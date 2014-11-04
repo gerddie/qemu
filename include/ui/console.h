@@ -152,6 +152,8 @@ void cursor_get_mono_mask(QEMUCursor *c, int transparent, uint8_t *mask);
 typedef struct DisplayChangeListenerOps {
     const char *dpy_name;
 
+    bool (*dpy_need_refresh)(DisplayChangeListener *dcl);
+
     void (*dpy_refresh)(DisplayChangeListener *dcl);
 
     void (*dpy_gfx_update)(DisplayChangeListener *dcl,
@@ -185,6 +187,7 @@ struct DisplayChangeListener {
 };
 
 DisplayState *init_displaystate(void);
+void update_displaystate(DisplayState *ds);
 DisplaySurface *qemu_create_displaysurface_from(int width, int height,
                                                 pixman_format_code_t format,
                                                 int linesize, uint8_t *data);

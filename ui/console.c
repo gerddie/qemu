@@ -180,6 +180,7 @@ static QEMUTimer *cursor_timer;
 
 static void text_console_do_init(CharDriverState *chr, DisplayState *ds);
 static void dpy_refresh(DisplayState *s);
+static bool dpy_need_refresh(DisplayState *s);
 static DisplayState *get_alloc_displaystate(void);
 static void text_console_update_cursor_timer(void);
 static void text_console_update_cursor(void *opaque);
@@ -216,7 +217,7 @@ static void gui_update(void *opaque)
     timer_mod(ds->gui_timer, ds->last_update + interval);
 }
 
-static void gui_setup_refresh(DisplayState *ds)
+void update_displaystate(DisplayState *ds)
 {
     DisplayChangeListener *dcl;
     bool need_timer = false;
@@ -234,6 +235,8 @@ static void gui_setup_refresh(DisplayState *ds)
             have_text = true;
         }
     }
+
+    need_timer &= dpy_need_refresh(ds);
 
     if (need_timer && ds->gui_timer == NULL) {
         ds->gui_timer = timer_new_ms(QEMU_CLOCK_REALTIME, gui_update, ds);
@@ -1341,7 +1344,7 @@ void register_displaychangelistener(DisplayChangeListener *dcl)
     trace_displaychangelistener_register(dcl, dcl->ops->dpy_name);
     dcl->ds = get_alloc_displaystate();
     QLIST_INSERT_HEAD(&dcl->ds->listeners, dcl, next);
-    gui_setup_refresh(dcl->ds);
+    update_displaystate(dcl->ds);
     if (dcl->con) {
         dcl->con->dcls++;
         con = dcl->con;
@@ -1380,7 +1383,7 @@ void unregister_displaychangelistener(DisplayChangeListener *dcl)
         dcl->con->dcls--;
     }
     QLIST_REMOVE(dcl, next);
-    gui_setup_refresh(ds);
+    update_displaystate(ds);
 }
 
 int dpy_set_ui_info(QemuConsole *con, QemuUIInfo *info)
@@ -1448,6 +1451,20 @@ static void dpy_refresh(DisplayState *s)
             dcl->ops->dpy_refresh(dcl);
         }
     }
+}
+
+static bool dpy_need_refresh(DisplayState *s)
+{
+    DisplayChangeListener *dcl;
+
+    QLIST_FOREACH(dcl, &s->listeners, next) {
+        if (!dcl->ops->dpy_need_refresh ||
+            dcl->ops->dpy_need_refresh(dcl)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void dpy_gfx_copy(QemuConsole *con, int src_x, int src_y,

@@ -1097,6 +1097,7 @@ static void qxl_enter_vga_mode(PCIQXLDevice *d)
     d->mode = QXL_MODE_VGA;
     vga_dirty_log_start(&d->vga);
     graphic_hw_update(d->vga.con);
+    update_displaystate(d->ssd.dcl.ds);
 }
 
 static void qxl_exit_vga_mode(PCIQXLDevice *d)
@@ -1109,6 +1110,7 @@ static void qxl_exit_vga_mode(PCIQXLDevice *d)
     update_displaychangelistener(&d->ssd.dcl, GUI_REFRESH_INTERVAL_IDLE);
     vga_dirty_log_stop(&d->vga);
     qxl_destroy_primary(d, QXL_SYNC);
+    update_displaystate(d->ssd.dcl.ds);
 }
 
 static void qxl_update_irq(PCIQXLDevice *d)
@@ -1867,11 +1869,23 @@ static void display_refresh(DisplayChangeListener *dcl)
     }
 }
 
+static bool display_need_refresh(DisplayChangeListener *dcl)
+{
+    PCIQXLDevice *qxl = container_of(dcl, PCIQXLDevice, ssd.dcl);
+
+    if (qxl->mode == QXL_MODE_VGA) {
+        return true;
+    }
+
+    return false;
+}
+
 static DisplayChangeListenerOps display_listener_ops = {
     .dpy_name        = "spice/qxl",
     .dpy_gfx_update  = display_update,
     .dpy_gfx_switch  = display_switch,
     .dpy_refresh     = display_refresh,
+    .dpy_need_refresh = display_need_refresh,
 };
 
 static void qxl_init_ramsize(PCIQXLDevice *qxl)
