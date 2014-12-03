@@ -146,6 +146,7 @@ cac_common_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
         break;
     case VCARD7816_INS_GET_RESPONSE:
     case VCARD7816_INS_VERIFY:
+    case VCARD7816_INS_GET_DATA:
         /* let the 7816 code handle these */
         ret = VCARD_NEXT;
         break;
