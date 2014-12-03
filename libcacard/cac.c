@@ -133,33 +133,12 @@ ccc_process_apdu(VCard *card, VCardAPDU *apdu,
 static VCardStatus
 cac_common_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
 {
-    int ef;
     VCardStatus ret = VCARD_FAIL;
 
     switch (apdu->a_ins) {
     case VCARD7816_INS_SELECT_FILE:
-        if (apdu->a_p1 != 0x02) {
-            /* let the 7816 code handle applet switches */
-            ret = VCARD_NEXT;
-            break;
-        }
-        /* handle file id setting */
-        if (apdu->a_Lc != 2) {
-            *response = vcard_make_response(
-                VCARD7816_STATUS_ERROR_DATA_INVALID);
-            ret = VCARD_DONE;
-            break;
-        }
-        /* CAC 1.0 only supports ef = 0 */
-        ef = apdu->a_body[0] | (apdu->a_body[1] << 8);
-        if (ef != 0) {
-            *response = vcard_make_response(
-                VCARD7816_STATUS_ERROR_FILE_NOT_FOUND);
-            ret = VCARD_DONE;
-            break;
-        }
-        *response = vcard_make_response(VCARD7816_STATUS_SUCCESS);
-        ret = VCARD_DONE;
+        /* let the 7816 code handle applet switches */
+        ret = VCARD_NEXT;
         break;
     case VCARD7816_INS_GET_RESPONSE:
     case VCARD7816_INS_VERIFY:
