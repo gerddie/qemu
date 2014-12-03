@@ -60,6 +60,69 @@ vcard_response_new_data(unsigned char *buf, int len)
     return new_response;
 }
 
+static int
+int_from_hex(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    g_error("invalid hex");
+}
+
+VCardResponse *
+vcard_response_new_hex(VCard *card, const char *str, int Le)
+{
+    int i, n;
+    VCardResponse *response;
+    unsigned char *data;
+
+    data = g_malloc(strlen(str));
+    if (!data)
+        return NULL;
+
+    for (i = 0, n = 0; i < strlen(str); i += 3) {
+        data[n] =
+            int_from_hex(str[i]) << 4 |
+            int_from_hex(str[i + 1]);
+        n++;
+    }
+
+    g_return_val_if_fail(n >= 2, NULL);
+    n -= 2;
+
+    if ((Le == 0 && n < 256) || (Le != 0 && n > Le)) {
+        vcard_set_buffer_response(card, vcard_buffer_response_new(data, n));
+        response = vcard_response_new_status_bytes(VCARD7816_SW1_RESPONSE_BYTES,
+                                                   n > 255 ? 0 : n);
+    } else if (Le == 0) {
+        int len = MIN(n, 256);
+        int remainder = n - len;
+
+        response = vcard_response_new_data(data, len);
+        if (response == NULL)
+            return NULL;
+
+        vcard_response_set_status_bytes(response, remainder > 0 ?
+                                        VCARD7816_SW1_RESPONSE_BYTES : VCARD7816_SW1_SUCCESS,
+                                        remainder);
+        if (remainder > 0)
+            vcard_set_buffer_response(card, vcard_buffer_response_new(data + len, remainder));
+    } else {
+        response = g_new(VCardResponse, 1);
+        response->b_data = data;
+        response->b_total_len = n + 2;
+        response->b_len = n;
+        response->b_type = VCARD_MALLOC;
+
+        data = NULL;
+    }
+
+    g_free(data);
+
+    return response;
+}
+
 static VCardResponse *
 vcard_init_buffer_response(VCard *card, unsigned char *buf, int len)
 {
