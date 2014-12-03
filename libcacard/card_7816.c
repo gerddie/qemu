@@ -606,6 +606,7 @@ static VCardStatus
 vcard7816_file_system_process_apdu(VCard *card, VCardAPDU *apdu,
                                    VCardResponse **response)
 {
+    g_warning("%s not supported", G_STRLOC);
     /* TODO: if we want to support a virtual file system card, we do it here.
      * It would probably be a pkcs #15 card type */
     *response = vcard_make_response(
@@ -698,6 +699,7 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
     case  VCARD7816_INS_APPEND_RECORD: /* file op */
     case  VCARD7816_INS_ENVELOPE:
     case  VCARD7816_INS_PUT_DATA:
+        g_warning("%s not supported", G_STRLOC);
         *response = vcard_make_response(
                             VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         break;
@@ -739,6 +741,7 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
                                    VCARD7816_STATUS_SUCCESS);
             g_byte_array_free(reply, TRUE);
         } else {
+            g_warning("missing file");
             *response =
                 vcard_make_response(VCARD7816_STATUS_ERROR_FILE_NOT_FOUND);
         }
@@ -801,11 +804,13 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
         break;
 
     case VCARD7816_INS_GET_DATA:
+        g_warning("%s not supported", G_STRLOC);
         *response =
             vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         break;
 
     default:
+        g_warning("%s not supported", G_STRLOC);
         *response =
             vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         break;
@@ -846,10 +851,12 @@ vcard_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
     }
     switch (vcard_get_type(card)) {
     case VCARD_FILE_SYSTEM:
+        g_debug("file system");
         return vcard7816_file_system_process_apdu(card, apdu, response);
     case VCARD_VM:
         return vcard7816_vm_process_apdu(card, apdu, response);
     case VCARD_DIRECT:
+        g_debug("direct");
         /* if we are type direct, then the applet should handle everything */
         assert(!"VCARD_DIRECT: applet failure");
         break;
