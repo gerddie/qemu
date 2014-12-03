@@ -151,7 +151,6 @@ cac_common_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
         ret = VCARD_NEXT;
         break;
     case CAC_GET_PROPERTIES:
-    case CAC_GET_ACR:
         /* skip these for now, this will probably be needed */
         *response = vcard_make_response(VCARD7816_STATUS_ERROR_P1_P2_INCORRECT);
         ret = VCARD_DONE;
@@ -354,6 +353,73 @@ cac_applet_id_process_apdu(VCard *card, VCardAPDU *apdu,
         /* TODO: implement */
         *response = vcard_make_response(
                         VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        ret = VCARD_DONE;
+        break;
+    case CAC_GET_ACR:
+        g_warning("ACR %x", apdu->a_p1);
+        if (apdu->a_p1 == 0x61) {
+            *response = vcard_response_new_hex(card,
+                "4F 00 07 A0 00 00 01 16 DB 00 "
+                "40 00 07 A0 00 00 00 79 01 00 "
+                "42 00 07 A0 00 00 01 16 30 00 "
+                "61 00 07 A0 00 00 01 16 A0 01 "
+                "43 00 0B A0 00 00 03 08 00 00 10 00 01 00 "
+                "90 00", apdu->a_Le);
+        } else if (apdu->a_p1 == 0x50) {
+            *response = vcard_response_new_hex(card,
+                "20 1F 01 1D FF FF 26 81 02 04 "
+                "26 80 00 2C 80 07 24 81 80 07 "
+                "24 81 01 00 24 80 06 20 00 00 "
+                "D8 80 04 24 4F 02 08 DB 00 58 "
+                "00 04 52 00 00 18 FF FF 82 01 "
+                "00 11 50 80 02 82 80 02 F0 80 "
+                "04 34 80 04 84 00 11 20 00 10 "
+                "80 40 06 0C 02 00 58 00 09 52 "
+                "04 01 00 52 00 08 0C 02 01 58 "
+                "00 0B 52 04 01 00 52 00 0A 18 "
+                "01 00 58 00 04 52 00 00 46 81 "
+                "01 00 46 80 04 42 00 06 36 80 "
+                "00 D8 80 01 18 01 01 58 00 04 "
+                "52 00 00 46 81 01 00 46 80 04 "
+                "42 00 06 36 80 00 D8 80 01 18 "
+                "01 02 58 00 04 52 00 00 46 81 "
+                "01 00 46 80 01 42 00 06 36 80 "
+                "00 D8 80 04 18 FF FF 82 01 00 "
+                "11 50 80 02 82 80 02 F0 80 04 "
+                "34 80 04 84 00 11 20 00 10 4A "
+                "42 05 0B 30 00 58 00 04 52 00 "
+                "00 B0 00 00 0C 60 10 58 00 04 "
+                "52 04 01 00 52 00 06 0C 60 30 "
+                "58 00 04 52 04 01 00 52 00 06 "
+                "08 90 00 58 00 04 52 00 00 18 "
+                "FF FF 82 01 00 11 50 80 02 82 "
+                "80 02 F0 80 04 34 80 04 84 00 "
+                "11 20 00 10 34 61 02 18 A0 01 "
+                "58 00 04 52 00 00 46 81 01 00 "
+                "46 80 04 42 00 01 36 80 00 D8 "
+                "80 01 18 FF FF 82 81 00 11 50 "
+                "80 02 82 80 02 F0 80 04 34 80 "
+                "04 84 80 11 20 00 10 90 00", apdu->a_Le);
+        } else if (apdu->a_p1 == 0x40) {
+            *response = vcard_response_new_hex(card,
+                "06 00 00 00 00 00 00 06 01 01 "
+                "00 01 00 00 06 02 00 1F 00 00 "
+                "00 06 06 06 00 1E 01 00 06 04 "
+                "04 1F 1F 21 00 08 08 03 00 9D "
+                "01 1E 01 00 06 09 02 00 1D 02 "
+                "00 08 0A 03 00 9D 03 1E 01 00 "
+                "06 0B 02 00 1D 04 00 06 10 00 "
+                "1E 00 00 00 06 11 00 1D 00 00 "
+                "00 07 07 04 3F 83 1F 21 00 09 "
+                "03 20 22 82 80 00 02 01 00 0B "
+                "0C 20 22 A0 9E 01 DE 01 02 01 "
+                "00 0B 0D 20 22 82 9E 01 DE 01 "
+                "02 01 00 90 00", apdu->a_Le);
+        } else {
+            *response = vcard_make_response(VCARD7816_STATUS_ERROR_P1_P2_INCORRECT);
+            g_warning("%s not supported", G_STRLOC);
+        }
+
         ret = VCARD_DONE;
         break;
     default:
