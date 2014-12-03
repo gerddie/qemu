@@ -78,9 +78,50 @@ security_domain_process_apdu(VCard *card, VCardAPDU *apdu,
         ret = VCARD_NEXT;
         break;
     default:
-        g_critical("%s not supported", G_STRLOC);
-        *response = vcard_make_response(
-                                        VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        g_warning("%s not supported", G_STRLOC);
+        *response =
+          vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        ret = VCARD_DONE;
+    }
+    return ret;
+}
+
+static VCardStatus
+ccc_process_apdu(VCard *card, VCardAPDU *apdu,
+                 VCardResponse **response)
+{
+    VCardStatus ret = VCARD_FAIL;
+
+    switch (apdu->a_ins) {
+    case VCARD7816_INS_GET_DATA: {
+        /* TODO: check cla class */
+        uint16_t tag = (apdu->a_p1 << 8) | apdu->a_p2;
+        g_debug("CCC get data tag: %x", tag);
+
+        *response =
+            vcard_make_response(VCARD7816_STATUS_ERROR_DATA_NOT_FOUND);
+        return VCARD_DONE;
+    }
+    case VCARD7816_INS_SELECT_FILE:
+    case VCARD7816_INS_GET_RESPONSE:
+    case VCARD7816_INS_VERIFY:
+        /* let the 7816 code handle these */
+        ret = VCARD_NEXT;
+        break;
+    case CAC_READ_BUFFER: {
+        /* new CAC call, go ahead and use the old version for now */
+
+        int offset = (apdu->a_p1 << 8) + apdu->a_p2;
+        int type = apdu->a_body[0];
+        int len = apdu->a_body[1];
+
+        g_debug("READ BUFFER type:%x offset:%x len:%x (card %p)",
+                type, offset, len, card);
+    }
+    default:
+        g_warning("%s not supported", G_STRLOC);
+        *response =
+            vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         ret = VCARD_DONE;
     }
     return ret;
@@ -413,6 +454,8 @@ static unsigned char cac_default_container_aid[] = {
     0xa0, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00 };
 static unsigned char cac_id_aid[] = {
     0xa0, 0x00, 0x00, 0x00, 0x79, 0x03, 0x00 };
+static unsigned char cac_ccc_aid[] = {
+    0xa0, 0x00, 0x00, 0x01, 0x16, 0xdb, 0x00 };
 /*
  * Initialize the cac card. This is the only public function in this file. All
  * the rest are connected through function pointers.
@@ -444,6 +487,15 @@ cac_card_init(VReader *reader, VCard *card,
     applet = vcard_new_applet(security_domain_process_apdu,
                               NULL, security_domain_aid,
                               sizeof(security_domain_aid));
+    if (applet == NULL) {
+        goto failure;
+    }
+    vcard_add_applet(card, applet);
+
+    /* create a CCC */
+    applet = vcard_new_applet(ccc_process_apdu,
+                              NULL, cac_ccc_aid,
+                              sizeof(cac_ccc_aid));
     if (applet == NULL) {
         goto failure;
     }
