@@ -277,7 +277,7 @@ vcard_applet_get_aid(VCardApplet *applet, int *aid_len)
 void
 vcard_select_applet(VCard *card, int channel, VCardApplet *applet)
 {
-    assert(channel < MAX_CHANNEL);
+    g_return_if_fail(channel < MAX_CHANNEL);
 
     /* If using an emulated card, make sure to log out of any already logged in
      * session. */
@@ -293,7 +293,11 @@ vcard_select_applet(VCard *card, int channel, VCardApplet *applet)
 VCardAppletPrivate *
 vcard_get_current_applet_private(VCard *card, int channel)
 {
-    VCardApplet *applet = card->current_applet[channel];
+    VCardApplet *applet;
+
+    g_return_val_if_fail(channel < MAX_CHANNEL, NULL);
+
+    applet = card->current_applet[channel];
 
     if (applet == NULL) {
         return NULL;
@@ -305,6 +309,8 @@ VCardStatus
 vcard_process_applet_apdu(VCard *card, VCardAPDU *apdu,
                           VCardResponse **response)
 {
+    g_return_val_if_fail(apdu->a_channel < MAX_CHANNEL, VCARD_NEXT);
+
     if (card->current_applet[apdu->a_channel]) {
         return card->current_applet[apdu->a_channel]->process_apdu(
                                                         card, apdu, response);
