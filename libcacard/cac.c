@@ -151,8 +151,21 @@ cac_common_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
         ret = VCARD_NEXT;
         break;
     case CAC_GET_PROPERTIES:
-        /* skip these for now, this will probably be needed */
-        *response = vcard_make_response(VCARD7816_STATUS_ERROR_P1_P2_INCORRECT);
+        if (apdu->a_p1 == 0x40) {
+            *response = vcard_response_new_hex(card,
+                "01 05 10 02 06 2B 04 40 01 05 50 0E 41 02 02 00 42 05 00 42 00 "
+                "42 01 26 01 01 50 0E 41 02 02 01 42 05 00 22 00 62 00 26 01 01 "
+                "51 14 41 02 01 00 42 05 00 1E 00 46 05 43 04 07 20 01 01 26 01 "
+                "01 51 14 41 02 01 01 42 05 00 1E 00 46 05 43 04 07 20 01 01 26 "
+                "01 01 51 14 41 02 01 02 42 05 00 1E 00 46 05 43 04 07 20 01 00 "
+                "26 01 01 39 01 00 3F 01 00 3A 07 A0 00 00 00 79 03 00 90 00", apdu->a_Le);
+        }
+
+        if (!*response) {
+            g_warning("%s not supported", G_STRLOC);
+            *response =
+                vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        }
         ret = VCARD_DONE;
         break;
     default:
