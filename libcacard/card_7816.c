@@ -654,7 +654,7 @@ static VCardStatus
 vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
                           VCardResponse **response)
 {
-    int bytes_to_copy, next_byte_count, count;
+    int bytes_to_copy, next_byte_count, count, ef;
     VCardApplet *current_applet;
     VCardBufferResponse *buffer_response;
     vcard_7816_status_t status;
@@ -703,28 +703,46 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
         break;
 
     case  VCARD7816_INS_SELECT_FILE:
-        if (apdu->a_p1 != 0x04) {
-            *response = vcard_make_response(
-                            VCARD7816_STATUS_ERROR_FUNCTION_NOT_SUPPORTED);
+        if (apdu->a_p1 == 0x02) {
+            /* handle file id setting */
+            if (apdu->a_Lc != 2) {
+                *response =
+                    vcard_make_response(VCARD7816_STATUS_ERROR_DATA_INVALID);
+                break;
+            }
+
+            /* CAC 1.0 only supports ef = 0 */
+            ef = (apdu->a_body[0] << 8) | apdu->a_body[1];
+            current_applet = vcard_find_ef(card, apdu->a_channel, ef);
+        } else if (apdu->a_p1 == 0x04) {
+            current_applet = vcard_find_applet(card, apdu->a_body, apdu->a_Lc);
+        } else {
+            *response =
+                vcard_make_response(VCARD7816_STATUS_ERROR_FUNCTION_NOT_SUPPORTED);
             break;
         }
 
-        /* side effect, deselect the current applet if no applet has been found
-         * */
-        current_applet = vcard_find_applet(card, apdu->a_body, apdu->a_Lc);
+        /* side effect, deselect the current applet if no applet
+           has been found */
         vcard_select_applet(card, apdu->a_channel, current_applet);
+
         if (current_applet) {
+            if (apdu->a_p1 == 0x02) {
+                *response =
+                    vcard_make_response(VCARD7816_STATUS_SUCCESS);
+                break;
+            }
+
             GByteArray *reply = make_fci(current_applet);
             *response =
                 vcard_response_new(card, reply->data, reply->len, apdu->a_Le,
                                    VCARD7816_STATUS_SUCCESS);
             g_byte_array_free(reply, TRUE);
         } else {
-            *response = vcard_make_response(
-                             VCARD7816_STATUS_ERROR_FILE_NOT_FOUND);
+            *response =
+                vcard_make_response(VCARD7816_STATUS_ERROR_FILE_NOT_FOUND);
         }
         break;
-
     case  VCARD7816_INS_VERIFY:
         if ((apdu->a_p1 != 0x00) || (apdu->a_p2 != 0x00)) {
             *response = vcard_make_response(
