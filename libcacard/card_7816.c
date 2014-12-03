@@ -66,11 +66,6 @@ vcard_init_buffer_response(VCard *card, unsigned char *buf, int len)
     VCardResponse *response;
     VCardBufferResponse *buffer_response;
 
-    buffer_response = vcard_get_buffer_response(card);
-    if (buffer_response) {
-        vcard_set_buffer_response(card, NULL);
-        vcard_buffer_response_delete(buffer_response);
-    }
     buffer_response = vcard_buffer_response_new(buf, len);
     if (buffer_response == NULL) {
         return NULL;
@@ -683,7 +678,6 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
         buffer_response->len -= bytes_to_copy;
         if (*response == NULL || (next_byte_count == 0)) {
             vcard_set_buffer_response(card, NULL);
-            vcard_buffer_response_delete(buffer_response);
         }
         if (*response == NULL) {
             *response =
@@ -730,7 +724,6 @@ vcard_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
     if (buffer_response && apdu->a_ins != VCARD7816_INS_GET_RESPONSE) {
         /* clear out buffer_response, return an error */
         vcard_set_buffer_response(card, NULL);
-        vcard_buffer_response_delete(buffer_response);
         *response = vcard_make_response(VCARD7816_STATUS_EXC_ERROR);
         return VCARD_DONE;
     }

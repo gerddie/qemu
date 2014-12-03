@@ -325,6 +325,10 @@ vcard_get_buffer_response(VCard *card)
 void
 vcard_set_buffer_response(VCard *card, VCardBufferResponse *buffer)
 {
+    if (vcard_get_buffer_response(card) != NULL) {
+        vcard_buffer_response_delete(vcard_get_buffer_response(card));
+    }
+
     card->vcard_buffer_response = buffer;
 }
 
