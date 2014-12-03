@@ -487,6 +487,7 @@ failure:
     return NULL;
 }
 
+/* TODO: A0 00 00 01 16 30 00 ? PIV RID GSC data model ? */
 static unsigned char security_domain_aid[] = {
     0xa0, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00 };
 static unsigned char cac_default_container_aid[] = {
