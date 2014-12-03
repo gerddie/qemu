@@ -41,14 +41,8 @@ print_byte_array(
 
 static void
 print_usage(void) {
-    printf("vscclient [-c <certname> .. -e <emul_args> -d <level>%s] "
-            "<host> <port>\n",
-#ifdef USE_PASSTHRU
-    " -p");
-    printf(" -p use passthrough mode\n");
-#else
-   "");
-#endif
+    printf("vscclient [-c <certname> .. -e <emul_args> -d <level>] "
+           "<host> <port>\n");
     vcard_emul_usage();
 }
 
