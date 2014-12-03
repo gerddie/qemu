@@ -157,6 +157,7 @@ cac_common_process_apdu(VCard *card, VCardAPDU *apdu, VCardResponse **response)
         ret = VCARD_DONE;
         break;
     default:
+        g_warning("%s not supported", G_STRLOC);
         *response = vcard_make_response(
             VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         ret = VCARD_DONE;
@@ -248,6 +249,8 @@ cac_applet_pki_process_apdu(VCard *card, VCardAPDU *apdu,
 
         sign_buffer = g_realloc(pki_applet->sign_buffer,
                                 pki_applet->sign_buffer_len + size);
+        g_return_val_if_fail(sign_buffer != NULL, VCARD_DONE);
+
         memcpy(sign_buffer+pki_applet->sign_buffer_len, apdu->a_body, size);
         size += pki_applet->sign_buffer_len;
         switch (apdu->a_p1) {
@@ -369,6 +372,7 @@ cac_applet_container_process_apdu(VCard *card, VCardAPDU *apdu,
     switch (apdu->a_ins) {
     case CAC_READ_BUFFER:
     case CAC_UPDATE_BUFFER:
+        g_warning("%s not supported", G_STRLOC);
         *response = vcard_make_response(
                         VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
         ret = VCARD_DONE;
