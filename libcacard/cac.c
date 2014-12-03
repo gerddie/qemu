@@ -33,6 +33,59 @@ struct VCardAppletPrivateStruct {
     } u;
 };
 
+static VCardStatus
+security_domain_process_apdu(VCard *card, VCardAPDU *apdu,
+                                  VCardResponse **response)
+{
+    VCardStatus ret = VCARD_FAIL;
+
+    switch (apdu->a_ins) {
+    case VCARD7816_INS_GET_DATA: {
+        /* TODO: check cla class */
+        uint16_t tag = (apdu->a_p1 << 8) | apdu->a_p2;
+
+        switch (tag) {
+        case 0x0066:
+            /* see H.2 Structure of Card Recognition Data */
+            *response = vcard_response_new_hex(card,
+                "66 31 "
+                "73 2F "
+                "06 07 2A 86 48 86 FC 6B 01 "
+                "60 0C 06 0A 2A 86 48 86 FC 6B 02 02 01 01 "
+                "63 09 06 07 2A 86 48 86 FC 6B 03 "
+                "64 0B 06 09 2A 86 48 86 FC 6B 04 00 00 "
+                "90 00", apdu->a_Le);
+
+            return VCARD_DONE;
+        case 0x9f7f:
+            /* TODO: CPLC: */
+            *response = vcard_response_new_hex(card,
+                "9F 7F 2A 47 90 50 43 16 71 73 54 43 25 91 89 "
+                "91 00 F5 F3 88 51 47 92 30 23 16 73 73 54 16 "
+                "74 30 23 00 00 00 72 00 00 00 00 00 00 00 00 "
+                "90 00", apdu->a_Le);
+            return VCARD_DONE;
+        default:
+            *response =
+                vcard_make_response(VCARD7816_STATUS_ERROR_DATA_NOT_FOUND);
+            return VCARD_DONE;
+        }
+    }
+    case VCARD7816_INS_SELECT_FILE:
+    case VCARD7816_INS_GET_RESPONSE:
+    case VCARD7816_INS_VERIFY:
+        /* let the 7816 code handle these */
+        ret = VCARD_NEXT;
+        break;
+    default:
+        g_critical("%s not supported", G_STRLOC);
+        *response = vcard_make_response(
+                                        VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        ret = VCARD_DONE;
+    }
+    return ret;
+}
+
 /*
  * handle all the APDU's that are common to all CAC applets
  */
@@ -354,7 +407,8 @@ failure:
     return NULL;
 }
 
-
+static unsigned char security_domain_aid[] = {
+    0xa0, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00 };
 static unsigned char cac_default_container_aid[] = {
     0xa0, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00 };
 static unsigned char cac_id_aid[] = {
@@ -385,6 +439,15 @@ cac_card_init(VReader *reader, VCard *card,
         }
         vcard_add_applet(card, applet);
     }
+
+    /* create a security domain */
+    applet = vcard_new_applet(security_domain_process_apdu,
+                              NULL, security_domain_aid,
+                              sizeof(security_domain_aid));
+    if (applet == NULL) {
+        goto failure;
+    }
+    vcard_add_applet(card, applet);
 
     /* create a default blank container applet */
     applet = vcard_new_applet(cac_applet_container_process_apdu,
