@@ -307,6 +307,7 @@ trace_file="trace"
 spice=""
 rbd=""
 smartcard_nss=""
+pcsc=""
 libusb=""
 usb_redir=""
 glx=""
@@ -1041,6 +1042,10 @@ for opt do
   --disable-smartcard-nss) smartcard_nss="no"
   ;;
   --enable-smartcard-nss) smartcard_nss="yes"
+  ;;
+  --disable-pcsc) pcsc="no"
+  ;;
+  --enable-pcsc) pcsc="yes"
   ;;
   --disable-libusb) libusb="no"
   ;;
@@ -3648,6 +3653,30 @@ EOF
     fi
 fi
 
+if test "$pcsc" != "no"; then
+  cat > $TMPC << EOF
+#ifdef __APPLE__
+#include <PCSC/winscard.h>
+#include <PCSC/wintypes.h>
+#else
+#include <winscard.h>
+#endif
+int main(void) { SCardEstablishContext(SCARD_SCOPE_SYSTEM, 0, 0, 0); return 0; }
+EOF
+    pcsc_libs="$($pkg_config --libs libpcsclite 2>/dev/null)"
+    pcsc_cflags="$($pkg_config --cflags libpcsclite 2>/dev/null)"
+
+    if compile_prog "$pcsc_cflags" "$pcsc_libs"; then
+        pcsc="yes"
+    else
+        if test "$pcsc" = "yes"; then
+            feature_not_found "pcsc" "Install pcsclite"
+        fi
+        pcsc="no"
+    fi
+fi
+
+
 # check for libusb
 if test "$libusb" != "no" ; then
     if $pkg_config --atleast-version=1.0.13 libusb-1.0; then
@@ -4318,6 +4347,7 @@ fi
 echo "rbd support       $rbd"
 echo "xfsctl support    $xfs"
 echo "nss used          $smartcard_nss"
+echo "pcsc used         $pcsc"
 echo "libusb            $libusb"
 echo "usb net redir     $usb_redir"
 echo "GLX support       $glx"
@@ -4672,6 +4702,12 @@ if test "$smartcard_nss" = "yes" ; then
   echo "CONFIG_SMARTCARD_NSS=y" >> $config_host_mak
   echo "NSS_LIBS=$nss_libs" >> $config_host_mak
   echo "NSS_CFLAGS=$nss_cflags" >> $config_host_mak
+fi
+
+if test "$pcsc" = "yes" ; then
+  echo "CONFIG_PCSC=y" >> $config_host_mak
+  echo "PCSC_LIBS=$pcsc_libs" >> $config_host_mak
+  echo "PCSC_CFLAGS=$pcsc_cflags" >> $config_host_mak
 fi
 
 if test "$libusb" = "yes" ; then

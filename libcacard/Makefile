@@ -11,6 +11,9 @@ $(libcacard-obj-y): | $(libcacard-lobj-y)
 
 all: libcacard.la libcacard.pc
 
+libcacard/vscclient.o-cflags := $(PCSC_CFLAGS)
+libcacard/vscclient.o-libs := $(PCSC_LIBS)
+
 vscclient$(EXESUF): libcacard/vscclient.o libcacard.la
 	$(call LINK,$^)
 
