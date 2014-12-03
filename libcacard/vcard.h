@@ -52,6 +52,8 @@ void vcard_set_type(VCard *card, VCardType type);
 VCardStatus vcard_add_applet(VCard *card, VCardApplet *applet);
 /* find the applet on the card with the given aid */
 VCardApplet *vcard_find_applet(VCard *card, unsigned char *aid, int aid_len);
+/* find the applet on the card with the given aid */
+VCardApplet *vcard_find_ef(VCard *card, int channel, int ef);
 /* set the following applet to be current on the given channel */
 void vcard_select_applet(VCard *card, int channel, VCardApplet *applet);
 /* get the card type specific private data on the given channel */

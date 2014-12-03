@@ -235,6 +235,34 @@ vcard_find_applet(VCard *card, unsigned char *aid, int aid_len)
     return current_applet;
 }
 
+VCardApplet *
+vcard_find_ef(VCard *card, int channel, int ef)
+{
+    VCardApplet *applet;
+    guint8 *aid;
+
+    g_return_val_if_fail(channel < MAX_CHANNEL, NULL);
+
+    applet = card->current_applet[channel];
+    if (!applet)
+        return NULL;
+
+    g_return_val_if_fail(applet->aid_len >= 2, NULL);
+
+    aid = g_memdup(applet->aid, applet->aid_len);
+    g_return_val_if_fail(aid != NULL, NULL);
+
+    /* TODO: a naive implementation. Does ef share df aid prefix? */
+    aid[applet->aid_len - 2] = (ef >> 8) & 0xff;
+    aid[applet->aid_len - 1] = ef & 0xff;
+
+    applet = vcard_find_applet(card, aid, applet->aid_len);
+
+    g_free(aid);
+
+    return applet;
+}
+
 unsigned char *
 vcard_applet_get_aid(VCardApplet *applet, int *aid_len)
 {
