@@ -339,6 +339,11 @@ cac_applet_id_process_apdu(VCard *card, VCardAPDU *apdu,
     VCardStatus ret = VCARD_FAIL;
 
     switch (apdu->a_ins) {
+    case CAC_TODO:
+        *response = vcard_make_response(
+                        VCARD7816_STATUS_SUCCESS);
+        ret = VCARD_DONE;
+        break;
     case CAC_UPDATE_BUFFER:
         *response = vcard_make_response(
                         VCARD7816_STATUS_ERROR_CONDITION_NOT_SATISFIED);

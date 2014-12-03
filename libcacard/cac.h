@@ -16,6 +16,7 @@
 #define CAC_UPDATE_BUFFER   0x58
 #define CAC_SIGN_DECRYPT    0x42
 #define CAC_GET_CERTIFICATE 0x36
+#define CAC_TODO            0x5a
 
 /*
  * Initialize the cac card. This is the only public function in this file. All
