@@ -613,6 +613,40 @@ vcard7816_file_system_process_apdu(VCard *card, VCardAPDU *apdu,
     return VCARD_DONE;
 }
 
+/* ISO7816-4 5.1.5 */
+static GByteArray *
+make_fci(VCardApplet *applet)
+{
+    GByteArray *buf;
+    guint8 fci_tag = 0x6f;
+    guint8 len = 0;
+    guint8 df_name_tag = 0x84;
+    guint8 nul = 0;
+    unsigned char *aid;
+    int aid_len;
+    /* FIXME: what issuer could we use? */
+    guint8 issuer[] = { 0xA5, 0x04, 0x9F, 0x65, 0x01, 0xFF };
+
+    buf = g_byte_array_new();
+
+    g_byte_array_append(buf, &fci_tag, 1);
+    g_byte_array_append(buf, &len, 1);
+    g_byte_array_append(buf, &df_name_tag, 1);
+
+    aid = vcard_applet_get_aid(applet, &aid_len);
+    aid_len += 1;
+    g_byte_array_append(buf, (guint8*)&aid_len, 1);
+    g_byte_array_append(buf, aid, aid_len - 1);
+    g_byte_array_append(buf, &nul, 1);
+
+    /* CAC has also issuer infos: */
+    g_byte_array_append(buf, issuer, sizeof(issuer));
+
+    buf->data[1] = buf->len - 2;
+
+    return buf;
+}
+
 /*
  * VM card (including java cards)
  */
@@ -680,11 +714,11 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
         current_applet = vcard_find_applet(card, apdu->a_body, apdu->a_Lc);
         vcard_select_applet(card, apdu->a_channel, current_applet);
         if (current_applet) {
-            unsigned char *aid;
-            int aid_len;
-            aid = vcard_applet_get_aid(current_applet, &aid_len);
-            *response = vcard_response_new(card, aid, aid_len, apdu->a_Le,
-                                          VCARD7816_STATUS_SUCCESS);
+            GByteArray *reply = make_fci(current_applet);
+            *response =
+                vcard_response_new(card, reply->data, reply->len, apdu->a_Le,
+                                   VCARD7816_STATUS_SUCCESS);
+            g_byte_array_free(reply, TRUE);
         } else {
             *response = vcard_make_response(
                              VCARD7816_STATUS_ERROR_FILE_NOT_FOUND);
