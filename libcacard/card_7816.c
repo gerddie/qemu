@@ -806,7 +806,7 @@ vcard7816_vm_process_apdu(VCard *card, VCardAPDU *apdu,
     case VCARD7816_INS_GET_DATA:
         g_warning("%s not supported", G_STRLOC);
         *response =
-            vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+            vcard_make_response(VCARD7816_STATUS_ERROR_DATA_NOT_FOUND);
         break;
 
     default:
