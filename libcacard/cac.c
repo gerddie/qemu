@@ -5,12 +5,15 @@
  * See the COPYING.LIB file in the top-level directory.
  */
 
+#include <zlib.h>
 #include "qemu-common.h"
 
 #include "cac.h"
 #include "vcard.h"
 #include "vcard_emul.h"
 #include "card_7816.h"
+
+#define CERT_TAG_SIZE 8
 
 /* private data for PKI applets */
 typedef struct CACPKIAppletDataStruct {
@@ -21,6 +24,7 @@ typedef struct CACPKIAppletDataStruct {
     unsigned char *sign_buffer;
     int sign_buffer_len;
     VCardKey *key;
+    unsigned char cert_tag[CERT_TAG_SIZE];
 } CACPKIAppletData;
 
 /*
@@ -211,8 +215,8 @@ cac_applet_pki_process_apdu(VCard *card, VCardAPDU *apdu,
         assert(pki_applet->cert != NULL);
         size = apdu->a_Le;
         if (pki_applet->cert_buffer == NULL) {
-            pki_applet->cert_buffer = pki_applet->cert;
-            pki_applet->cert_buffer_len = pki_applet->cert_len;
+            pki_applet->cert_buffer = pki_applet->cert + 2;
+            pki_applet->cert_buffer_len = pki_applet->cert_len - 2;
         }
         size = MIN(size, pki_applet->cert_buffer_len);
         next = MIN(255, pki_applet->cert_buffer_len - size);
@@ -282,13 +286,40 @@ cac_applet_pki_process_apdu(VCard *card, VCardAPDU *apdu,
         }
         ret = VCARD_DONE;
         break;
-    case CAC_READ_BUFFER:
+    case CAC_READ_BUFFER: {
         /* new CAC call, go ahead and use the old version for now */
-        /* TODO: implement */
-        *response = vcard_make_response(
-                                VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+
+        guint8 *buffer; /* FIXME: should be const */
+        int buffer_len = -1;
+        int offset = (apdu->a_p1 << 8) + apdu->a_p2;
+        int type = apdu->a_body[0];
+        int len = apdu->a_body[1];
+
+        g_debug("READ BUFFER type:%x offset:%x len:%x (card %p)", type, offset, len, card);
+
+        if (type == 1) {
+            buffer = pki_applet->cert_tag;
+            buffer_len = sizeof(pki_applet->cert_tag);
+        } else if (type == 2) {
+            /* select cert */
+            buffer = pki_applet->cert;
+            buffer_len = pki_applet->cert_len;
+        }
+
+        if (offset + len <= buffer_len) {
+            *response =
+                vcard_response_new_bytes(card, buffer + offset, len, apdu->a_Le,
+                                         VCARD7816_SW1_SUCCESS, 0);
+        }
+
+        if (!*response) {
+            g_warning("%s not supported", G_STRLOC);
+            *response =
+                vcard_make_response(VCARD7816_STATUS_ERROR_COMMAND_NOT_SUPPORTED);
+        }
         ret = VCARD_DONE;
         break;
+    }
     default:
         ret = cac_common_process_apdu(card, apdu, response);
         break;
@@ -374,17 +405,36 @@ cac_new_pki_applet_private(const unsigned char *cert,
 {
     CACPKIAppletData *pki_applet_data;
     VCardAppletPrivate *applet_private;
+    int zret;
+    uLong zlen;
+    char cert_tag[CERT_TAG_SIZE] = { CERT_TAG_SIZE - 2, 0x00,
+                                     0x71, 0x01,
+                                     0x70, 0xFF, 0x00, 0x00 };
+
+    g_return_val_if_fail(cert_len < 0xffff, NULL);
 
     applet_private = g_new0(VCardAppletPrivate, 1);
     pki_applet_data = &(applet_private->u.pki_data);
-    pki_applet_data->cert = (unsigned char *)g_malloc(cert_len+1);
-    /*
-     * if we want to support compression, then we simply change the 0 to a 1
-     * and compress the cert data with libz
-     */
-    pki_applet_data->cert[0] = 0; /* not compressed */
-    memcpy(&pki_applet_data->cert[1], cert, cert_len);
-    pki_applet_data->cert_len = cert_len+1;
+
+    zlen = compressBound(cert_len);
+    pki_applet_data->cert = (unsigned char *)g_malloc(zlen + 3);
+
+    zret = compress(&pki_applet_data->cert[3], &zlen, cert, cert_len);
+    if (zret != Z_OK) {
+      g_warn_if_reached();
+      g_free(pki_applet_data->cert);
+      g_free(applet_private);
+      return NULL;
+    }
+
+    pki_applet_data->cert[0] = (zlen + 1) & 0xff;
+    pki_applet_data->cert[1] = (zlen + 1) >> 8;
+    pki_applet_data->cert[2] = 1; /* compressed */
+    pki_applet_data->cert_len = zlen + 3;
+
+    memcpy(pki_applet_data->cert_tag, cert_tag, sizeof(cert_tag));
+    pki_applet_data->cert_tag[6] = zlen & 0xff;
+    pki_applet_data->cert_tag[7] = zlen >> 8;
 
     pki_applet_data->key = key;
     return applet_private;
