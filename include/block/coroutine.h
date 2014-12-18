@@ -19,6 +19,9 @@
 #include "qemu/typedefs.h"
 #include "qemu/queue.h"
 #include "qemu/timer.h"
+#ifdef CONFIG_GCOROUTINE
+#include <gcoroutine.h>
+#endif
 
 /**
  * Coroutines are a mechanism for stack switching and can be used for
@@ -103,9 +106,13 @@ bool qemu_in_coroutine(void);
  * them later. They provide the fundamental primitives on which coroutine locks
  * are built.
  */
+#ifdef CONFIG_GCOROUTINE
+typedef GCoQueue CoQueue;
+#else
 typedef struct CoQueue {
     QTAILQ_HEAD(, Coroutine) entries;
 } CoQueue;
+#endif
 
 /**
  * Initialise a CoQueue. This must be called before any other operation is used
@@ -145,10 +152,14 @@ bool qemu_co_queue_empty(CoQueue *queue);
 /**
  * Provides a mutex that can be used to synchronise coroutines
  */
+#ifdef CONFIG_GCOROUTINE
+typedef GCoMutex CoMutex;
+#else
 typedef struct CoMutex {
     bool locked;
     CoQueue queue;
 } CoMutex;
+#endif
 
 /**
  * Initialises a CoMutex. This must be called before any other operation is used
@@ -168,11 +179,15 @@ void coroutine_fn qemu_co_mutex_lock(CoMutex *mutex);
  */
 void coroutine_fn qemu_co_mutex_unlock(CoMutex *mutex);
 
+#ifdef CONFIG_GCOROUTINE
+typedef GCoRWLock CoRwlock;
+#else
 typedef struct CoRwlock {
     bool writer;
     int reader;
     CoQueue queue;
 } CoRwlock;
+#endif
 
 /**
  * Initialises a CoRwlock. This must be called before any other operation

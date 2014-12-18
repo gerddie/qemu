@@ -14,9 +14,16 @@ block-obj-$(CONFIG_WIN32) += aio-win32.o
 block-obj-y += block/
 block-obj-y += qemu-io-cmds.o
 
-block-obj-y += qemu-coroutine.o qemu-coroutine-lock.o qemu-coroutine-io.o
-block-obj-y += qemu-coroutine-sleep.o
 block-obj-y += coroutine-$(CONFIG_COROUTINE_BACKEND).o
+
+ifeq ($(CONFIG_COROUTINE_BACKEND),gcoroutine)
+coroutine-gcoroutine.o-cflags := $(GCOROUTINE_CFLAGS)
+coroutine-gcoroutine.o-libs := $(GCOROUTINE_LIBS)
+else
+block-obj-y += qemu-coroutine.o qemu-coroutine-lock.o
+endif
+block-obj-y += qemu-coroutine-io.o
+block-obj-y += qemu-coroutine-sleep.o
 
 block-obj-m = block/
 

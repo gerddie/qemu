@@ -1381,7 +1381,7 @@ Advanced options (experts only):
   --disable-seccomp        disable seccomp support
   --enable-seccomp         enable seccomp support
   --with-coroutine=BACKEND coroutine backend. Supported options:
-                           gthread, ucontext, sigaltstack, windows
+                           gcoroutine, gthread, ucontext, sigaltstack, windows
   --disable-coroutine-pool disable coroutine freelist (worse performance)
   --enable-coroutine-pool  enable coroutine freelist (better performance)
   --enable-glusterfs       enable GlusterFS backend
@@ -3870,8 +3870,16 @@ EOF
   fi
 fi
 
+if $pkg_config gcoroutine-1.0 --exists; then
+  gcoroutine_cflags=`$pkg_config --cflags gcoroutine-1.0`
+  gcoroutine_libs=`$pkg_config --libs gcoroutine-1.0`
+  gcoroutine=yes
+fi
+
 if test "$coroutine" = ""; then
-  if test "$mingw32" = "yes"; then
+  if test "$gcoroutine" = "yes"; then
+    coroutine=gcoroutine
+  elif test "$mingw32" = "yes"; then
     coroutine=win32
   elif test "$ucontext_works" = "yes"; then
     coroutine=ucontext
@@ -3896,6 +3904,11 @@ else
   gthread|sigaltstack)
     if test "$mingw32" = "yes"; then
       error_exit "only the 'windows' coroutine backend is valid for Windows"
+    fi
+    ;;
+  gcoroutine)
+    if test "$gcoroutine" != "yes"; then
+      feature_not_found "gcoroutine"
     fi
     ;;
   *)
@@ -4213,7 +4226,7 @@ EOF
 fi
 
 # prepend pixman and ftd flags after all config tests are done
-QEMU_CFLAGS="$pixman_cflags $fdt_cflags $QEMU_CFLAGS"
+QEMU_CFLAGS="$pixman_cflags $fdt_cflags $gcoroutine_cflags $QEMU_CFLAGS"
 libs_softmmu="$pixman_libs $libs_softmmu"
 
 echo "Install prefix    $prefix"
@@ -4732,6 +4745,13 @@ if test "$coroutine_pool" = "yes" ; then
 else
   echo "CONFIG_COROUTINE_POOL=0" >> $config_host_mak
 fi
+
+if test "$coroutine" = "gcoroutine" ; then
+  echo "CONFIG_GCOROUTINE=1" >> $config_host_mak
+  echo "GCOROUTINE_LIBS=$gcoroutine_libs" >> $config_host_mak
+  echo "GCOROUTINE_CFLAGS=$gcoroutine_cflags" >> $config_host_mak
+fi
+
 
 if test "$open_by_handle_at" = "yes" ; then
   echo "CONFIG_OPEN_BY_HANDLE=y" >> $config_host_mak
