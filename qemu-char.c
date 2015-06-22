@@ -3840,9 +3840,8 @@ void qemu_chr_fe_release(CharDriverState *s)
     s->avail_connections++;
 }
 
-void qemu_chr_delete(CharDriverState *chr)
+void qemu_chr_free(CharDriverState *chr)
 {
-    QTAILQ_REMOVE(&chardevs, chr, next);
     if (chr->chr_close) {
         chr->chr_close(chr);
     }
@@ -3850,6 +3849,12 @@ void qemu_chr_delete(CharDriverState *chr)
     g_free(chr->label);
     qemu_opts_del(chr->opts);
     g_free(chr);
+}
+
+void qemu_chr_delete(CharDriverState *chr)
+{
+    QTAILQ_REMOVE(&chardevs, chr, next);
+    qemu_chr_free(chr);
 }
 
 ChardevInfoList *qmp_query_chardev(Error **errp)
