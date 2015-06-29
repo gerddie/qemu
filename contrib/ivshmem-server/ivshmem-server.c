@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/eventfd.h>
+#include <sys/vfs.h>
 
 #include "qemu-common.h"
 #include "qemu/queue.h"
@@ -271,15 +272,53 @@ ivshmem_server_init(IvshmemServer *server, const char *unix_sock_path,
     return 0;
 }
 
+#define HUGETLBFS_MAGIC       0x958458f6
+
+static long gethugepagesize(const char *path)
+{
+    struct statfs fs;
+    int ret;
+
+    do {
+        ret = statfs(path, &fs);
+    } while (ret != 0 && errno == EINTR);
+
+    if (ret != 0) {
+        if (errno != ENOENT) {
+            fprintf(stderr, "cannot stat shm file %s: %s\n", path,
+                    strerror(errno));
+        }
+        return -1;
+    }
+
+    if (fs.f_type != HUGETLBFS_MAGIC) {
+        return -1;
+    }
+
+    return fs.f_bsize;
+}
+
 /* open shm, create and bind to the unix socket */
 int
 ivshmem_server_start(IvshmemServer *server)
 {
     struct sockaddr_un sun;
     int shm_fd, sock_fd, ret;
+    long hpagesize;
 
     /* open shm file */
-    shm_fd = shm_open(server->shm_path, O_CREAT|O_RDWR, S_IRWXU);
+    hpagesize = gethugepagesize(server->shm_path);
+    if (hpagesize > 0) {
+        gchar *filename = g_strdup_printf("%s/ivshmem.XXXXXX", server->shm_path);
+        fprintf(stdout, "Using hugepages: %s\n", server->shm_path);
+        shm_fd = mkstemp(filename);
+        unlink(filename);
+        g_free(filename);
+    } else {
+        fprintf(stdout, "Using POSIX shared memory: %s\n", server->shm_path);
+        shm_fd = shm_open(server->shm_path, O_CREAT|O_RDWR, S_IRWXU);
+    }
+
     if (shm_fd < 0) {
         fprintf(stderr, "cannot open shm file %s: %s\n", server->shm_path,
                 strerror(errno));
