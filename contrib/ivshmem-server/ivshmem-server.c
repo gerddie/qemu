@@ -33,7 +33,7 @@
 
 /* send message to a client unix socket */
 static int
-ivshmem_server_send_one_msg(int sock_fd, long peer_id, int fd)
+ivshmem_server_send_one_msg(int sock_fd, int64_t peer_id, int fd)
 {
     int ret;
     struct msghdr msg;
@@ -44,6 +44,7 @@ ivshmem_server_send_one_msg(int sock_fd, long peer_id, int fd)
     } msg_control;
     struct cmsghdr *cmsg;
 
+    peer_id = GINT64_TO_LE(peer_id);
     iov[0].iov_base = &peer_id;
     iov[0].iov_len = sizeof(peer_id);
 
@@ -448,7 +449,7 @@ ivshmem_server_handle_fds(IvshmemServer *server, fd_set *fds, int maxfd)
 
 /* lookup peer from its id */
 IvshmemServerPeer *
-ivshmem_server_search_peer(IvshmemServer *server, long peer_id)
+ivshmem_server_search_peer(IvshmemServer *server, int64_t peer_id)
 {
     IvshmemServerPeer *peer;
 

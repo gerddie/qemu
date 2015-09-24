@@ -276,7 +276,7 @@ static void ivshmem_receive(void *opaque, const uint8_t *buf, int size)
 
 static int ivshmem_can_receive(void * opaque)
 {
-    return sizeof(long);
+    return sizeof(int64_t);
 }
 
 static void ivshmem_event(void *opaque, int event)
@@ -516,7 +516,7 @@ static bool fifo_update_and_get(IVShmemState *s, const uint8_t *buf, int size,
     const uint8_t *p;
     uint32_t num;
 
-    assert(len <= sizeof(long)); /* limitation of the fifo */
+    assert(len <= sizeof(int64_t)); /* limitation of the fifo */
     if (fifo8_is_empty(&s->incoming_fifo) && size == len) {
         memcpy(data, buf, size);
         return true;
@@ -524,7 +524,7 @@ static bool fifo_update_and_get(IVShmemState *s, const uint8_t *buf, int size,
 
     IVSHMEM_DPRINTF("short read of %d bytes\n", size);
 
-    num = MIN(size, sizeof(long) - fifo8_num_used(&s->incoming_fifo));
+    num = MIN(size, sizeof(int64_t) - fifo8_num_used(&s->incoming_fifo));
     fifo8_push_all(&s->incoming_fifo, buf, num);
 
     if (fifo8_num_used(&s->incoming_fifo) < len) {
@@ -544,6 +544,17 @@ static bool fifo_update_and_get(IVShmemState *s, const uint8_t *buf, int size,
     }
 
     return true;
+}
+
+static bool fifo_update_and_get_i64(IVShmemState *s,
+                                    const uint8_t *buf, int size, int64_t *i64)
+{
+    if (fifo_update_and_get(s, buf, size, i64, sizeof(*i64))) {
+        *i64 = GINT64_FROM_LE(*i64);
+        return true;
+    }
+
+    return false;
 }
 
 static int ivshmem_add_kvm_msi_virq(IVShmemState *s, int vector)
@@ -603,12 +614,11 @@ static void ivshmem_read(void *opaque, const uint8_t *buf, int size)
     IVShmemState *s = opaque;
     int incoming_fd;
     int new_eventfd;
-    long incoming_posn;
+    int64_t incoming_posn;
     Error *err = NULL;
     Peer *peer;
 
-    if (!fifo_update_and_get(s, buf, size,
-                             &incoming_posn, sizeof(incoming_posn))) {
+    if (!fifo_update_and_get_i64(s, buf, size, &incoming_posn)) {
         return;
     }
 
@@ -716,10 +726,9 @@ static void ivshmem_check_version(void *opaque, const uint8_t * buf, int size)
 {
     IVShmemState *s = opaque;
     int tmp;
-    long version;
+    int64_t version;
 
-    if (!fifo_update_and_get(s, buf, size,
-                             &version, sizeof(version))) {
+    if (!fifo_update_and_get_i64(s, buf, size, &version)) {
         return;
     }
 
@@ -874,7 +883,7 @@ static void pci_ivshmem_realize(PCIDevice *dev, Error **errp)
         s->ivshmem_size = size;
     }
 
-    fifo8_create(&s->incoming_fifo, sizeof(long));
+    fifo8_create(&s->incoming_fifo, sizeof(int64_t));
 
     /* IRQFD requires MSI */
     if (ivshmem_has_feature(s, IVSHMEM_IOEVENTFD) &&

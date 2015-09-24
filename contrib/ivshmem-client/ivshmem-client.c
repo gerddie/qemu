@@ -24,7 +24,7 @@
 
 /* read message from the unix socket */
 static int
-ivshmem_client_read_one_msg(IvshmemClient *client, long *index, int *fd)
+ivshmem_client_read_one_msg(IvshmemClient *client, int64_t *index, int *fd)
 {
     int ret;
     struct msghdr msg;
@@ -45,7 +45,7 @@ ivshmem_client_read_one_msg(IvshmemClient *client, long *index, int *fd)
     msg.msg_controllen = sizeof(msg_control);
 
     ret = recvmsg(client->sock_fd, &msg, 0);
-    if (ret < 0) {
+    if (ret < sizeof(*index)) {
         IVSHMEM_CLIENT_DEBUG(client, "cannot read message: %s\n",
                              strerror(errno));
         return -1;
@@ -55,6 +55,7 @@ ivshmem_client_read_one_msg(IvshmemClient *client, long *index, int *fd)
         return -1;
     }
 
+    *index = GINT64_FROM_LE(*index);
     *fd = -1;
 
     for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
@@ -91,7 +92,7 @@ static int
 ivshmem_client_handle_server_msg(IvshmemClient *client)
 {
     IvshmemClientPeer *peer;
-    long peer_id;
+    int64_t peer_id;
     int ret, fd;
 
     ret = ivshmem_client_read_one_msg(client, &peer_id, &fd);
@@ -180,7 +181,7 @@ ivshmem_client_connect(IvshmemClient *client)
 {
     struct sockaddr_un sun;
     int fd, ret;
-    long tmp;
+    int64_t tmp;
 
     IVSHMEM_CLIENT_DEBUG(client, "connect to client %s\n",
                          client->unix_sock_path);
@@ -402,7 +403,7 @@ ivshmem_client_notify_broadcast(const IvshmemClient *client)
 
 /* lookup peer from its id */
 IvshmemClientPeer *
-ivshmem_client_search_peer(IvshmemClient *client, long peer_id)
+ivshmem_client_search_peer(IvshmemClient *client, int64_t peer_id)
 {
     IvshmemClientPeer *peer;
 
