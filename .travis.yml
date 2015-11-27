@@ -38,9 +38,11 @@ before_install:
   - wget -O - http://people.linaro.org/~alex.bennee/qemu-submodule-git-seed.tar.xz | tar -xvJ
   - git submodule update --init --recursive
   - sudo apt-get update -qq
-  - sudo apt-get install -qq ${CORE_PKGS} ${NET_PKGS} ${GUI_PKGS} ${EXTRA_PKGS}
+  - sudo apt-get install -qq ${CORE_PKGS} ${NET_PKGS} ${GUI_PKGS} ${EXTRA_PKGS} valgrind gdb
 before_script:
   - ./configure --target-list=${TARGETS} --enable-debug-tcg ${EXTRA_CONFIG}
   - cat config-host.mak
 script:
-  - make -j2 && make check ; QTEST_QEMU_BINARY=i386-softmmu/qemu-system-i386 tests/vhost-user-test
+  - make -j2 && make tests/vhost-user-test
+#  - QTEST_QEMU_BINARY=i386-softmmu/qemu-system-i386 libtool --mode=execute valgrind tests/vhost-user-test   -p /i386/vhost-user/migrate
+  - QTEST_QEMU_BINARY=i386-softmmu/qemu-system-i386 libtool --mode=execute gdb -ex run -ex bt --args tests/vhost-user-test   -p /i386/vhost-user/migrate
