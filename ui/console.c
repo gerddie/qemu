@@ -219,6 +219,15 @@ static void gui_update(void *opaque)
     timer_mod(ds->gui_timer, ds->last_update + interval);
 }
 
+static void disable_refresh(DisplayState *ds)
+{
+    if (ds->gui_timer != NULL) {
+        timer_del(ds->gui_timer);
+        timer_free(ds->gui_timer);
+        ds->gui_timer = NULL;
+    }
+}
+
 static void gui_setup_refresh(DisplayState *ds)
 {
     DisplayChangeListener *dcl;
@@ -242,10 +251,8 @@ static void gui_setup_refresh(DisplayState *ds)
         ds->gui_timer = timer_new_ms(QEMU_CLOCK_REALTIME, gui_update, ds);
         timer_mod(ds->gui_timer, qemu_clock_get_ms(QEMU_CLOCK_REALTIME));
     }
-    if (!need_timer && ds->gui_timer != NULL) {
-        timer_del(ds->gui_timer);
-        timer_free(ds->gui_timer);
-        ds->gui_timer = NULL;
+    if (!need_timer) {
+        disable_refresh(ds);
     }
 
     ds->have_gfx = have_gfx;
@@ -1715,6 +1722,7 @@ void dpy_gl_scanout(QemuConsole *con,
     con->gl->ops->dpy_gl_scanout(con->gl, backing_id,
                                  backing_y_0_top,
                                  x, y, width, height);
+    disable_refresh(con->ds);
 }
 
 void dpy_gl_update(QemuConsole *con,
