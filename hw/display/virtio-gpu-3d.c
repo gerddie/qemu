@@ -561,6 +561,7 @@ static void virtio_gpu_fence_poll(void *opaque)
 
     virgl_renderer_poll();
     virtio_gpu_process_cmdq(g);
+
     if (!QTAILQ_EMPTY(&g->cmdq) || !QTAILQ_EMPTY(&g->fenceq)) {
         timer_mod(g->fence_poll, qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) + 10);
     }
@@ -587,11 +588,25 @@ void virtio_gpu_virgl_reset(VirtIOGPU *g)
 int virtio_gpu_virgl_init(VirtIOGPU *g)
 {
     int ret;
+    int flags = 0;
 
-    ret = virgl_renderer_init(g, 0, &virtio_gpu_3d_cbs);
+#ifdef VIRGL_RENDERER_THREAD_SYNC
+    if (dpy_gl_is_mt_safe(g->scanout[0].con)) {
+        flags |= VIRGL_RENDERER_THREAD_SYNC;
+    }
+#endif
+
+    ret = virgl_renderer_init(g, flags, &virtio_gpu_3d_cbs);
     if (ret != 0) {
         return ret;
     }
+
+#ifdef VIRGL_RENDERER_THREAD_SYNC
+    ret = virgl_renderer_get_poll_fd();
+    if (ret != -1) {
+        qemu_set_fd_handler(ret, virtio_gpu_fence_poll, NULL, g);
+    }
+#endif
 
     g->fence_poll = timer_new_ms(QEMU_CLOCK_VIRTUAL,
                                  virtio_gpu_fence_poll, g);
