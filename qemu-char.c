@@ -96,6 +96,10 @@
 static char *SocketAddress_to_str(const char *prefix, SocketAddress *addr,
                                   bool is_listen, bool is_telnet)
 {
+    if (!addr) {
+        return g_strdup(prefix);
+    }
+
     switch (addr->type) {
     case SOCKET_ADDRESS_KIND_INET:
         return g_strdup_printf("%s%s:%s:%s%s", prefix,
@@ -166,7 +170,7 @@ CharDriverState *qemu_chr_alloc(ChardevCommon *backend, Error **errp)
     CharDriverState *chr = g_malloc0(sizeof(CharDriverState));
     qemu_mutex_init(&chr->chr_write_lock);
 
-    if (backend->has_logfile) {
+    if (backend && backend->has_logfile) {
         int flags = O_WRONLY | O_CREAT;
         if (backend->has_logappend &&
             backend->logappend) {
@@ -4464,6 +4468,37 @@ static CharDriverState *qmp_chardev_open_socket(const char *id,
     g_free(s);
     qemu_chr_free_common(chr);
     return NULL;
+}
+
+CharDriverState *qemu_chr_open_socket(int fd, Error **errp)
+{
+    CharDriverState *chr;
+    TCPCharDriver *s;
+
+    chr = qemu_chr_alloc(NULL, errp);
+    if (!chr) {
+        return NULL;
+    }
+
+    qemu_set_nonblock(fd);
+
+    s = g_new0(TCPCharDriver, 1);
+    chr->opaque = s;
+    chr->chr_write = tcp_chr_write;
+    chr->chr_sync_read = tcp_chr_sync_read;
+    chr->chr_close = tcp_chr_close;
+    chr->get_msgfds = tcp_get_msgfds;
+    chr->set_msgfds = tcp_set_msgfds;
+    chr->chr_add_watch = tcp_chr_add_watch;
+    chr->chr_update_read_handler = tcp_chr_update_read_handler;
+
+    if (tcp_chr_add_client(chr, fd) < -1) {
+        free(s);
+        qemu_chr_free_common(chr);
+        return NULL;
+    }
+
+    return chr;
 }
 
 static CharDriverState *qmp_chardev_open_udp(const char *id,
