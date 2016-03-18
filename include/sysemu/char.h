@@ -106,6 +106,8 @@ struct CharDriverState {
  */
 CharDriverState *qemu_chr_alloc(ChardevCommon *backend, Error **errp);
 
+CharDriverState *qemu_chr_open_socket(int fd, Error **errp);
+
 /**
  * @qemu_chr_new_from_opts:
  *
