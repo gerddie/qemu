@@ -96,12 +96,12 @@ static void virtio_input_host_realize(DeviceState *dev, Error **errp)
         goto err_close;
     }
 
-    rc = ioctl(vih->fd, EVIOCGRAB, 1);
-    if (rc < 0) {
-        error_setg_errno(errp, errno, "%s: failed to get exclusive access",
-                         vih->evdev);
-        goto err_close;
-    }
+    /* rc = ioctl(vih->fd, EVIOCGRAB, 1); */
+    /* if (rc < 0) { */
+    /*     error_setg_errno(errp, errno, "%s: failed to get exclusive access", */
+    /*                      vih->evdev); */
+    /*     goto err_close; */
+    /* } */
 
     memset(&id, 0, sizeof(id));
     ioctl(vih->fd, EVIOCGNAME(sizeof(id.u.string)-1), id.u.string);
