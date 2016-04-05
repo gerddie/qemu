@@ -7,10 +7,14 @@
 #include "qemu/osdep.h"
 #include "qapi/error.h"
 #include "qemu/iov.h"
+#include "qemu/error-report.h"
+#include <sys/socket.h>
 
+#include "sysemu/char.h"
 #include "hw/qdev.h"
 #include "hw/virtio/virtio.h"
 #include "hw/virtio/virtio-input.h"
+#include "hw/virtio/virtio-bus.h"
 
 #include "standard-headers/linux/input.h"
 
@@ -186,6 +190,71 @@ static uint64_t virtio_input_get_features(VirtIODevice *vdev, uint64_t f,
     return f;
 }
 
+static void virtio_input_vhost_start(VirtIODevice *vdev)
+{
+    VirtIOInput *vinput = VIRTIO_INPUT(vdev);
+    BusState *qbus = BUS(qdev_get_parent_bus(DEVICE(vdev)));
+    VirtioBusClass *k = VIRTIO_BUS_GET_CLASS(qbus);
+    int ret, i ;
+
+    if (!k->set_guest_notifiers) {
+        error_report("binding does not support guest notifiers");
+        return;
+    }
+
+    ret = vhost_dev_enable_notifiers(&vinput->vhostdev, vdev);
+    if (ret < 0) {
+        return;
+    }
+
+    vinput->vhostdev.acked_features = vdev->guest_features;
+    ret = vhost_dev_start(&vinput->vhostdev, vdev);
+    if (ret < 0) {
+        error_report("Error start vhost dev");
+        goto err_notifiers;
+    }
+
+    ret = k->set_guest_notifiers(qbus->parent, vinput->vhostdev.nvqs, true);
+    if (ret < 0) {
+        error_report("Error binding guest notifier");
+        goto err_vhost_stop;
+    }
+
+    /* guest_notifier_mask/pending not used yet, so just unmask
+     * everything here.  virtio-pci will do the right thing by
+     * enabling/disabling irqfd.
+     */
+    for (i = 0; i < vinput->vhostdev.nvqs; i++) {
+        vhost_virtqueue_mask(&vinput->vhostdev, vdev,
+                             vinput->vhostdev.vq_index + i, false);
+    }
+
+err_vhost_stop:
+    vhost_dev_stop(&vinput->vhostdev, vdev);
+err_notifiers:
+    vhost_dev_disable_notifiers(&vinput->vhostdev, vdev);
+}
+
+static void virtio_input_vhost_stop(VirtIODevice *vdev)
+{
+    VirtIOInput *vinput = VIRTIO_INPUT(vdev);
+    BusState *qbus = BUS(qdev_get_parent_bus(DEVICE(vdev)));
+    VirtioBusClass *k = VIRTIO_BUS_GET_CLASS(qbus);
+    int ret = 0;
+
+    if (k->set_guest_notifiers) {
+        ret = k->set_guest_notifiers(qbus->parent,
+                                     vinput->vhostdev.nvqs, false);
+        if (ret < 0) {
+            error_report("vhost guest notifier cleanup failed: %d", ret);
+        }
+    }
+    assert(ret >= 0);
+
+    vhost_dev_stop(&vinput->vhostdev, vdev);
+    vhost_dev_disable_notifiers(&vinput->vhostdev, vdev);
+}
+
 static void virtio_input_set_status(VirtIODevice *vdev, uint8_t val)
 {
     VirtIOInputClass *vic = VIRTIO_INPUT_GET_CLASS(vdev);
@@ -196,6 +265,10 @@ static void virtio_input_set_status(VirtIODevice *vdev, uint8_t val)
             vinput->active = true;
             if (vic->change_active) {
                 vic->change_active(vinput);
+            }
+
+            if (vinput->vhostchr) {
+                virtio_input_vhost_start(vdev);
             }
         }
     }
@@ -211,7 +284,36 @@ static void virtio_input_reset(VirtIODevice *vdev)
         if (vic->change_active) {
             vic->change_active(vinput);
         }
+
+        if (vinput->vhostchr) {
+            virtio_input_vhost_stop(vdev);
+        }
     }
+}
+
+int virtio_input_init_vhost(VirtIOInput *vinput, Error **errp)
+{
+    int sv[2];
+
+    assert(vinput->vhostfd == -1);
+
+    if (socketpair(PF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+        error_setg_errno(errp, errno, "socketpair() failed");
+        return -1;
+    }
+
+    vinput->vhostchr = qemu_chr_open_socket(sv[0], errp);
+    if (!vinput->vhostchr) {
+        return -1;
+    }
+
+    vinput->vhostfd = sv[1];
+    vinput->vhostdev.nvqs = 2;
+    vinput->vhostdev.vqs = g_new(struct vhost_virtqueue, vinput->vhostdev.nvqs);
+    vinput->vhostdev.vq_index = 0;
+    vinput->vhostdev.backend_features = 0;
+
+    return 0;
 }
 
 static void virtio_input_device_realize(DeviceState *dev, Error **errp)
@@ -222,6 +324,7 @@ static void virtio_input_device_realize(DeviceState *dev, Error **errp)
     VirtIOInputConfig *cfg;
     Error *local_err = NULL;
 
+    vinput->vhostfd = -1;
     if (vic->realize) {
         vic->realize(dev, &local_err);
         if (local_err) {
@@ -245,6 +348,19 @@ static void virtio_input_device_realize(DeviceState *dev, Error **errp)
                 vinput->cfg_size);
     vinput->evt = virtio_add_queue(vdev, 64, virtio_input_handle_evt);
     vinput->sts = virtio_add_queue(vdev, 64, virtio_input_handle_sts);
+
+    if (vinput->vhostchr) {
+        int ret = vhost_dev_init(&vinput->vhostdev, vinput->vhostchr,
+                                 VHOST_BACKEND_TYPE_USER);
+        if (ret < 0) {
+            error_setg(errp, "vhost initialization failed: %s", strerror(-ret));
+            return;
+        }
+
+        /* net->dev.acked_features = net->dev.backend_features; */
+        /* vhost_ack_features(&net->dev, vhost_net_get_feature_bits(net),
+           features); */
+    }
 }
 
 static void virtio_input_device_unrealize(DeviceState *dev, Error **errp)

@@ -2,6 +2,8 @@
 #define _QEMU_VIRTIO_INPUT_H
 
 #include "ui/input.h"
+#include "vhost.h"
+#include "io/channel-command.h"
 
 /* ----------------------------------------------------------------- */
 /* virtio input protocol                                             */
@@ -80,6 +82,10 @@ struct VirtIOInput {
     uint32_t                          qindex, qsize;
 
     bool                              active;
+
+    struct vhost_dev                  vhostdev;
+    CharDriverState                   *vhostchr;
+    int                               vhostfd;
 };
 
 struct VirtIOInputClass {
@@ -107,6 +113,8 @@ struct VirtIOInputHost {
     char                              *evdev;
     int                               fd;
 };
+
+int virtio_input_init_vhost(VirtIOInput *vinput, Error **errp);
 
 void virtio_input_send(VirtIOInput *vinput, virtio_input_event *event);
 void virtio_input_init_config(VirtIOInput *vinput,
