@@ -126,7 +126,29 @@ static void virtio_input_host_realize(DeviceState *dev, Error **errp)
     virtio_input_bits_config(vih, EV_MSC, MSC_CNT);
     virtio_input_bits_config(vih, EV_SW,  SW_CNT);
 
-    qemu_set_fd_handler(vih->fd, virtio_input_host_event, NULL, vih);
+    if (vih->helper) {
+        char **helper_argv = g_new0(char *, 6);
+
+        if (virtio_input_init_vhost(vinput, errp) < 0) {
+            goto err_close;
+        }
+
+        helper_argv[0] = g_strdup(vih->helper);
+        helper_argv[1] = g_strdup_printf("--evdevfd");
+        helper_argv[2] = g_strdup_printf("%d", vih->fd);
+        helper_argv[3] = g_strdup_printf("--vhostfd");
+        helper_argv[4] = g_strdup_printf("%d", vinput->vhostfd);
+        vih->io_helper = QIO_CHANNEL(qio_channel_command_new_spawn(
+                                         (const char * const *)helper_argv,
+                                         0, errp));
+        g_strfreev(helper_argv);
+        if (!vih->io_helper) {
+            goto err_close;
+        }
+    } else {
+        qemu_set_fd_handler(vih->fd, virtio_input_host_event, NULL, vih);
+    }
+
     return;
 
 err_close:
@@ -138,6 +160,11 @@ err_close:
 static void virtio_input_host_unrealize(DeviceState *dev, Error **errp)
 {
     VirtIOInputHost *vih = VIRTIO_INPUT_HOST(dev);
+
+    if (vih->helper) {
+        object_unref(OBJECT(vih->io_helper));
+        vih->io_helper = NULL;
+    }
 
     if (vih->fd > 0) {
         qemu_set_fd_handler(vih->fd, NULL, NULL, NULL);
@@ -152,6 +179,7 @@ static const VMStateDescription vmstate_virtio_input_host = {
 
 static Property virtio_input_host_properties[] = {
     DEFINE_PROP_STRING("evdev", VirtIOInputHost, evdev),
+    DEFINE_PROP_STRING("helper", VirtIOInputHost, helper),
     DEFINE_PROP_END_OF_LIST(),
 };
 

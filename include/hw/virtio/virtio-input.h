@@ -112,6 +112,8 @@ struct VirtIOInputHost {
     VirtIOInput                       parent_obj;
     char                              *evdev;
     int                               fd;
+    char                              *helper;
+    QIOChannel                        *io_helper;
 };
 
 int virtio_input_init_vhost(VirtIOInput *vinput, Error **errp);
