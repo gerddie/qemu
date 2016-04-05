@@ -106,7 +106,6 @@ RAMBlock *qemu_ram_alloc_resizeable(ram_addr_t size, ram_addr_t max_size,
                                                     void *host),
                                     MemoryRegion *mr, Error **errp);
 int qemu_get_ram_fd(ram_addr_t addr);
-void qemu_set_ram_fd(ram_addr_t addr, int fd);
 void *qemu_get_ram_block_host_ptr(ram_addr_t addr);
 void qemu_ram_free(RAMBlock *block);
 

@@ -581,7 +581,7 @@ int vfio_region_mmap(VFIORegion *region)
         memory_region_init_ram_ptr(&region->mmaps[i].mem,
                                    memory_region_owner(region->mem),
                                    name, region->mmaps[i].size,
-                                   region->mmaps[i].mmap);
+                                   region->mmaps[i].mmap, -1);
         g_free(name);
         memory_region_set_skip_dump(&region->mmaps[i].mem);
         memory_region_add_subregion(region->mem, region->mmaps[i].offset,

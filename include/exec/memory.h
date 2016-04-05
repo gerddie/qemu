@@ -411,12 +411,14 @@ void memory_region_init_ram_from_file(MemoryRegion *mr,
  * @name: the name of the region.
  * @size: size of the region.
  * @ptr: memory to be mapped; must contain at least @size bytes.
+ * @fd: associated fd, or -1
  */
 void memory_region_init_ram_ptr(MemoryRegion *mr,
                                 struct Object *owner,
                                 const char *name,
                                 uint64_t size,
-                                void *ptr);
+                                void *ptr,
+                                int fd);
 
 /**
  * memory_region_init_alias: Initialize a memory region that aliases all or a

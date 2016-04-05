@@ -532,8 +532,7 @@ static void process_msg_shmem(IVShmemState *s, int fd, Error **errp)
         return;
     }
     memory_region_init_ram_ptr(&s->server_bar2, OBJECT(s),
-                               "ivshmem.bar2", size, ptr);
-    qemu_set_ram_fd(memory_region_get_ram_addr(&s->server_bar2), fd);
+                               "ivshmem.bar2", size, ptr, fd);
     s->ivshmem_bar2 = &s->server_bar2;
 }
 

@@ -1357,7 +1357,8 @@ void memory_region_init_ram_ptr(MemoryRegion *mr,
                                 Object *owner,
                                 const char *name,
                                 uint64_t size,
-                                void *ptr)
+                                void *ptr,
+                                int fd)
 {
     memory_region_init(mr, owner, name, size);
     mr->ram = true;
@@ -1368,6 +1369,7 @@ void memory_region_init_ram_ptr(MemoryRegion *mr,
     /* qemu_ram_alloc_from_ptr cannot fail with ptr != NULL.  */
     assert(ptr != NULL);
     mr->ram_block = qemu_ram_alloc_from_ptr(size, ptr, mr, &error_fatal);
+    mr->ram_block->fd = fd;
 }
 
 void memory_region_set_skip_dump(MemoryRegion *mr)
