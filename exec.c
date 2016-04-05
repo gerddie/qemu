@@ -1696,6 +1696,55 @@ RAMBlock *qemu_ram_alloc_from_file(ram_addr_t size, MemoryRegion *mr,
     }
     return new_block;
 }
+
+RAMBlock *qemu_ram_alloc_from_fd(ram_addr_t size, MemoryRegion *mr,
+                                  bool share, int fd, Error **errp)
+{
+    RAMBlock *new_block;
+    Error *local_err = NULL;
+
+    if (xen_enabled()) {
+        error_setg(errp, "ramfd not supported with Xen");
+        return NULL;
+    }
+
+    if (phys_mem_alloc != qemu_anon_ram_alloc) {
+        /*
+         * file_ram_alloc() needs to allocate just like
+         * phys_mem_alloc, but we haven't bothered to provide
+         * a hook there.
+         */
+        error_setg(errp,
+                   "ramfd not supported with this accelerator");
+        return NULL;
+    }
+
+    size = HOST_PAGE_ALIGN(size);
+    new_block = g_malloc0(sizeof(*new_block));
+    new_block->mr = mr;
+    new_block->used_length = size;
+    new_block->max_length = size;
+    new_block->flags = share ? RAM_SHARED : 0;
+
+    new_block->host = qemu_ram_mmap(fd, size, getpagesize(),
+                                    new_block->flags & RAM_SHARED);
+    if (new_block->host == MAP_FAILED) {
+        error_setg_errno(errp, errno, "unable to map ram");
+        g_free(new_block);
+        return NULL;
+    }
+
+    new_block->fd = fd;
+
+    ram_block_add(new_block, &local_err);
+    if (local_err) {
+        g_free(new_block);
+        error_propagate(errp, local_err);
+        return NULL;
+    }
+
+    return new_block;
+}
 #endif
 
 static
