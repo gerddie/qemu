@@ -117,3 +117,4 @@ qga-vss-dll-obj-y = qga/
 ivshmem-client-obj-y = contrib/ivshmem-client/
 ivshmem-server-obj-y = contrib/ivshmem-server/
 libvhost-user-obj-y = contrib/libvhost-user/
+vhost-user-input-obj-y = contrib/vhost-user-input/
