@@ -2737,7 +2737,8 @@ static bool object_create_initial(const char *type)
     }
 
 #if defined(CONFIG_VHOST_USER)
-    if (g_str_equal(type, "cryptodev-vhost-user")) {
+    if (g_str_equal(type, "cryptodev-vhost-user") ||
+        g_str_equal(type, "vhost-user-backend")) {
         return false;
     }
 #endif

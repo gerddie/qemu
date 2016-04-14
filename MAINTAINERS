@@ -1204,6 +1204,8 @@ M: Michael S. Tsirkin <mst@redhat.com>
 S: Supported
 F: hw/*/*vhost*
 F: docs/interop/vhost-user.txt
+F: backends/vhost-user.c
+F: include/sysemu/vhost-user-backend.h
 
 virtio
 M: Michael S. Tsirkin <mst@redhat.com>
