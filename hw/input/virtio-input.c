@@ -237,6 +237,11 @@ static void virtio_input_device_realize(DeviceState *dev, Error **errp)
     VirtIOInputConfig *cfg;
     Error *local_err = NULL;
 
+    if (vinput->vhost &&
+        vhost_user_backend_dev_init(vinput->vhost, vdev, 2, errp) == -1) {
+        return;
+    }
+
     if (vic->realize) {
         vic->realize(dev, &local_err);
         if (local_err) {

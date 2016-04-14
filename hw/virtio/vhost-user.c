@@ -261,7 +261,8 @@ static int vhost_user_write(struct vhost_dev *dev, VhostUserMsg *msg,
 
 static void *vhost_user_read_size(struct vhost_dev *dev, uint32_t size)
 {
-    CharBackend *chr = dev->opaque;
+    struct vhost_user *u = dev->opaque;
+    CharBackend *chr = u->chr;
     int r;
     uint8_t *p = g_malloc(size);
 

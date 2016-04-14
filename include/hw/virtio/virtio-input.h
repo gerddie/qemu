@@ -2,6 +2,7 @@
 #define QEMU_VIRTIO_INPUT_H
 
 #include "ui/input.h"
+#include "sysemu/vhost-user-backend.h"
 
 /* ----------------------------------------------------------------- */
 /* virtio input protocol                                             */
@@ -69,6 +70,7 @@ struct VirtIOInput {
     uint32_t                          qindex, qsize;
 
     bool                              active;
+    VhostUserBackend                  *vhost;
 };
 
 struct VirtIOInputClass {
