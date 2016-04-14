@@ -10,3 +10,7 @@ common-obj-y += cryptodev.o
 common-obj-y += cryptodev-builtin.o
 
 common-obj-$(CONFIG_LINUX) += hostmem-memfd.o
+
+ifdef CONFIG_LINUX
+common-obj-$(CONFIG_VIRTIO) += vhost-user.o
+endif
