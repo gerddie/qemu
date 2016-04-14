@@ -95,19 +95,13 @@ static void virtio_input_abs_config(VirtIOInputHost *vih, int axis)
     virtio_input_add_config(VIRTIO_INPUT(vih), &config);
 }
 
-static void virtio_input_host_realize(DeviceState *dev, Error **errp)
+static void virtio_input_evdev_init(VirtIOInputHost *vih, Error **errp)
 {
-    VirtIOInputHost *vih = VIRTIO_INPUT_HOST(dev);
-    VirtIOInput *vinput = VIRTIO_INPUT(dev);
+    VirtIOInput *vinput = VIRTIO_INPUT(vih);
     virtio_input_config id, *abs;
     struct input_id ids;
     int rc, ver, i, axis;
     uint8_t byte;
-
-    if (!vih->evdev) {
-        error_setg(errp, "evdev property is required");
-        return;
-    }
 
     vih->fd = open(vih->evdev, O_RDWR);
     if (vih->fd < 0)  {
@@ -175,7 +169,34 @@ static void virtio_input_host_realize(DeviceState *dev, Error **errp)
 err_close:
     close(vih->fd);
     vih->fd = -1;
-    return;
+}
+
+static void virtio_input_host_realize(DeviceState *dev, Error **errp)
+{
+    VirtIOInputHost *vih = VIRTIO_INPUT_HOST(dev);
+    VirtIOInput *vinput = VIRTIO_INPUT(vih);
+
+    if (!!vih->evdev + !!vinput->vhost != 1) {
+        error_setg(errp, "'evdev' or 'vhost-user' property is required");
+        return;
+    }
+
+    if (vih->evdev) {
+        virtio_input_evdev_init(vih, errp);
+    } else {
+        virtio_input_config *config;
+        int i, ret;
+
+        ret = vhost_user_input_get_config(&vinput->vhost->dev, &config);
+        if (ret < 0) {
+            error_setg(errp, "failed to get input config");
+            return;
+        }
+        for (i = 0; i < ret; i++) {
+            virtio_input_add_config(vinput, &config[i]);
+        }
+        g_free(config);
+    }
 }
 
 static void virtio_input_host_unrealize(DeviceState *dev, Error **errp)
@@ -210,6 +231,15 @@ static void virtio_input_host_handle_status(VirtIOInput *vinput,
     }
 }
 
+static void virtio_input_host_change_active(VirtIOInput *vinput)
+{
+    if (vinput->active) {
+        vhost_user_backend_start(vinput->vhost);
+    } else {
+        vhost_user_backend_stop(vinput->vhost);
+    }
+}
+
 static const VMStateDescription vmstate_virtio_input_host = {
     .name = "virtio-input-host",
     .unmigratable = 1,
@@ -230,6 +260,19 @@ static void virtio_input_host_class_init(ObjectClass *klass, void *data)
     vic->realize       = virtio_input_host_realize;
     vic->unrealize     = virtio_input_host_unrealize;
     vic->handle_status = virtio_input_host_handle_status;
+    vic->change_active = virtio_input_host_change_active;
+}
+
+static void virtio_input_host_user_is_busy(Object *obj, const char *name,
+                                           Object *val, Error **errp)
+{
+    VirtIOInput *vinput = VIRTIO_INPUT(obj);
+
+    if (vinput->vhost) {
+        error_setg(errp, "can't use already busy vhost-user");
+    } else {
+        qdev_prop_allow_set_link_before_realize(obj, name, val, errp);
+    }
 }
 
 static void virtio_input_host_init(Object *obj)
@@ -237,6 +280,12 @@ static void virtio_input_host_init(Object *obj)
     VirtIOInput *vinput = VIRTIO_INPUT(obj);
 
     virtio_input_init_config(vinput, virtio_input_host_config);
+
+    object_property_add_link(obj, "vhost-user", TYPE_VHOST_USER_BACKEND,
+                             (Object **)&vinput->vhost,
+                             virtio_input_host_user_is_busy,
+                             OBJ_PROP_LINK_UNREF_ON_RELEASE,
+                             &error_abort);
 }
 
 static const TypeInfo virtio_input_host_info = {

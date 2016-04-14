@@ -280,6 +280,10 @@ static void virtio_input_device_realize(DeviceState *dev, Error **errp)
     vinput->evt = virtio_add_queue(vdev, 64, virtio_input_handle_evt);
     vinput->sts = virtio_add_queue(vdev, 64, virtio_input_handle_sts);
 
+    if (vinput->vhost) {
+        vhost_user_backend_dev_init(vinput->vhost, vdev, 2, errp);
+    }
+
     register_savevm(dev, "virtio-input", -1, VIRTIO_INPUT_VM_VERSION,
                     virtio_input_save, virtio_input_load, vinput);
 }
