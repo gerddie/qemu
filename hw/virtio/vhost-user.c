@@ -63,6 +63,7 @@ typedef enum VhostUserRequest {
     VHOST_USER_NET_SET_MTU = 20,
     VHOST_USER_SET_SLAVE_REQ_FD = 21,
     VHOST_USER_IOTLB_MSG = 22,
+    VHOST_USER_INPUT_GET_CONFIG = 23,
     VHOST_USER_MAX
 } VhostUserRequest;
 
@@ -256,6 +257,63 @@ static int vhost_user_write(struct vhost_dev *dev, VhostUserMsg *msg,
     }
 
     return 0;
+}
+
+static void *vhost_user_read_size(struct vhost_dev *dev, uint32_t size)
+{
+    CharBackend *chr = dev->opaque;
+    int r;
+    uint8_t *p = g_malloc(size);
+
+    r = qemu_chr_fe_read_all(chr, p, size);
+    if (r != size) {
+        error_report("Failed to read msg payload."
+                     " Read %d instead of %d.", r, size);
+        return NULL;
+    }
+
+    return p;
+}
+
+int vhost_user_input_get_config(struct vhost_dev *dev,
+                                struct virtio_input_config **config)
+{
+    void *p = NULL;
+    VhostUserMsg msg = {
+        .request = VHOST_USER_INPUT_GET_CONFIG,
+        .flags = VHOST_USER_VERSION,
+    };
+
+    if (vhost_user_write(dev, &msg, NULL, 0) < 0) {
+        goto err;
+    }
+
+    if (vhost_user_read_header(dev, &msg) < 0) {
+        goto err;
+    }
+
+    p = vhost_user_read_size(dev, msg.size);
+    if (!p) {
+        goto err;
+    }
+
+    if (msg.request != VHOST_USER_INPUT_GET_CONFIG) {
+        error_report("Received unexpected msg type. Expected %d received %d",
+                     VHOST_USER_INPUT_GET_CONFIG, msg.request);
+        goto err;
+    }
+
+    if (msg.size % sizeof(struct virtio_input_config)) {
+        error_report("Invalid msg size");
+        goto err;
+    }
+
+    *config = p;
+    return msg.size / sizeof(struct virtio_input_config);
+
+err:
+    g_free(p);
+    return -1;
 }
 
 static int vhost_user_set_log_base(struct vhost_dev *dev, uint64_t base,

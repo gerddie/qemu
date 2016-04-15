@@ -580,6 +580,12 @@ Master message types
       This request should be send only when VIRTIO_F_IOMMU_PLATFORM feature
       has been successfully negotiated.
 
+ * VHOST_USER_INPUT_GET_CONFIG
+
+      Slave payload: (struct virtio_input_config)*
+
+      Ask vhost user input backend the list of virtio_input_config.
+
 Slave message types
 -------------------
 
