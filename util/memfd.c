@@ -64,13 +64,9 @@ static int memfd_create(const char *name, unsigned int flags)
  * memfd with sealing, but may fallback on other methods without
  * sealing.
  */
-void *qemu_memfd_alloc(const char *name, size_t size, unsigned int seals,
-                       int *fd)
+int qemu_memfd_create(const char *name, size_t size, unsigned int seals)
 {
-    void *ptr;
     int mfd = -1;
-
-    *fd = -1;
 
 #ifdef CONFIG_LINUX
     if (seals) {
@@ -115,6 +111,19 @@ void *qemu_memfd_alloc(const char *name, size_t size, unsigned int seals,
             close(mfd);
             return NULL;
         }
+    }
+
+    return mfd;
+}
+
+void *qemu_memfd_alloc(const char *name, size_t size, unsigned int seals,
+                       int *fd)
+{
+    void *ptr;
+    int mfd = qemu_memfd_create(name, size, seals);
+
+    if (mfd == -1) {
+        return NULL;
     }
 
     ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, mfd, 0);

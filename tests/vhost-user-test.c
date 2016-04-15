@@ -32,8 +32,8 @@
 #endif
 
 #define QEMU_CMD_ACCEL  " -machine accel=tcg"
-#define QEMU_CMD_MEM    " -m %d -object memory-backend-file,id=mem,size=%dM,"\
-                        "mem-path=%s,share=on -numa node,memdev=mem"
+#define QEMU_CMD_MEM    " -m %d -object memory-backend-memfd,id=mem,size=%dM"\
+                        " -numa node,memdev=mem"
 #define QEMU_CMD_CHR    " -chardev socket,id=%s,path=%s"
 #define QEMU_CMD_NETDEV " -netdev vhost-user,id=net0,chardev=%s,vhostforce"
 #define QEMU_CMD_NET    " -device virtio-net-pci,netdev=net0,romfile=./pc-bios/pxe-virtio.rom"
@@ -383,12 +383,12 @@ static TestServer *test_server_new(const gchar *name)
     return server;
 }
 
-#define GET_QEMU_CMD(s)                                                        \
-    g_strdup_printf(QEMU_CMD, 512, 512, (root), (s)->chr_name,                 \
+#define GET_QEMU_CMD(s)                                 \
+    g_strdup_printf(QEMU_CMD, 512, 512, (s)->chr_name,  \
                     (s)->socket_path, (s)->chr_name)
 
-#define GET_QEMU_CMDE(s, mem, extra, ...)                                      \
-    g_strdup_printf(QEMU_CMD extra, (mem), (mem), (root), (s)->chr_name,       \
+#define GET_QEMU_CMDE(s, mem, extra, ...)                               \
+    g_strdup_printf(QEMU_CMD extra, (mem), (mem), (s)->chr_name,        \
                     (s)->socket_path, (s)->chr_name, ##__VA_ARGS__)
 
 static gboolean _test_server_free(TestServer *server)
