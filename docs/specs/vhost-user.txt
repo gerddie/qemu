@@ -464,3 +464,12 @@ Message types
       is present in VHOST_USER_GET_PROTOCOL_FEATURES.
       The first 6 bytes of the payload contain the mac address of the guest to
       allow the vhost user backend to construct and broadcast the fake RARP.
+
+ * VHOST_USER_INPUT_GET_CONFIG
+
+      Id: 20
+      Equivalent ioctl: N/A
+      Master payload: N/A
+      Slave payload: (struct virtio_input_config)*
+
+      Ask vhost user input backend the list of virtio_input_config.

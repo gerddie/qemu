@@ -11,6 +11,7 @@
 #ifndef VHOST_BACKEND_H_
 #define VHOST_BACKEND_H_
 
+#include "standard-headers/linux/virtio_input.h"
 
 typedef enum VhostBackendType {
     VHOST_BACKEND_TYPE_NONE = 0,
@@ -106,5 +107,8 @@ extern const VhostOps user_ops;
 
 int vhost_set_backend_type(struct vhost_dev *dev,
                            VhostBackendType backend_type);
+
+int vhost_user_input_get_config(struct vhost_dev *dev,
+                                struct virtio_input_config **config);
 
 #endif /* VHOST_BACKEND_H_ */
