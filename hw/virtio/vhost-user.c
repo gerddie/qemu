@@ -113,7 +113,7 @@ static bool ioeventfd_enabled(void)
     return kvm_enabled() && kvm_eventfds_enabled();
 }
 
-static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
+static int vhost_user_read_header(struct vhost_dev *dev, VhostUserMsg *msg)
 {
     CharDriverState *chr = dev->opaque;
     uint8_t *p = (uint8_t *) msg;
@@ -123,7 +123,7 @@ static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
     if (r != size) {
         error_report("Failed to read msg header. Read %d instead of %d."
                      " Original request %d.", r, size, msg->request);
-        goto fail;
+        return -1;
     }
 
     /* validate received flags */
@@ -131,7 +131,20 @@ static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
         error_report("Failed to read msg header."
                 " Flags 0x%x instead of 0x%x.", msg->flags,
                 VHOST_USER_REPLY_MASK | VHOST_USER_VERSION);
-        goto fail;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
+{
+    CharDriverState *chr = dev->opaque;
+    uint8_t *p = (uint8_t *) msg;
+    int r, size;
+
+    if (vhost_user_read_header(dev, msg) < 0) {
+        return -1;
     }
 
     /* validate message size is sane */
@@ -139,7 +152,7 @@ static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
         error_report("Failed to read msg header."
                 " Size %d exceeds the maximum %zu.", msg->size,
                 VHOST_USER_PAYLOAD_SIZE);
-        goto fail;
+        return -1;
     }
 
     if (msg->size) {
@@ -149,14 +162,11 @@ static int vhost_user_read(struct vhost_dev *dev, VhostUserMsg *msg)
         if (r != size) {
             error_report("Failed to read msg payload."
                          " Read %d instead of %d.", r, msg->size);
-            goto fail;
+            return -1;
         }
     }
 
     return 0;
-
-fail:
-    return -1;
 }
 
 static bool vhost_user_one_time_request(VhostUserRequest request)
@@ -459,7 +469,7 @@ static int vhost_user_get_u64(struct vhost_dev *dev, int request, uint64_t *u64)
     vhost_user_write(dev, &msg, NULL, 0);
 
     if (vhost_user_read(dev, &msg) < 0) {
-        return 0;
+        return -1;
     }
 
     if (msg.request != request) {
