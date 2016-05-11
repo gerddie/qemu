@@ -4976,6 +4976,7 @@ if test "$want_tools" = "yes" ; then
     tools="qemu-nbd\$(EXESUF) $tools"
     tools="ivshmem-client\$(EXESUF) ivshmem-server\$(EXESUF) $tools"
     tools="vhost-user-input\$(EXESUF) $tools"
+    tools="vhost-user-gpu\$(EXESUF) $tools"
   fi
 fi
 if test "$softmmu" = yes ; then
@@ -6424,6 +6425,9 @@ done # for target in $targets
 if [ "$pixman" = "internal" ]; then
   echo "config-host.h: subdir-pixman" >> $config_host_mak
 fi
+
+echo "PIXMAN_CFLAGS=$pixman_cflags" >> $config_host_mak
+echo "PIXMAN_LIBS=$pixman_libs" >> $config_host_mak
 
 if [ "$dtc_internal" = "yes" ]; then
   echo "config-host.h: subdir-dtc" >> $config_host_mak

@@ -271,6 +271,7 @@ dummy := $(call unnest-vars,, \
                 libvhost-user-obj-y \
                 vhost-user-scsi-obj-y \
                 vhost-user-input-obj-y \
+                vhost-user-gpu-obj-y \
                 qga-vss-dll-obj-y \
                 block-obj-y \
                 block-obj-m \
@@ -478,6 +479,8 @@ ivshmem-server$(EXESUF): $(ivshmem-server-obj-y) $(COMMON_LDADDS)
 vhost-user-scsi$(EXESUF): $(vhost-user-scsi-obj-y)
 	$(call LINK, $^)
 vhost-user-input$(EXESUF): $(vhost-user-input-obj-y) $(libvhost-user-obj-y) libqemuutil.a libqemustub.a
+	$(call LINK, $^)
+vhost-user-gpu$(EXESUF): $(vhost-user-gpu-obj-y) $(libvhost-user-obj-y) libqemuutil.a libqemustub.a
 	$(call LINK, $^)
 
 module_block.h: $(SRC_PATH)/scripts/modules/module_block.py config-host.mak
