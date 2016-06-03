@@ -62,6 +62,7 @@ typedef enum VhostUserRequest {
     VHOST_USER_SET_VRING_ENABLE = 18,
     VHOST_USER_SEND_RARP = 19,
     VHOST_USER_INPUT_GET_CONFIG = 23,
+    VHOST_USER_GPU_SET_SOCKET = 24,
     VHOST_USER_MAX
 } VhostUserRequest;
 

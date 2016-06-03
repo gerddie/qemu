@@ -64,6 +64,7 @@ typedef enum VhostUserRequest {
     VHOST_USER_SET_SLAVE_REQ_FD = 21,
     VHOST_USER_IOTLB_MSG = 22,
     VHOST_USER_INPUT_GET_CONFIG = 23,
+    VHOST_USER_GPU_SET_SOCKET = 24,
     VHOST_USER_MAX
 } VhostUserRequest;
 
@@ -315,6 +316,16 @@ int vhost_user_input_get_config(struct vhost_dev *dev,
 err:
     g_free(p);
     return -1;
+}
+
+int vhost_user_gpu_set_socket(struct vhost_dev *dev, int fd)
+{
+    VhostUserMsg msg = {
+        .request = VHOST_USER_GPU_SET_SOCKET,
+        .flags = VHOST_USER_VERSION,
+    };
+
+    return vhost_user_write(dev, &msg, &fd, 1);
 }
 
 static int vhost_user_set_log_base(struct vhost_dev *dev, uint64_t base,
