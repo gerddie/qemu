@@ -1744,6 +1744,21 @@ void dpy_gl_scanout_texture(QemuConsole *con,
                                          x, y, width, height);
 }
 
+void dpy_gl_scanout_fd(QemuConsole *con,
+                       int fd, bool backing_y_0_top,
+                       uint32_t backing_width, uint32_t backing_stride,
+                       uint32_t backing_height, int backing_fourcc,
+                       uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+    assert(con->gl);
+    con->gl->ops->dpy_gl_scanout_fd(con->gl, fd,
+                                    backing_y_0_top,
+                                    backing_width, backing_stride,
+                                    backing_height,
+                                    backing_fourcc,
+                                    x, y, w, h);
+}
+
 void dpy_gl_update(QemuConsole *con,
                    uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {

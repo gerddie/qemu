@@ -969,6 +969,29 @@ static void qemu_spice_gl_scanout_texture(DisplayChangeListener *dcl,
     ssd->have_scanout = true;
 }
 
+static void qemu_spice_gl_scanout_fd(DisplayChangeListener *dcl,
+                                     int fd,
+                                     bool y_0_top,
+                                     uint32_t backing_width,
+                                     uint32_t backing_stride,
+                                     uint32_t backing_height,
+                                     int backing_fourcc,
+                                     uint32_t x, uint32_t y,
+                                     uint32_t w, uint32_t h)
+{
+    SimpleSpiceDisplay *ssd = container_of(dcl, SimpleSpiceDisplay, dcl);
+
+    dprint(1, "%s: %dx%d (stride %d, fourcc 0x%x)\n", __func__,
+           w, h, backing_stride, backing_fourcc);
+
+    /* note: spice server will close the fd */
+    spice_qxl_gl_scanout(&ssd->qxl, fd, backing_width, backing_height,
+                         backing_stride, backing_fourcc, y_0_top);
+    qemu_spice_gl_monitor_config(ssd, x, y, w, h);
+    ssd->have_surface = false;
+    ssd->have_scanout = true;
+}
+
 static void qemu_spice_gl_update(DisplayChangeListener *dcl,
                                  uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
@@ -1001,6 +1024,7 @@ static const DisplayChangeListenerOps display_listener_gl_ops = {
 
     .dpy_gl_scanout_disable  = qemu_spice_gl_scanout_disable,
     .dpy_gl_scanout_texture  = qemu_spice_gl_scanout_texture,
+    .dpy_gl_scanout_fd       = qemu_spice_gl_scanout_fd,
     .dpy_gl_update           = qemu_spice_gl_update,
 };
 
