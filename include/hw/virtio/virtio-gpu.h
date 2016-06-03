@@ -20,6 +20,7 @@
 #include "hw/virtio/virtio.h"
 #include "hw/pci/pci.h"
 #include "qemu/log.h"
+#include "sysemu/vhost-user-backend.h"
 
 #include "standard-headers/linux/virtio_gpu.h"
 #define TYPE_VIRTIO_GPU "virtio-gpu-device"
@@ -88,6 +89,9 @@ struct virtio_gpu_ctrl_command {
 
 typedef struct VirtIOGPU {
     VirtIODevice parent_obj;
+
+    VhostUserBackend *vhost;
+    CharBackend vhost_chr;
 
     QEMUBH *ctrl_bh;
     QEMUBH *cursor_bh;
@@ -171,5 +175,8 @@ void virtio_gpu_virgl_fence_poll(VirtIOGPU *g);
 void virtio_gpu_virgl_reset(VirtIOGPU *g);
 void virtio_gpu_gl_block(void *opaque, bool block);
 int virtio_gpu_virgl_init(VirtIOGPU *g);
+
+/* vhost-gpu.c */
+int vhost_gpu_init(VirtIOGPU *g, Error **errp);
 
 #endif
