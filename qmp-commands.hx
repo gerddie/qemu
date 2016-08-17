@@ -3357,7 +3357,7 @@ Example:
    }
 
 EQMP
-
+#if defined(CONFIG_VNC)
     {
         .name       = "query-vnc",
         .args_type  = "",
@@ -3368,7 +3368,7 @@ EQMP
         .args_type  = "",
         .mhandler.cmd_new = qmp_marshal_query_vnc_servers,
     },
-
+#endif
 SQMP
 query-spice
 -----------
@@ -3921,12 +3921,13 @@ EQMP
         .args_type  = "",
         .mhandler.cmd_new = qmp_marshal_nbd_server_stop,
     },
-
+#if defined(CONFIG_VNC)
     {
         .name       = "change-vnc-password",
         .args_type  = "password:s",
         .mhandler.cmd_new = qmp_marshal_change_vnc_password,
     },
+#endif
     {
         .name       = "qom-list-types",
         .args_type  = "implements:s?,abstract:b?",
