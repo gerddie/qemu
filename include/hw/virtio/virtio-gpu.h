@@ -122,7 +122,7 @@ typedef struct VirtIOGPUDataPlane {
 
 #define VIRTIO_GPU_DATA_PLANE_OK(dp) ((dp) && (dp)->started && !(dp)->disabled)
 
-typedef struct VirtIOGPU {
+struct VirtIOGPU {
     VirtIODevice parent_obj;
 
     QEMUBH *ctrl_bh;
@@ -171,7 +171,7 @@ typedef struct VirtIOGPU {
     } stats;
 
     Error *migration_blocker;
-} VirtIOGPU;
+};
 
 extern const GraphicHwOps virtio_gpu_ops;
 

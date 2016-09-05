@@ -19,7 +19,6 @@
 #include "hw/virtio/virtio-bus.h"
 #include "hw/virtio/virtio-gpu.h"
 #include "qapi/error.h"
-#include "ui/egl-context.h"
 
 #ifdef CONFIG_VIRGL
 
