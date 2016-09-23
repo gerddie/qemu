@@ -1,0 +1,20 @@
+# this file is included from top-level makefile and contains
+# test-tcg* clean-tcg* rules calling into subdir makefiles
+
+ARCHS = $(patsubst $(SRC_PATH)/tests/tcg/%/,%, $(wildcard $(SRC_PATH)/tests/tcg/*/))
+
+.PHONY: test-tcg $(patsubst %, test-tcg-%, $(ARCHS))
+
+test-tcg: $(patsubst %, test-tcg-%, $(ARCHS))
+
+$(patsubst %, test-tcg-%, $(ARCHS)): test-tcg-%:
+	$(call quiet-command,$(MAKE) $(SUBDIR_MAKEFLAGS) -C tests/tcg/$* V="$(V)" test,)
+
+clean: clean-tcg
+
+.PHONY: clean-tcg $(patsubst %, clean-tcg-%, $(ARCHS))
+
+clean-tcg: $(patsubst %, clean-tcg-%, $(ARCHS))
+
+$(patsubst %, clean-tcg-%, $(ARCHS)): clean-tcg-%:
+	$(call quiet-command,$(MAKE) $(SUBDIR_MAKEFLAGS) -C tests/tcg/$* V="$(V)" clean,)

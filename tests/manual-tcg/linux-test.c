@@ -16,6 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
+#define _GNU_SOURCE
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -545,9 +546,7 @@ int main(int argc, char **argv)
     test_time();
     test_socket();
     //    test_clone();
-#ifndef __x86_64__
     test_signal();
-#endif
     test_shm();
     return 0;
 }
