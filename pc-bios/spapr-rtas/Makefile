@@ -20,5 +20,15 @@ build-all: spapr-rtas.bin
 %.bin: %.img
 	$(call quiet-command,$(OBJCOPY) -O binary -j .text $< $@,"  Building $(TARGET_DIR)$@")
 
+
+cleanfiles = .gitignore
+cleanfiles += *.o *.d *.raw *.img *.bin *~
+
 clean:
-	rm -f *.o *.d *.img *.bin *~
+	rm -f $(cleanfiles)
+
+$(SRC_PATH)/pc-bios/spapr-rtas/.gitignore: $(MAKEFILE_LIST)
+	$(call quiet-command, echo "$(cleanfiles) $(distcleanfiles)" | \
+	  xargs -n1 | sort > $@, " GEN $(@F)")
+
+all gitignore: $(SRC_PATH)/pc-bios/spapr-rtas/.gitignore

@@ -139,6 +139,7 @@ endif
 	  cp -p $@ $@.old; \
 	 fi, "  GEN   $@");
 
+cleanfiles += config-all-devices.mak
 defconfig:
 	rm -f config-all-devices.mak $(SUBDIR_DEVICES_MAK)
 
@@ -168,6 +169,8 @@ endif
 
 all: $(DOCS) $(TOOLS) $(HELPERS-y) recurse-all modules
 
+cleanfiles += $(DOCS) $(TOOLS) $(HELPERS-y)
+
 qemu-version.h: FORCE
 	$(call quiet-command, \
 		(cd $(SRC_PATH); \
@@ -187,6 +190,8 @@ qemu-version.h: FORCE
 			fi; \
 		fi) > $@.tmp)
 	$(call quiet-command, cmp -s $@ $@.tmp || mv $@.tmp $@)
+
+cleanfiles += qemu-version.h.tmp
 
 config-host.h: config-host.h-timestamp
 config-host.h-timestamp: config-host.mak
@@ -239,7 +244,7 @@ $(BUILD_DIR)/version.o: $(SRC_PATH)/version.rc config-host.h | $(BUILD_DIR)/vers
 $(BUILD_DIR)/version.lo: $(SRC_PATH)/version.rc config-host.h
 	$(call quiet-command,$(WINDRES) -I$(BUILD_DIR) -o $@ $<,"  RC    version.lo")
 
-Makefile: $(version-obj-y) $(version-lobj-y)
+Makefile: | $(version-obj-y) $(version-lobj-y)
 
 ######################################################################
 # Build libraries
@@ -260,6 +265,7 @@ qemu-bridge-helper$(EXESUF): qemu-bridge-helper.o libqemuutil.a libqemustub.a
 fsdev/virtfs-proxy-helper$(EXESUF): fsdev/virtfs-proxy-helper.o fsdev/9p-marshal.o fsdev/9p-iov-marshal.o libqemuutil.a libqemustub.a
 fsdev/virtfs-proxy-helper$(EXESUF): LIBS += -lcap
 
+cleanfiles += qemu-img-cmds.h
 qemu-img-cmds.h: $(SRC_PATH)/qemu-img-cmds.hx $(SRC_PATH)/scripts/hxtool
 	$(call quiet-command,sh $(SRC_PATH)/scripts/hxtool -h < $< > $@,"  GEN   $@")
 
@@ -285,6 +291,10 @@ $(SRC_PATH)/qga/qapi-schema.json $(SRC_PATH)/scripts/qapi-commands.py $(qapi-py)
 	$(call quiet-command,$(PYTHON) $(SRC_PATH)/scripts/qapi-commands.py \
 		$(gen-out-type) -o qga/qapi-generated -p "qga-" $<, \
 		"  GEN   $@")
+
+QGALIB_GEN = $(addprefix qga/qapi-generated/, qga-qapi-types.c qga-qapi-visit.c qga-qmp-marshal.c qga-qapi-types.h qga-qapi-visit.h qga-qmp-commands.h)
+
+cleanfiles += $(QGALIB_GEN)
 
 qapi-modules = $(SRC_PATH)/qapi-schema.json $(SRC_PATH)/qapi/common.json \
                $(SRC_PATH)/qapi/block.json $(SRC_PATH)/qapi/block-core.json \
@@ -318,7 +328,6 @@ $(qapi-modules) $(SRC_PATH)/scripts/qapi-introspect.py $(qapi-py)
 		$(gen-out-type) -o "." $<, \
 		"  GEN   $@")
 
-QGALIB_GEN=$(addprefix qga/qapi-generated/, qga-qapi-types.h qga-qapi-visit.h qga-qmp-commands.h)
 $(qga-obj-y) qemu-ga.o: $(QGALIB_GEN)
 
 qemu-ga$(EXESUF): $(qga-obj-y) libqemuutil.a libqemustub.a
@@ -326,6 +335,7 @@ qemu-ga$(EXESUF): $(qga-obj-y) libqemuutil.a libqemustub.a
 
 ifdef QEMU_GA_MSI_ENABLED
 QEMU_GA_MSI=qemu-ga-$(ARCH).msi
+cleanfiles += $(QEMU_GA_MSI)
 
 msi: $(QEMU_GA_MSI)
 
@@ -356,29 +366,54 @@ module_block.h: $(SRC_PATH)/scripts/modules/module_block.py config-host.mak
 	$(addprefix $(SRC_PATH)/,$(patsubst %.mo,%.c,$(block-obj-m))), \
 	"  GEN   $@")
 
-clean:
 # avoid old build problems by removing potentially incorrect old files
-	rm -f config.mak op-i386.h opc-i386.h gen-op-i386.h op-arm.h opc-arm.h gen-op-arm.h
-	rm -f qemu-options.def
-	rm -f *.msi
+cleanfiles += config.mak op-i386.h opc-i386.h gen-op-i386.h op-arm.h opc-arm.h gen-op-arm.h
+cleanfiles += qemu-options.def
+cleanfiles += *.o *.l[oa] *.so *.dll *.mo *.[oda]
+cleanfiles += *.pod *~ .stgit-* *.pyc
+cleanfiles += .libs */.libs
+cleanfiles += trace/generated-tracers-dtrace.dtrace*
+cleanfiles += trace/generated-tracers-dtrace.h*
+cleanfiles += $(foreach f,$(GENERATED_HEADERS),$(f) $(f)-timestamp)
+cleanfiles += $(foreach f,$(GENERATED_SOURCES),$(f) $(f)-timestamp)
+cleanfiles += $(foreach d,$(ALL_SUBDIRS),$(d)/qemu-options.def)
+cleanfiles += docker-src.*
+
+distcleanfiles += .gitignore
+distcleanfiles += $(TARGET_DIRS)
+distcleanfiles += config-host.mak config-host.h* config-host.ld
+distcleanfiles += $(DOCS) qemu-options.texi qemu-img-cmds.texi
+distcleanfiles += qemu-monitor.texi qemu-monitor-info.texi
+distcleanfiles += config-all-disas.mak config.status
+distcleanfiles += po/*.mo tests/qemu-iotests/common.env
+distcleanfiles += roms/seabios/config.mak roms/vgabios/config.mak
+distcleanfiles += qemu-doc.info qemu-doc.aux qemu-doc.cp qemu-doc.cps qemu-doc.dvi
+distcleanfiles += qemu-doc.fn qemu-doc.fns qemu-doc.info qemu-doc.ky qemu-doc.kys
+distcleanfiles += qemu-doc.log qemu-doc.pdf qemu-doc.pg qemu-doc.toc qemu-doc.tp
+distcleanfiles += qemu-doc.vr
+distcleanfiles += config.log
+distcleanfiles += linux-headers/asm
+distcleanfiles += qemu-tech.info qemu-tech.aux qemu-tech.cp qemu-tech.dvi
+distcleanfiles += qemu-tech.fn qemu-tech.info qemu-tech.ky qemu-tech.log qemu-tech.pdf
+distcleanfiles += qemu-tech.pg qemu-tech.toc qemu-tech.tp qemu-tech.vr
+distcleanfiles += .sdk
+
+gitignore += !contrib/ivshmem-client/
+gitignore += !contrib/ivshmem-server/
+gitignore += !scripts/qemu-guest-agent/fsfreeze-hook.d/
+
+$(SRC_PATH)/.gitignore: $(MAKEFILE_LIST)
+	$(call quiet-command, (echo "$(cleanfiles) $(distcleanfiles)" | \
+	  xargs -n1 | sort ; echo "$(gitignore)" | xargs -n1) > $@, " GEN $(@F)")
+
+all gitignore: $(SRC_PATH)/.gitignore
+
+clean:
+	rm -rf $(cleanfiles)
 	find . \( -name '*.l[oa]' -o -name '*.so' -o -name '*.dll' -o -name '*.mo' -o -name '*.[oda]' \) -type f -exec rm {} +
-	rm -f $(filter-out %.tlb,$(TOOLS)) $(HELPERS-y) qemu-ga TAGS cscope.* *.pod *~ */*~
-	rm -f fsdev/*.pod
-	rm -rf .libs */.libs
-	rm -f qemu-img-cmds.h
-	rm -f ui/shader/*-vert.h ui/shader/*-frag.h
-	@# May not be present in GENERATED_HEADERS
-	rm -f trace/generated-tracers-dtrace.dtrace*
-	rm -f trace/generated-tracers-dtrace.h*
-	rm -f $(foreach f,$(GENERATED_HEADERS),$(f) $(f)-timestamp)
-	rm -f $(foreach f,$(GENERATED_SOURCES),$(f) $(f)-timestamp)
-	rm -rf qapi-generated
-	rm -rf qga/qapi-generated
 	for d in $(ALL_SUBDIRS); do \
-	if test -d $$d; then $(MAKE) -C $$d $@ || exit 1; fi; \
-	rm -f $$d/qemu-options.def; \
-        done
-	rm -f $(SUBDIR_DEVICES_MAK) config-all-devices.mak
+		if test -d $$d; then $(MAKE) -C $$d $@ || exit 1; fi; \
+	done
 
 VERSION ?= $(shell cat VERSION)
 
@@ -388,21 +423,7 @@ qemu-%.tar.bz2:
 	$(SRC_PATH)/scripts/make-release "$(SRC_PATH)" "$(patsubst qemu-%.tar.bz2,%,$@)"
 
 distclean: clean
-	rm -f config-host.mak config-host.h* config-host.ld $(DOCS) qemu-options.texi qemu-img-cmds.texi qemu-monitor.texi qemu-monitor-info.texi
-	rm -f config-all-devices.mak config-all-disas.mak config.status
-	rm -f po/*.mo tests/qemu-iotests/common.env
-	rm -f roms/seabios/config.mak roms/vgabios/config.mak
-	rm -f qemu-doc.info qemu-doc.aux qemu-doc.cp qemu-doc.cps qemu-doc.dvi
-	rm -f qemu-doc.fn qemu-doc.fns qemu-doc.info qemu-doc.ky qemu-doc.kys
-	rm -f qemu-doc.log qemu-doc.pdf qemu-doc.pg qemu-doc.toc qemu-doc.tp
-	rm -f qemu-doc.vr
-	rm -f config.log
-	rm -f linux-headers/asm
-	rm -f qemu-tech.info qemu-tech.aux qemu-tech.cp qemu-tech.dvi qemu-tech.fn qemu-tech.info qemu-tech.ky qemu-tech.log qemu-tech.pdf qemu-tech.pg qemu-tech.toc qemu-tech.tp qemu-tech.vr
-	for d in $(TARGET_DIRS); do \
-	rm -rf $$d || exit 1 ; \
-        done
-	rm -Rf .sdk
+	rm -rf $(distcleanfiles)
 	if test -f pixman/config.log; then $(MAKE) -C pixman distclean; fi
 	if test -f dtc/version_gen.h; then $(MAKE) $(DTC_MAKE_ARGS) clean; fi
 
@@ -516,6 +537,8 @@ cscope:
 	find "$(SRC_PATH)/" -name "*.[chsS]" -print | sed 's,^\./,,' > "$(SRC_PATH)/cscope.files"
 	cscope -b -i"$(SRC_PATH)/cscope.files"
 
+cleanfiles += tags TAGS cscope.*
+
 # opengl shader programs
 ui/shader/%-vert.h: $(SRC_PATH)/ui/shader/%.vert $(SRC_PATH)/scripts/shaderinclude.pl
 	@mkdir -p $(dir $@)
@@ -528,6 +551,8 @@ ui/shader/%-frag.h: $(SRC_PATH)/ui/shader/%.frag $(SRC_PATH)/scripts/shaderinclu
 	$(call quiet-command,\
 		perl $(SRC_PATH)/scripts/shaderinclude.pl $< > $@,\
 		"  FRAG  $@")
+
+cleanfiles += ui/shader/*-vert.h ui/shader/*-frag.h
 
 ui/console-gl.o: $(SRC_PATH)/ui/console-gl.c \
 	ui/shader/texture-blit-vert.h ui/shader/texture-blit-frag.h

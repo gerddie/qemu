@@ -309,7 +309,6 @@ define unnest-vars
     # In the case of target build (i.e. $1 == ..), fix path for top level
     # Makefile.objs objects
     $(if $1,$(call fix-paths,$1/,,$2))
-
     # Descend and include every subdir Makefile.objs
     $(foreach v, $2,
         $(call unnest-var-recursive,$1,$2,$v)

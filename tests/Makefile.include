@@ -795,6 +795,8 @@ tests-cleanfiles += test-qmp-marshal.c
 tests-cleanfiles += $(subst tests/,,$(check-unit-y))
 tests-cleanfiles += $(subst tests/,,$(check-qtest-y))
 tests-cleanfiles += $(patsubst tests/%,%,$(QEMU_IOTESTS_HELPERS-y))
+tests-cleanfiles += migration/initrd-stress.img
+tests-cleanfiles += migration/stress$(EXESUF)
 
 # Consolidated targets
 .PHONY: check-qapi-schema check-qtest check-unit check check-clean
@@ -812,12 +814,11 @@ clean: check-clean
 
 all: $(QEMU_IOTESTS_HELPERS-y)
 
-ifneq ($(filter-out $(UNCHECKED_GOALS),$(MAKECMDGOALS)),$(if $(MAKECMDGOALS),,fail))
-$(SRC_PATH)/tests/.gitignore:
+$(SRC_PATH)/tests/.gitignore: $(MAKEFILE_LIST)
 	$(call quiet-command, echo "$(tests-cleanfiles)" | xargs -n1 | sort > $@, \
 	  " GEN $(@F)")
-Makefile: $(SRC_PATH)/tests/.gitignore
-endif
+
+all gitignore: $(SRC_PATH)/tests/.gitignore
 
 -include $(wildcard tests/*.d)
 -include $(wildcard tests/libqos/*.d)

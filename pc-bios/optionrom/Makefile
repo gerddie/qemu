@@ -54,5 +54,14 @@ build-all: multiboot.bin linuxboot.bin linuxboot_dma.bin kvmvapic.bin
 %.bin: %.raw
 	$(call quiet-command,$(PYTHON) $(SRC_PATH)/scripts/signrom.py $< $@,"  Signing $(TARGET_DIR)$@")
 
+cleanfiles = .gitignore
+cleanfiles += *.o *.d *.raw *.img *.bin *~
+
+$(SRC_PATH)/pc-bios/optionrom/.gitignore: $(MAKEFILE_LIST)
+	$(call quiet-command, echo "$(cleanfiles) $(distcleanfiles)" | \
+	  xargs -n1 | sort > $@, " GEN $(@F)")
+
+all gitignore: $(SRC_PATH)/pc-bios/optionrom/.gitignore
+
 clean:
-	rm -f *.o *.d *.raw *.img *.bin *~
+	rm -f $(cleanfiles)

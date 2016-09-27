@@ -26,5 +26,14 @@ s390-ccw.img: s390-ccw.elf
 
 $(OBJECTS): Makefile
 
+cleanfiles = .gitignore
+cleanfiles += *.o *.d *.img *.elf *~
+
 clean:
-	rm -f *.o *.d *.img *.elf *~
+	rm -f $(cleanfiles)
+
+$(SRC_PATH)/pc-bios/s390-ccw/.gitignore: $(MAKEFILE_LIST)
+	$(call quiet-command, echo "$(cleanfiles) $(distcleanfiles)" | \
+	  xargs -n1 | sort > $@, " GEN $(@F)")
+
+all gitignore: $(SRC_PATH)/pc-bios/s390-ccw/.gitignore

@@ -11,6 +11,8 @@ tracetool-y += $(shell find $(SRC_PATH)/scripts/tracetool -name "*.py")
 $(BUILD_DIR)/trace-events-all: $(trace-events-y:%=$(SRC_PATH)/%)
 	$(call quiet-command,cat $^ > $@)
 
+cleanfiles += trace-events-all
+
 ######################################################################
 # Auto-generated event descriptions for LTTng ust code
 
