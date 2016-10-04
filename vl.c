@@ -2983,6 +2983,8 @@ static int global_init_func(void *opaque, QemuOpts *opts, Error **errp)
     return 0;
 }
 
+void qemu_rust_init(void);
+
 int main(int argc, char **argv, char **envp)
 {
     int i;
@@ -3020,6 +3022,8 @@ int main(int argc, char **argv, char **envp)
     Error *err = NULL;
     bool list_data_dirs = false;
 
+
+    qemu_rust_init();
     qemu_init_cpu_list();
     qemu_init_cpu_loop();
     qemu_mutex_lock_iothread();

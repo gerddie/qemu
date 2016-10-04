@@ -28,7 +28,7 @@ void qemu_module_dummy(void);
 #define module_init(function, type)                                         \
 static void __attribute__((constructor)) do_qemu_init_ ## function(void)    \
 {                                                                           \
-    register_dso_module_init(function, type);                               \
+    register_dso_module_init(function, type);                           \
 }
 #else
 /* This should not be used directly.  Use block_init etc. instead.  */
