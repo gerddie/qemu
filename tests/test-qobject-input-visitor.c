@@ -119,7 +119,6 @@ static void test_visitor_in_int(TestInputVisitorData *data,
 static void test_visitor_in_uint(TestInputVisitorData *data,
                                 const void *unused)
 {
-    Error *err = NULL;
     uint64_t res = 0;
     int value = 42;
     Visitor *v;
@@ -140,8 +139,8 @@ static void test_visitor_in_uint(TestInputVisitorData *data,
 
     v = visitor_input_test_init(data, "18446744073709551574");
 
-    visit_type_uint64(v, NULL, &res, &err);
-    error_free_or_abort(&err);
+    visit_type_uint64(v, NULL, &res, &error_abort);
+    g_assert_cmpuint(res, ==, 18446744073709551574u);
 }
 
 static void test_visitor_in_int_overflow(TestInputVisitorData *data,
