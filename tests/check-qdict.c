@@ -12,6 +12,7 @@
 #include "qemu/osdep.h"
 
 #include "qapi/qmp/qint.h"
+#include "qapi/qmp/quint.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qstring.h"
 #include "qapi/error.h"
@@ -117,6 +118,32 @@ static void qdict_get_try_int_test(void)
 
     ret = qdict_get_try_int(tests_dict, key, 0);
     g_assert(ret == value);
+
+    QDECREF(tests_dict);
+}
+
+static void qdict_get_try_uint_test(void)
+{
+    uint64_t ret;
+    const int ivalue = 100;
+    const uint64_t uvalue = G_MAXUINT64;
+    const char *key = "uint";
+    QDict *tests_dict = qdict_new();
+
+    qdict_put(tests_dict, key, qint_from_int(ivalue));
+    /* try_uint will work with int types too */
+    ret = qdict_get_try_uint(tests_dict, key, &error_abort);
+    g_assert_cmpint(ret, ==, ivalue);
+
+    qdict_put(tests_dict, key, quint_from_uint(uvalue));
+    ret = qdict_get_try_uint(tests_dict, key, &error_abort);
+    g_assert_cmpint(ret, ==, uvalue);
+
+    qdict_put(tests_dict, key, qint_from_int(-1));
+    /* try_uint will will work with negative int values, for
+     * compatibility reasons */
+    ret = qdict_get_try_uint(tests_dict, key, &error_abort);
+    g_assert_cmpint(ret, ==, (uint64_t)-1);
 
     QDECREF(tests_dict);
 }
@@ -854,6 +881,7 @@ int main(int argc, char **argv)
     g_test_add_func("/public/get", qdict_get_test);
     g_test_add_func("/public/get_int", qdict_get_int_test);
     g_test_add_func("/public/get_try_int", qdict_get_try_int_test);
+    g_test_add_func("/public/get_try_uint", qdict_get_try_uint_test);
     g_test_add_func("/public/get_str", qdict_get_str_test);
     g_test_add_func("/public/get_try_str", qdict_get_try_str_test);
     g_test_add_func("/public/defaults", qdict_defaults_test);
