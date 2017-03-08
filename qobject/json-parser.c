@@ -473,6 +473,13 @@ static QObject *parse_escape(JSONParserContext *ctxt, va_list *ap)
     } else if (!strcmp(token->str, "%lld") ||
                !strcmp(token->str, "%I64d")) {
         return QOBJECT(qint_from_int(va_arg(*ap, long long)));
+    } else if (!strcmp(token->str, "%u")) {
+        return QOBJECT(quint_from_uint(va_arg(*ap, unsigned int)));
+    } else if (!strcmp(token->str, "%lu")) {
+        return QOBJECT(quint_from_uint(va_arg(*ap, unsigned long)));
+    } else if (!strcmp(token->str, "%llu") ||
+               !strcmp(token->str, "%I64u")) {
+        return QOBJECT(quint_from_uint(va_arg(*ap, unsigned long long)));
     } else if (!strcmp(token->str, "%s")) {
         return QOBJECT(qstring_from_str(va_arg(*ap, const char *)));
     } else if (!strcmp(token->str, "%f")) {
@@ -519,6 +526,7 @@ static QObject *parse_literal(JSONParserContext *ctxt)
 
         /* fall through to JSON_FLOAT */
     }
+
     case JSON_FLOAT:
         /* FIXME dependent on locale; a pervasive issue in QEMU */
         /* FIXME our lexer matches RFC 7159 in forbidding Inf or NaN,
