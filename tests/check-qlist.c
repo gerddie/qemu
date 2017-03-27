@@ -11,7 +11,8 @@
  */
 #include "qemu/osdep.h"
 
-#include "qapi/qmp/qint.h"
+#include "qapi/error.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qlist.h"
 
 /*
@@ -35,11 +36,11 @@ static void qlist_new_test(void)
 
 static void qlist_append_test(void)
 {
-    QInt *qi;
+    QNum *qi;
     QList *qlist;
     QListEntry *entry;
 
-    qi = qint_from_int(42);
+    qi = qnum_from_int(42);
 
     qlist = qlist_new();
     qlist_append(qlist, qi);
@@ -74,7 +75,7 @@ static void qlist_destroy_test(void)
     qlist = qlist_new();
 
     for (i = 0; i < 42; i++)
-        qlist_append(qlist, qint_from_int(i));
+        qlist_append(qlist, qnum_from_int(i));
 
     QDECREF(qlist);
 }
@@ -84,13 +85,14 @@ static const int iter_max = 42;
 
 static void iter_func(QObject *obj, void *opaque)
 {
-    QInt *qi;
+    QNum *qi;
 
     g_assert(opaque == NULL);
 
-    qi = qobject_to_qint(obj);
+    qi = qobject_to_qnum(obj);
     g_assert(qi != NULL);
-    g_assert((qint_get_int(qi) >= 0) && (qint_get_int(qi) <= iter_max));
+    g_assert((qnum_get_int(qi, &error_abort) >= 0)
+             && (qnum_get_int(qi, &error_abort) <= iter_max));
 
     iter_called++;
 }
@@ -103,7 +105,7 @@ static void qlist_iter_test(void)
     qlist = qlist_new();
 
     for (i = 0; i < iter_max; i++)
-        qlist_append(qlist, qint_from_int(i));
+        qlist_append(qlist, qnum_from_int(i));
 
     iter_called = 0;
     qlist_iter(qlist, iter_func, NULL);

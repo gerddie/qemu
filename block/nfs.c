@@ -36,7 +36,7 @@
 #include "qemu/cutils.h"
 #include "sysemu/sysemu.h"
 #include "qapi/qmp/qdict.h"
-#include "qapi/qmp/qint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qstring.h"
 #include "qapi-visit.h"
 #include "qapi/qobject-input-visitor.h"
@@ -830,25 +830,25 @@ static void nfs_refresh_filename(BlockDriverState *bs, QDict *options)
     qdict_put(opts, "path", qstring_from_str(client->path));
 
     if (client->uid) {
-        qdict_put(opts, "user", qint_from_int(client->uid));
+        qdict_put(opts, "user", qnum_from_int(client->uid));
     }
     if (client->gid) {
-        qdict_put(opts, "group", qint_from_int(client->gid));
+        qdict_put(opts, "group", qnum_from_int(client->gid));
     }
     if (client->tcp_syncnt) {
         qdict_put(opts, "tcp-syn-cnt",
-                  qint_from_int(client->tcp_syncnt));
+                  qnum_from_int(client->tcp_syncnt));
     }
     if (client->readahead) {
         qdict_put(opts, "readahead-size",
-                  qint_from_int(client->readahead));
+                  qnum_from_int(client->readahead));
     }
     if (client->pagecache) {
         qdict_put(opts, "page-cache-size",
-                  qint_from_int(client->pagecache));
+                  qnum_from_int(client->pagecache));
     }
     if (client->debug) {
-        qdict_put(opts, "debug", qint_from_int(client->debug));
+        qdict_put(opts, "debug", qnum_from_int(client->debug));
     }
 
     visit_free(ov);

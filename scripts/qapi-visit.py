@@ -161,12 +161,7 @@ void visit_type_%(c_name)s(Visitor *v, const char *name, %(c_name)s *obj, Error 
 
 
 def gen_visit_alternate(name, variants):
-    promote_int = 'true'
     ret = ''
-    for var in variants.variants:
-        if var.type.alternate_qtype() == 'QTYPE_QINT' \
-            or var.type.alternate_qtype() == 'QTYPE_QUINT':
-            promote_int = 'false'
 
     ret += mcgen('''
 
@@ -174,8 +169,7 @@ void visit_type_%(c_name)s(Visitor *v, const char *name, %(c_name)s **obj, Error
 {
     Error *err = NULL;
 
-    visit_start_alternate(v, name, (GenericAlternate **)obj, sizeof(**obj),
-                          %(promote_int)s, &err);
+    visit_start_alternate(v, name, (GenericAlternate **)obj, sizeof(**obj), &err);
     if (err) {
         goto out;
     }
@@ -184,7 +178,7 @@ void visit_type_%(c_name)s(Visitor *v, const char *name, %(c_name)s **obj, Error
     }
     switch ((*obj)->type) {
 ''',
-                 c_name=c_name(name), promote_int=promote_int)
+                 c_name=c_name(name))
 
     for var in variants.variants:
         ret += mcgen('''

@@ -32,8 +32,7 @@
 #include "qapi/qmp/qstring.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qbool.h"
-#include "qapi/qmp/qint.h"
-#include "qapi/qmp/qfloat.h"
+#include "qapi/qmp/qnum.h"
 
 #include "qapi-types.h"
 #include "qapi-visit.h"

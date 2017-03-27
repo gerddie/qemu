@@ -886,21 +886,21 @@ static void simple_number(void)
     };
 
     for (i = 0; test_cases[i].encoded; i++) {
-        QInt *qint;
+        QNum *qnum;
 
-        qint = qobject_to_qint(qobject_from_json(test_cases[i].encoded,
+        qnum = qobject_to_qnum(qobject_from_json(test_cases[i].encoded,
                                                  &error_abort));
-        g_assert(qint);
-        g_assert(qint_get_int(qint) == test_cases[i].decoded);
+        g_assert(qnum);
+        g_assert(qnum_get_int(qnum, &error_abort) == test_cases[i].decoded);
         if (test_cases[i].skip == 0) {
             QString *str;
 
-            str = qobject_to_json(QOBJECT(qint));
+            str = qobject_to_json(QOBJECT(qnum));
             g_assert(strcmp(qstring_get_str(str), test_cases[i].encoded) == 0);
             QDECREF(str);
         }
 
-        QDECREF(qint);
+        QDECREF(qnum);
     }
 }
 
@@ -908,27 +908,26 @@ static void large_number(void)
 {
     const char *maxu64 = "18446744073709551615"; /* 2^64-1 */
     const char *gtu64 = "18446744073709551616"; /* 2^64 */
-    QUInt *quint;
-    QFloat *qfloat;
+    QNum *qnum;
     QString *str;
 
-    quint = qobject_to_quint(qobject_from_json(maxu64, &error_abort));
-    g_assert(quint);
-    g_assert_cmpint(quint_get_uint(quint), ==, 18446744073709551615U);
+    qnum = qobject_to_qnum(qobject_from_json(maxu64, &error_abort));
+    g_assert(qnum);
+    g_assert_cmpint(qnum_get_uint(qnum, &error_abort), ==, 18446744073709551615U);
 
-    str = qobject_to_json(QOBJECT(quint));
+    str = qobject_to_json(QOBJECT(qnum));
     g_assert_cmpstr(qstring_get_str(str), ==, maxu64);
     QDECREF(str);
-    QDECREF(quint);
+    QDECREF(qnum);
 
-    qfloat = qobject_to_qfloat(qobject_from_json(gtu64, &error_abort));
-    g_assert(qfloat);
-    g_assert_cmpfloat(qfloat_get_double(qfloat), ==, 18446744073709551616.0);
+    qnum = qobject_to_qnum(qobject_from_json(gtu64, &error_abort));
+    g_assert(qnum);
+    g_assert_cmpfloat(qnum_get_double(qnum), ==, 18446744073709551616.0);
 
-    str = qobject_to_json(QOBJECT(qfloat));
+    str = qobject_to_json(QOBJECT(qnum));
     g_assert_cmpstr(qstring_get_str(str), ==, gtu64);
     QDECREF(str);
-    QDECREF(qfloat);
+    QDECREF(qnum);
 }
 
 static void float_number(void)
@@ -948,12 +947,12 @@ static void float_number(void)
 
     for (i = 0; test_cases[i].encoded; i++) {
         QObject *obj;
-        QFloat *qfloat;
+        QNum *qnum;
 
         obj = qobject_from_json(test_cases[i].encoded, &error_abort);
-        qfloat = qobject_to_qfloat(obj);
-        g_assert(qfloat);
-        g_assert(qfloat_get_double(qfloat) == test_cases[i].decoded);
+        qnum = qobject_to_qnum(obj);
+        g_assert(qnum);
+        g_assert(qnum_get_double(qnum) == test_cases[i].decoded);
 
         if (test_cases[i].skip == 0) {
             QString *str;
@@ -963,29 +962,28 @@ static void float_number(void)
             QDECREF(str);
         }
 
-        QDECREF(qfloat);
+        QDECREF(qnum);
     }
 }
 
 static void vararg_number(void)
 {
-    QInt *qint;
-    QFloat *qfloat;
+    QNum *qnum;
     int value = 0x2342;
     long long value_ll = 0x2342342343LL;
     double valuef = 2.323423423;
 
-    qint = qobject_to_qint(qobject_from_jsonf("%d", value));
-    g_assert(qint_get_int(qint) == value);
-    QDECREF(qint);
+    qnum = qobject_to_qnum(qobject_from_jsonf("%d", value));
+    g_assert(qnum_get_int(qnum, &error_abort) == value);
+    QDECREF(qnum);
 
-    qint = qobject_to_qint(qobject_from_jsonf("%lld", value_ll));
-    g_assert(qint_get_int(qint) == value_ll);
-    QDECREF(qint);
+    qnum = qobject_to_qnum(qobject_from_jsonf("%lld", value_ll));
+    g_assert(qnum_get_int(qnum, &error_abort) == value_ll);
+    QDECREF(qnum);
 
-    qfloat = qobject_to_qfloat(qobject_from_jsonf("%f", valuef));
-    g_assert(qfloat_get_double(qfloat) == valuef);
-    QDECREF(qfloat);
+    qnum = qobject_to_qnum(qobject_from_jsonf("%f", valuef));
+    g_assert(qnum_get_double(qnum) == valuef);
+    QDECREF(qnum);
 }
 
 static void keyword_literal(void)
@@ -1046,7 +1044,7 @@ struct LiteralQObject
 {
     int type;
     union {
-        int64_t qint;
+        int64_t qnum;
         const char *qstr;
         LiteralQDictEntry *qdict;
         LiteralQObject *qlist;
@@ -1059,7 +1057,7 @@ struct LiteralQDictEntry
     LiteralQObject value;
 };
 
-#define QLIT_QINT(val) (LiteralQObject){.type = QTYPE_QINT, .value.qint = (val)}
+#define QLIT_QINT(val) (LiteralQObject){.type = QTYPE_QNUM, .value.qnum = (val)}
 #define QLIT_QSTR(val) (LiteralQObject){.type = QTYPE_QSTRING, .value.qstr = (val)}
 #define QLIT_QDICT(val) (LiteralQObject){.type = QTYPE_QDICT, .value.qdict = (val)}
 #define QLIT_QLIST(val) (LiteralQObject){.type = QTYPE_QLIST, .value.qlist = (val)}
@@ -1096,8 +1094,9 @@ static int compare_litqobj_to_qobj(LiteralQObject *lhs, QObject *rhs)
     }
 
     switch (lhs->type) {
-    case QTYPE_QINT:
-        return lhs->value.qint == qint_get_int(qobject_to_qint(rhs));
+    case QTYPE_QNUM:
+        return lhs->value.qnum ==
+            qnum_get_int(qobject_to_qnum(rhs), &error_abort);
     case QTYPE_QSTRING:
         return (strcmp(lhs->value.qstr, qstring_get_str(qobject_to_qstring(rhs))) == 0);
     case QTYPE_QDICT: {

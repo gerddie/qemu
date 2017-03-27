@@ -29,7 +29,7 @@
 #include "qemu/module.h"
 #include "qemu/bswap.h"
 #include "migration/migration.h"
-#include "qapi/qmp/qint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qbool.h"
 #include "qapi/qmp/qstring.h"
 #include "qemu/cutils.h"
@@ -1058,7 +1058,7 @@ static void vvfat_parse_filename(const char *filename, QDict *options,
 
     /* Fill in the options QDict */
     qdict_put(options, "dir", qstring_from_str(filename));
-    qdict_put(options, "fat-type", qint_from_int(fat_type));
+    qdict_put(options, "fat-type", qnum_from_int(fat_type));
     qdict_put(options, "floppy", qbool_from_bool(floppy));
     qdict_put(options, "rw", qbool_from_bool(rw));
 }

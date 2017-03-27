@@ -27,8 +27,7 @@
 #include "qom/qom-qobject.h"
 #include "qapi/qmp/qobject.h"
 #include "qapi/qmp/qbool.h"
-#include "qapi/qmp/qint.h"
-#include "qapi/qmp/quint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qstring.h"
 
 #define MAX_INTERFACES 32
@@ -1191,59 +1190,59 @@ bool object_property_get_bool(Object *obj, const char *name,
 void object_property_set_int(Object *obj, int64_t value,
                              const char *name, Error **errp)
 {
-    QInt *qint = qint_from_int(value);
-    object_property_set_qobject(obj, QOBJECT(qint), name, errp);
+    QNum *qnum = qnum_from_int(value);
+    object_property_set_qobject(obj, QOBJECT(qnum), name, errp);
 
-    QDECREF(qint);
+    QDECREF(qnum);
 }
 
 int64_t object_property_get_int(Object *obj, const char *name,
                                 Error **errp)
 {
     QObject *ret = object_property_get_qobject(obj, name, errp);
-    QInt *qint;
+    QNum *qnum;
     int64_t retval;
 
     if (!ret) {
         return -1;
     }
-    qint = qobject_to_qint(ret);
-    if (!qint) {
+    qnum = qobject_to_qnum(ret);
+    if (!qnum) {
         error_setg(errp, QERR_INVALID_PARAMETER_TYPE, name, "int");
         retval = -1;
     } else {
-        retval = qint_get_int(qint);
+        retval = qnum_get_int(qnum, errp);
     }
 
-    QDECREF(qint);
+    QDECREF(qnum);
     return retval;
 }
 
 void object_property_set_uint(Object *obj, uint64_t value,
                              const char *name, Error **errp)
 {
-    QUInt *quint = quint_from_uint(value);
-    object_property_set_qobject(obj, QOBJECT(quint), name, errp);
+    QNum *qnum = qnum_from_uint(value);
+    object_property_set_qobject(obj, QOBJECT(qnum), name, errp);
 
-    QDECREF(quint);
+    QDECREF(qnum);
 }
 
 uint64_t object_property_get_uint(Object *obj, const char *name,
                                   Error **errp)
 {
     QObject *ret = object_property_get_qobject(obj, name, errp);
-    QUInt *quint;
+    QNum *qnum;
     uint64_t retval;
 
     if (!ret) {
         return 0;
     }
-    quint = qobject_to_quint(ret);
-    if (!quint) {
+    qnum = qobject_to_qnum(ret);
+    if (!qnum) {
         error_setg(errp, QERR_INVALID_PARAMETER_TYPE, name, "uint");
         retval = 0;
     } else {
-        retval = quint_get_uint(quint);
+        retval = qnum_get_uint(qnum, errp);
     }
 
     qobject_decref(ret);

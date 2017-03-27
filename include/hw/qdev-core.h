@@ -7,6 +7,7 @@
 #include "qom/object.h"
 #include "hw/irq.h"
 #include "hw/hotplug.h"
+#include "qapi/qmp/qnum.h"
 
 enum {
     DEV_NVECTORS_UNSPECIFIED = -1,
@@ -239,10 +240,7 @@ struct Property {
     ptrdiff_t    offset;
     uint8_t      bitnr;
     QType        qtype;
-    union {
-        int64_t      i;
-        uint64_t     u;
-    } defval;
+    QNum         defval;
     int          arrayoffset;
     PropertyInfo *arrayinfo;
     int          arrayfieldsize;

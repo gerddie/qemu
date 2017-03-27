@@ -30,7 +30,7 @@
 #include "hw/xen/xen_backend.h"
 #include "monitor/qdev.h"
 #include "qapi/qmp/qbool.h"
-#include "qapi/qmp/qint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qstring.h"
 
 #include <xen/io/ring.h>
@@ -753,8 +753,8 @@ static void usbback_portid_add(struct usbback_info *usbif, unsigned port,
     tmp = g_strdup_printf("%s-%u", usbif->xendev.qdev.id, port);
     qdict_put(qdict, "id", qstring_from_str(tmp));
     g_free(tmp);
-    qdict_put(qdict, "port", qint_from_int(port));
-    qdict_put(qdict, "hostbus", qint_from_int(atoi(busid)));
+    qdict_put(qdict, "port", qnum_from_int(port));
+    qdict_put(qdict, "hostbus", qnum_from_int(atoi(busid)));
     qdict_put(qdict, "hostport", qstring_from_str(portname));
     opts = qemu_opts_from_qdict(qemu_find_opts("device"), qdict, &local_err);
     if (local_err) {

@@ -2773,9 +2773,9 @@ static QDict *monitor_parse_arguments(Monitor *mon,
                         size = -1;
                     }
                 }
-                qdict_put(qdict, "count", qint_from_int(count));
-                qdict_put(qdict, "format", qint_from_int(format));
-                qdict_put(qdict, "size", qint_from_int(size));
+                qdict_put(qdict, "count", qnum_from_int(count));
+                qdict_put(qdict, "format", qnum_from_int(format));
+                qdict_put(qdict, "size", qnum_from_int(size));
             }
             break;
         case 'i':
@@ -2818,7 +2818,7 @@ static QDict *monitor_parse_arguments(Monitor *mon,
                     }
                     val <<= 20;
                 }
-                qdict_put(qdict, key, qint_from_int(val));
+                qdict_put(qdict, key, qnum_from_int(val));
             }
             break;
         case 'o':
@@ -2841,7 +2841,7 @@ static QDict *monitor_parse_arguments(Monitor *mon,
                     monitor_printf(mon, "invalid size\n");
                     goto fail;
                 }
-                qdict_put(qdict, key, qint_from_int(val));
+                qdict_put(qdict, key, qnum_from_int(val));
                 p = end;
             }
             break;
@@ -2874,7 +2874,7 @@ static QDict *monitor_parse_arguments(Monitor *mon,
                     monitor_printf(mon, "Unknown unit suffix\n");
                     goto fail;
                 }
-                qdict_put(qdict, key, qfloat_from_double(val));
+                qdict_put(qdict, key, qnum_from_double(val));
             }
             break;
         case 'b':

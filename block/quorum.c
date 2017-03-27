@@ -19,7 +19,7 @@
 #include "qapi/qmp/qbool.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qerror.h"
-#include "qapi/qmp/qint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qjson.h"
 #include "qapi/qmp/qlist.h"
 #include "qapi/qmp/qstring.h"
@@ -1103,7 +1103,7 @@ static void quorum_refresh_filename(BlockDriverState *bs, QDict *options)
     opts = qdict_new();
     qdict_put_obj(opts, "driver", QOBJECT(qstring_from_str("quorum")));
     qdict_put_obj(opts, QUORUM_OPT_VOTE_THRESHOLD,
-                  QOBJECT(qint_from_int(s->threshold)));
+                  QOBJECT(qnum_from_int(s->threshold)));
     qdict_put_obj(opts, QUORUM_OPT_BLKVERIFY,
                   QOBJECT(qbool_from_bool(s->is_blkverify)));
     qdict_put_obj(opts, QUORUM_OPT_REWRITE,

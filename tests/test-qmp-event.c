@@ -18,7 +18,7 @@
 #include "test-qapi-visit.h"
 #include "test-qapi-event.h"
 #include "qapi/qmp/types.h"
-#include "qapi/qmp/qint.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qobject.h"
 #include "qapi/qmp-event.h"
 
@@ -62,9 +62,9 @@ void qdict_cmp_do_simple(const char *key, QObject *obj1, void *opaque)
         d->result = (qbool_get_bool(qobject_to_qbool(obj1)) ==
                      qbool_get_bool(qobject_to_qbool(obj2)));
         return;
-    case QTYPE_QINT:
-        d->result = (qint_get_int(qobject_to_qint(obj1)) ==
-                     qint_get_int(qobject_to_qint(obj2)));
+    case QTYPE_QNUM:
+        d->result = (qnum_get_int(qobject_to_qnum(obj1), &error_abort) ==
+                     qnum_get_int(qobject_to_qnum(obj2), &error_abort));
         return;
     case QTYPE_QSTRING:
         d->result = g_strcmp0(qstring_get_str(qobject_to_qstring(obj1)),
@@ -177,11 +177,11 @@ static void test_event_c(TestEventData *data,
     b.has_enum1 = false;
 
     d_b = qdict_new();
-    qdict_put(d_b, "integer", qint_from_int(2));
+    qdict_put(d_b, "integer", qnum_from_int(2));
     qdict_put(d_b, "string", qstring_from_str("test1"));
 
     d_data = qdict_new();
-    qdict_put(d_data, "a", qint_from_int(1));
+    qdict_put(d_data, "a", qnum_from_int(1));
     qdict_put(d_data, "b", d_b);
     qdict_put(d_data, "c", qstring_from_str("test2"));
 
@@ -213,7 +213,7 @@ static void test_event_d(TestEventData *data,
     a.enum2 = ENUM_ONE_VALUE2;
 
     d_struct1 = qdict_new();
-    qdict_put(d_struct1, "integer", qint_from_int(2));
+    qdict_put(d_struct1, "integer", qnum_from_int(2));
     qdict_put(d_struct1, "string", qstring_from_str("test1"));
     qdict_put(d_struct1, "enum1", qstring_from_str("value1"));
 

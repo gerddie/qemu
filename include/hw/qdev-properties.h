@@ -43,8 +43,9 @@ extern PropertyInfo qdev_prop_arraylen;
         .info      = &(_prop),                                          \
         .offset    = offsetof(_state, _field)                           \
             + type_check(_type,typeof_field(_state, _field)),           \
-        .qtype     = QTYPE_QINT,                                        \
-        .defval.i  = (_type)_defval,                                    \
+        .qtype     = QTYPE_QNUM,                                        \
+        .defval.type  = QNUM_I64,                                       \
+        .defval.u.i64  = (_type)_defval,                                \
         }
 
 #define DEFINE_PROP_UINT(_name, _state, _field, _defval, _prop, _type) { \
@@ -52,8 +53,9 @@ extern PropertyInfo qdev_prop_arraylen;
             .info      = &(_prop),                                      \
             .offset    = offsetof(_state, _field)                       \
             + type_check(_type, typeof_field(_state, _field)),          \
-            .qtype     = QTYPE_QUINT,                                   \
-            .defval.u  = (_type)_defval,                                \
+            .qtype     = QTYPE_QNUM,                                    \
+            .defval.type  = QNUM_U64,                                   \
+            .defval.u.u64  = (_type)_defval,                            \
          }
 
 #define DEFINE_PROP_BIT(_name, _state, _field, _bit, _defval) {         \
@@ -63,8 +65,9 @@ extern PropertyInfo qdev_prop_arraylen;
         .offset    = offsetof(_state, _field)                           \
             + type_check(uint32_t, typeof_field(_state, _field)),       \
         .qtype     = QTYPE_QBOOL,                                       \
-        .defval.i  = (bool)_defval,                                     \
+        .defval.u.i64  = (bool)_defval,                                 \
         }
+
 #define DEFINE_PROP_BIT64(_name, _state, _field, _bit, _defval) {       \
         .name      = (_name),                                           \
         .info      = &(qdev_prop_bit64),                                \
@@ -72,7 +75,7 @@ extern PropertyInfo qdev_prop_arraylen;
         .offset    = offsetof(_state, _field)                           \
             + type_check(uint64_t, typeof_field(_state, _field)),       \
         .qtype     = QTYPE_QBOOL,                                       \
-        .defval.i  = (bool)_defval ,                                    \
+        .defval.u.i64  = (bool)_defval,                                 \
         }
 
 #define DEFINE_PROP_BOOL(_name, _state, _field, _defval) {       \
@@ -81,7 +84,7 @@ extern PropertyInfo qdev_prop_arraylen;
         .offset    = offsetof(_state, _field)                    \
             + type_check(bool, typeof_field(_state, _field)),    \
         .qtype     = QTYPE_QBOOL,                                \
-        .defval.i  = (bool)_defval,                              \
+        .defval.u.i64  = (bool)_defval,                          \
         }
 
 #define PROP_ARRAY_LEN_PREFIX "len-"
@@ -116,7 +119,7 @@ extern PropertyInfo qdev_prop_arraylen;
         .info = &(qdev_prop_arraylen),                                  \
         .offset = offsetof(_state, _field)                              \
             + type_check(uint32_t, typeof_field(_state, _field)),       \
-        .qtype = QTYPE_QINT,                                            \
+        .qtype = QTYPE_QNUM,                                            \
         .arrayinfo = &(_arrayprop),                                     \
         .arrayfieldsize = sizeof(_arraytype),                           \
         .arrayoffset = offsetof(_state, _arrayfield),                   \

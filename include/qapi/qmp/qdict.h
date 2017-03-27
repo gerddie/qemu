@@ -62,7 +62,7 @@ const char *qdict_get_str(const QDict *qdict, const char *key);
 int64_t qdict_get_try_int(const QDict *qdict, const char *key,
                           int64_t def_value);
 uint64_t qdict_get_try_uint(const QDict *qdict, const char *key,
-                            Error **errp);
+                            uint64_t def_value);
 bool qdict_get_try_bool(const QDict *qdict, const char *key, bool def_value);
 const char *qdict_get_try_str(const QDict *qdict, const char *key);
 

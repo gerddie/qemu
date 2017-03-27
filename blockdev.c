@@ -318,6 +318,8 @@ static bool parse_stats_intervals(BlockAcctStats *stats, QList *intervals,
                                   Error **errp)
 {
     const QListEntry *entry;
+    Error *local_err = NULL;
+
     for (entry = qlist_first(intervals); entry; entry = qlist_next(entry)) {
         switch (qobject_type(entry->value)) {
 
@@ -334,9 +336,13 @@ static bool parse_stats_intervals(BlockAcctStats *stats, QList *intervals,
             break;
         }
 
-        case QTYPE_QINT: {
-            int64_t length = qint_get_int(qobject_to_qint(entry->value));
-            if (length > 0 && length <= UINT_MAX) {
+        case QTYPE_QNUM: {
+            int64_t length =
+                qnum_get_int(qobject_to_qnum(entry->value), &local_err);
+            if (local_err) {
+                error_propagate(errp, local_err);
+                return false;
+            } else if (length > 0 && length <= UINT_MAX) {
                 block_acct_add_interval(stats, (unsigned) length);
             } else {
                 error_setg(errp, "Invalid interval length: %" PRId64, length);

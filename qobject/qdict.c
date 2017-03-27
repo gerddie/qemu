@@ -11,9 +11,7 @@
  */
 
 #include "qemu/osdep.h"
-#include "qapi/qmp/qint.h"
-#include "qapi/qmp/quint.h"
-#include "qapi/qmp/qfloat.h"
+#include "qapi/qmp/qnum.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qbool.h"
 #include "qapi/qmp/qstring.h"
@@ -182,7 +180,7 @@ size_t qdict_size(const QDict *qdict)
  * qdict_get_double(): Get an number mapped by 'key'
  *
  * This function assumes that 'key' exists and it stores a
- * QFloat, QInt or QUInt object.
+ * QFloat, QNum or QNum object.
  *
  * Return number mapped by 'key'.
  */
@@ -192,12 +190,8 @@ double qdict_get_double(const QDict *qdict, const char *key)
 
     assert(obj);
     switch (qobject_type(obj)) {
-    case QTYPE_QFLOAT:
-        return qfloat_get_double(qobject_to_qfloat(obj));
-    case QTYPE_QINT:
-        return qint_get_int(qobject_to_qint(obj));
-    case QTYPE_QUINT:
-        return quint_get_uint(qobject_to_quint(obj));
+    case QTYPE_QNUM:
+        return qnum_get_double(qobject_to_qnum(obj));
     default:
         abort();
     }
@@ -207,13 +201,14 @@ double qdict_get_double(const QDict *qdict, const char *key)
  * qdict_get_int(): Get an integer mapped by 'key'
  *
  * This function assumes that 'key' exists and it stores a
- * QInt object.
+ * QNum object.
  *
  * Return integer mapped by 'key'.
  */
 int64_t qdict_get_int(const QDict *qdict, const char *key)
 {
-    return qint_get_int(qobject_to_qint(qdict_get(qdict, key)));
+    // FIXME: handle error?
+    return qnum_get_int(qobject_to_qnum(qdict_get(qdict, key)), &error_abort);
 }
 
 /**
@@ -263,15 +258,15 @@ const char *qdict_get_str(const QDict *qdict, const char *key)
  * qdict_get_try_int(): Try to get integer mapped by 'key'
  *
  * Return integer mapped by 'key', if it is not present in
- * the dictionary or if the stored object is not of QInt type
+ * the dictionary or if the stored object is not of QNum type
  * 'def_value' will be returned.
  */
 int64_t qdict_get_try_int(const QDict *qdict, const char *key,
                           int64_t def_value)
 {
-    QInt *qint = qobject_to_qint(qdict_get(qdict, key));
+    QNum *qnum = qobject_to_qnum(qdict_get(qdict, key));
 
-    return qint ? qint_get_int(qint) : def_value;
+    return qnum ? qnum_get_int(qnum, &error_abort) : def_value;
 }
 
 /**
@@ -281,24 +276,20 @@ int64_t qdict_get_try_int(const QDict *qdict, const char *key,
  * the dictionary or with negative value, returns 0 and set error.
  */
 uint64_t qdict_get_try_uint(const QDict *qdict, const char *key,
-                            Error **errp)
+                            uint64_t def_value)
 {
-    QUInt *quint = qobject_to_quint(qdict_get(qdict, key));
-    QInt *qint;
-    int val;
+    QNum *qnum = qobject_to_qnum(qdict_get(qdict, key));
+    Error *local_error = NULL;
+    uint64_t val;
 
-    if (quint) {
-        return quint_get_uint(quint);
+    if (qnum) {
+        val = qnum_get_uint(qnum, &local_error);
     }
 
-    qint = qobject_to_qint(qdict_get(qdict, key));
-    if (!qint) {
-        error_setg(errp, "Missing key or type mismatch");
-        return 0;
+    if (!qnum || local_error) {
+        error_free(local_error);
+        val = def_value;
     }
-
-    val = qint_get_int(qint);
-    /* XXX: for compatibility reasons, cast to uint64 */
 
     return val;
 }
