@@ -390,8 +390,10 @@ static void update_disconnected_filename(SocketChardev *s)
     Chardev *chr = CHARDEV(s);
 
     g_free(chr->filename);
-    chr->filename = SocketAddress_to_str("disconnected:", s->addr,
-                                         s->is_listen, s->is_telnet);
+    if (s->addr) {
+        chr->filename = SocketAddress_to_str("disconnected:", s->addr,
+                                             s->is_listen, s->is_telnet);
+    }
 }
 
 static void tcp_chr_disconnect(Chardev *chr)
