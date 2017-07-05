@@ -164,6 +164,7 @@ static int qcow2_cache_flush_dependency(BlockDriverState *bs, Qcow2Cache *c)
     return 0;
 }
 
+coroutine_fn
 static int qcow2_cache_entry_flush(BlockDriverState *bs, Qcow2Cache *c, int i)
 {
     BDRVQcow2State *s = bs->opaque;
@@ -221,6 +222,7 @@ static int qcow2_cache_entry_flush(BlockDriverState *bs, Qcow2Cache *c, int i)
     return 0;
 }
 
+coroutine_fn
 int qcow2_cache_write(BlockDriverState *bs, Qcow2Cache *c)
 {
     BDRVQcow2State *s = bs->opaque;
@@ -240,6 +242,7 @@ int qcow2_cache_write(BlockDriverState *bs, Qcow2Cache *c)
     return result;
 }
 
+coroutine_fn
 int qcow2_cache_flush(BlockDriverState *bs, Qcow2Cache *c)
 {
     int result = qcow2_cache_write(bs, c);
@@ -282,6 +285,7 @@ void qcow2_cache_depends_on_flush(Qcow2Cache *c)
     c->depends_on_flush = true;
 }
 
+coroutine_fn
 int qcow2_cache_empty(BlockDriverState *bs, Qcow2Cache *c)
 {
     int ret, i;
@@ -304,6 +308,7 @@ int qcow2_cache_empty(BlockDriverState *bs, Qcow2Cache *c)
     return 0;
 }
 
+coroutine_fn
 static int qcow2_cache_do_get(BlockDriverState *bs, Qcow2Cache *c,
     uint64_t offset, void **table, bool read_from_disk)
 {
@@ -378,12 +383,14 @@ found:
     return 0;
 }
 
+coroutine_fn
 int qcow2_cache_get(BlockDriverState *bs, Qcow2Cache *c, uint64_t offset,
     void **table)
 {
     return qcow2_cache_do_get(bs, c, offset, table, true);
 }
 
+coroutine_fn
 int qcow2_cache_get_empty(BlockDriverState *bs, Qcow2Cache *c, uint64_t offset,
     void **table)
 {

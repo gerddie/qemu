@@ -310,6 +310,7 @@ out:
     }
 }
 
+coroutine_fn
 static void iscsi_co_init_iscsitask(IscsiLun *iscsilun, struct IscsiTask *iTask)
 {
     *iTask = (struct IscsiTask) {

@@ -1087,6 +1087,7 @@ handle_dependencies(BlockDriverState *bs, uint64_t guest_offset,
  *
  *  -errno: in error cases
  */
+coroutine_fn
 static int handle_copied(BlockDriverState *bs, uint64_t guest_offset,
     uint64_t *host_offset, uint64_t *bytes, QCowL2Meta **m)
 {
@@ -1195,6 +1196,7 @@ out:
  * function has been waiting for another request and the allocation must be
  * restarted, but the whole request should not be failed.
  */
+coroutine_fn
 static int do_alloc_cluster_offset(BlockDriverState *bs, uint64_t guest_offset,
                                    uint64_t *host_offset, uint64_t *nb_clusters)
 {
@@ -1243,6 +1245,7 @@ static int do_alloc_cluster_offset(BlockDriverState *bs, uint64_t guest_offset,
  *
  *  -errno: in error cases
  */
+coroutine_fn
 static int handle_alloc(BlockDriverState *bs, uint64_t guest_offset,
     uint64_t *host_offset, uint64_t *bytes, QCowL2Meta **m)
 {

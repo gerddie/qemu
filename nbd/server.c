@@ -995,6 +995,7 @@ nbd_co_send_reply(NBDRequestData *req, NBDReply *reply, int len)
  * the client (although the caller may still need to disconnect after reporting
  * the error).
  */
+coroutine_fn
 static int nbd_co_receive_request(NBDRequestData *req, NBDRequest *request)
 {
     NBDClient *client = req->client;

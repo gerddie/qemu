@@ -1952,6 +1952,7 @@ int coroutine_fn bdrv_is_allocated(BlockDriverState *bs, int64_t sector_num,
  *  allocated/unallocated state.
  *
  */
+coroutine_fn
 int bdrv_is_allocated_above(BlockDriverState *top,
                             BlockDriverState *base,
                             int64_t sector_num,
