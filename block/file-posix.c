@@ -1600,7 +1600,7 @@ static void raw_aio_unplug(BlockDriverState *bs)
 #endif
 }
 
-static BlockAIOCB * coroutine_fn
+static BlockAIOCB *
 raw_aio_flush(BlockDriverState *bs,
         BlockCompletionFunc *cb, void *opaque)
 {
@@ -2111,7 +2111,7 @@ static int64_t coroutine_fn raw_co_get_block_status(BlockDriverState *bs,
     return ret | BDRV_BLOCK_OFFSET_VALID | start;
 }
 
-static coroutine_fn BlockAIOCB *raw_aio_pdiscard(BlockDriverState *bs,
+static BlockAIOCB *raw_aio_pdiscard(BlockDriverState *bs,
     int64_t offset, int bytes,
     BlockCompletionFunc *cb, void *opaque)
 {
@@ -2529,7 +2529,7 @@ hdev_open_Mac_error:
 
 #if defined(__linux__)
 
-static BlockAIOCB * coroutine_fn
+static BlockAIOCB *
 hdev_aio_ioctl(BlockDriverState *bs,
         unsigned long int req, void *buf,
         BlockCompletionFunc *cb, void *opaque)
@@ -2563,7 +2563,7 @@ static int fd_open(BlockDriverState *bs)
     return -EIO;
 }
 
-static coroutine_fn BlockAIOCB *hdev_aio_pdiscard(BlockDriverState *bs,
+static BlockAIOCB *hdev_aio_pdiscard(BlockDriverState *bs,
     int64_t offset, int bytes,
     BlockCompletionFunc *cb, void *opaque)
 {

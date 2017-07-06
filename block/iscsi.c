@@ -1006,7 +1006,7 @@ static void iscsi_ioctl_handle_emulated(IscsiAIOCB *acb, int req, void *buf)
     qemu_bh_schedule(acb->bh);
 }
 
-static BlockAIOCB * coroutine_fn
+static BlockAIOCB *
 iscsi_aio_ioctl(BlockDriverState *bs,
         unsigned long int req, void *buf,
         BlockCompletionFunc *cb, void *opaque)
