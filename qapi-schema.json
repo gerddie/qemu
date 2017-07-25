@@ -226,7 +226,8 @@
 #
 # Since: 0.14.0
 ##
-{ 'struct': 'KvmInfo', 'data': {'enabled': 'bool', 'present': 'bool'} }
+{ 'struct': 'KvmInfo', 'data': {'enabled': 'bool', 'present': 'bool'},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_KVM)'] }
 
 ##
 # @query-kvm:
@@ -243,7 +244,8 @@
 # <- { "return": { "enabled": true, "present": true } }
 #
 ##
-{ 'command': 'query-kvm', 'returns': 'KvmInfo' }
+{ 'command': 'query-kvm', 'returns': 'KvmInfo',
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_KVM)'] }
 
 ##
 # @RunState:

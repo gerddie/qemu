@@ -28,7 +28,6 @@ enum {
 
 extern const uint32_t arch_type;
 
-int kvm_available(void);
 int xen_available(void);
 
 #endif

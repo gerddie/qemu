@@ -295,6 +295,7 @@ STEXI
 Show dynamic compiler opcode counters
 ETEXI
 
+#if defined(CONFIG_KVM)
     {
         .name       = "kvm",
         .args_type  = "",
@@ -302,6 +303,7 @@ ETEXI
         .help       = "show KVM information",
         .cmd        = hmp_info_kvm,
     },
+#endif
 
 STEXI
 @item info kvm

@@ -26,6 +26,7 @@
 #include "cpu.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/arch_init.h"
+#include "sysemu/kvm.h"
 #include "hw/pci/pci.h"
 #include "hw/audio/soundhw.h"
 #include "qemu/config-file.h"
@@ -85,14 +86,17 @@ int graphic_depth = 32;
 
 const uint32_t arch_type = QEMU_ARCH;
 
-int kvm_available(void)
-{
 #ifdef CONFIG_KVM
-    return 1;
-#else
-    return 0;
-#endif
+KvmInfo *qmp_query_kvm(Error **errp)
+{
+    KvmInfo *info = g_malloc0(sizeof(*info));
+
+    info->enabled = kvm_enabled();
+    info->present = 1;
+
+    return info;
 }
+#endif
 
 int xen_available(void)
 {

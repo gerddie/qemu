@@ -24,7 +24,6 @@
 #include "chardev/char.h"
 #include "ui/qemu-spice.h"
 #include "ui/vnc.h"
-#include "sysemu/kvm.h"
 #include "sysemu/arch_init.h"
 #include "hw/qdev.h"
 #include "sysemu/blockdev.h"
@@ -59,16 +58,6 @@ VersionInfo *qmp_query_version(Error **errp)
     info->qemu->minor = QEMU_VERSION_MINOR;
     info->qemu->micro = QEMU_VERSION_MICRO;
     info->package = g_strdup(QEMU_PKGVERSION);
-
-    return info;
-}
-
-KvmInfo *qmp_query_kvm(Error **errp)
-{
-    KvmInfo *info = g_malloc0(sizeof(*info));
-
-    info->enabled = kvm_enabled();
-    info->present = kvm_available();
 
     return info;
 }

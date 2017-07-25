@@ -81,6 +81,7 @@ void hmp_info_version(Monitor *mon, const QDict *qdict)
     qapi_free_VersionInfo(info);
 }
 
+#ifdef CONFIG_KVM
 void hmp_info_kvm(Monitor *mon, const QDict *qdict)
 {
     KvmInfo *info;
@@ -95,6 +96,7 @@ void hmp_info_kvm(Monitor *mon, const QDict *qdict)
 
     qapi_free_KvmInfo(info);
 }
+#endif
 
 void hmp_info_status(Monitor *mon, const QDict *qdict)
 {
