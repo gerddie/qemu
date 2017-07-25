@@ -707,6 +707,7 @@ STEXI
 Show iothread's identifiers.
 ETEXI
 
+#if defined(CONFIG_ROCKER)
     {
         .name       = "rocker",
         .args_type  = "name:s",
@@ -714,6 +715,7 @@ ETEXI
         .help       = "Show rocker switch",
         .cmd        = hmp_rocker,
     },
+#endif
 
 STEXI
 @item info rocker @var{name}
@@ -721,6 +723,7 @@ STEXI
 Show rocker switch.
 ETEXI
 
+#if defined(CONFIG_ROCKER)
     {
         .name       = "rocker-ports",
         .args_type  = "name:s",
@@ -728,6 +731,7 @@ ETEXI
         .help       = "Show rocker ports",
         .cmd        = hmp_rocker_ports,
     },
+#endif
 
 STEXI
 @item info rocker_ports @var{name}-ports
@@ -735,6 +739,7 @@ STEXI
 Show rocker ports.
 ETEXI
 
+#if defined(CONFIG_ROCKER)
     {
         .name       = "rocker-of-dpa-flows",
         .args_type  = "name:s,tbl_id:i?",
@@ -742,6 +747,7 @@ ETEXI
         .help       = "Show rocker OF-DPA flow tables",
         .cmd        = hmp_rocker_of_dpa_flows,
     },
+#endif
 
 STEXI
 @item info rocker_of_dpa_flows @var{name} [@var{tbl_id}]
@@ -749,6 +755,7 @@ STEXI
 Show rocker OF-DPA flow tables.
 ETEXI
 
+#if defined(CONFIG_ROCKER)
     {
         .name       = "rocker-of-dpa-groups",
         .args_type  = "name:s,type:i?",
@@ -756,6 +763,7 @@ ETEXI
         .help       = "Show rocker OF-DPA groups",
         .cmd        = hmp_rocker_of_dpa_groups,
     },
+#endif
 
 STEXI
 @item info rocker-of-dpa-groups @var{name} [@var{type}]

@@ -18,7 +18,8 @@
 # Since: 2.4
 ##
 { 'struct': 'RockerSwitch',
-  'data': { 'name': 'str', 'id': 'uint64', 'ports': 'uint32' } }
+  'data': { 'name': 'str', 'id': 'uint64', 'ports': 'uint32' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @query-rocker:
@@ -37,7 +38,8 @@
 ##
 { 'command': 'query-rocker',
   'data': { 'name': 'str' },
-  'returns': 'RockerSwitch' }
+  'returns': 'RockerSwitch',
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerPortDuplex:
@@ -50,7 +52,8 @@
 #
 # Since: 2.4
 ##
-{ 'enum': 'RockerPortDuplex', 'data': [ 'half', 'full' ] }
+{ 'enum': 'RockerPortDuplex', 'data': [ 'half', 'full' ],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerPortAutoneg:
@@ -63,7 +66,8 @@
 #
 # Since: 2.4
 ##
-{ 'enum': 'RockerPortAutoneg', 'data': [ 'off', 'on' ] }
+{ 'enum': 'RockerPortAutoneg', 'data': [ 'off', 'on' ],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerPort:
@@ -87,7 +91,8 @@
 { 'struct': 'RockerPort',
   'data': { 'name': 'str', 'enabled': 'bool', 'link-up': 'bool',
             'speed': 'uint32', 'duplex': 'RockerPortDuplex',
-            'autoneg': 'RockerPortAutoneg' } }
+            'autoneg': 'RockerPortAutoneg' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @query-rocker-ports:
@@ -110,7 +115,8 @@
 ##
 { 'command': 'query-rocker-ports',
   'data': { 'name': 'str' },
-  'returns': ['RockerPort'] }
+  'returns': ['RockerPort'],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerOfDpaFlowKey:
@@ -148,7 +154,8 @@
   'data' : { 'priority': 'uint32', 'tbl-id': 'uint32', '*in-pport': 'uint32',
              '*tunnel-id': 'uint32', '*vlan-id': 'uint16',
              '*eth-type': 'uint16', '*eth-src': 'str', '*eth-dst': 'str',
-             '*ip-proto': 'uint8', '*ip-tos': 'uint8', '*ip-dst': 'str' } }
+             '*ip-proto': 'uint8', '*ip-tos': 'uint8', '*ip-dst': 'str' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerOfDpaFlowMask:
@@ -177,7 +184,8 @@
 { 'struct': 'RockerOfDpaFlowMask',
   'data' : { '*in-pport': 'uint32', '*tunnel-id': 'uint32',
              '*vlan-id': 'uint16', '*eth-src': 'str', '*eth-dst': 'str',
-             '*ip-proto': 'uint8', '*ip-tos': 'uint8' } }
+             '*ip-proto': 'uint8', '*ip-tos': 'uint8' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerOfDpaFlowAction:
@@ -204,7 +212,8 @@
 { 'struct': 'RockerOfDpaFlowAction',
   'data' : { '*goto-tbl': 'uint32', '*group-id': 'uint32',
              '*tunnel-lport': 'uint32', '*vlan-id': 'uint16',
-             '*new-vlan-id': 'uint16', '*out-pport': 'uint32' } }
+             '*new-vlan-id': 'uint16', '*out-pport': 'uint32' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerOfDpaFlow:
@@ -225,7 +234,8 @@
 ##
 { 'struct': 'RockerOfDpaFlow',
   'data': { 'cookie': 'uint64', 'hits': 'uint64', 'key': 'RockerOfDpaFlowKey',
-            'mask': 'RockerOfDpaFlowMask', 'action': 'RockerOfDpaFlowAction' } }
+            'mask': 'RockerOfDpaFlowMask', 'action': 'RockerOfDpaFlowAction' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @query-rocker-of-dpa-flows:
@@ -257,7 +267,8 @@
 ##
 { 'command': 'query-rocker-of-dpa-flows',
   'data': { 'name': 'str', '*tbl-id': 'uint32' },
-  'returns': ['RockerOfDpaFlow'] }
+  'returns': ['RockerOfDpaFlow'],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @RockerOfDpaGroup:
@@ -301,7 +312,8 @@
             '*group-id': 'uint32', '*set-vlan-id': 'uint16',
             '*pop-vlan': 'uint8', '*group-ids': ['uint32'],
             '*set-eth-src': 'str', '*set-eth-dst': 'str',
-            '*ttl-check': 'uint8' } }
+            '*ttl-check': 'uint8' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }
 
 ##
 # @query-rocker-of-dpa-groups:
@@ -338,4 +350,5 @@
 ##
 { 'command': 'query-rocker-of-dpa-groups',
   'data': { 'name': 'str', '*type': 'uint8' },
-  'returns': ['RockerOfDpaGroup'] }
+  'returns': ['RockerOfDpaGroup'],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_ROCKER)'] }

@@ -2508,6 +2508,7 @@ void hmp_qom_set(Monitor *mon, const QDict *qdict)
     hmp_handle_error(mon, &err);
 }
 
+#ifdef CONFIG_ROCKER
 void hmp_rocker(Monitor *mon, const QDict *qdict)
 {
     const char *name = qdict_get_str(qdict, "name");
@@ -2809,6 +2810,7 @@ void hmp_rocker_of_dpa_groups(Monitor *mon, const QDict *qdict)
 
     qapi_free_RockerOfDpaGroupList(list);
 }
+#endif
 
 void hmp_info_dump(Monitor *mon, const QDict *qdict)
 {

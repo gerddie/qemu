@@ -89,6 +89,7 @@
 #pragma GCC poison CONFIG_KVM
 #pragma GCC poison CONFIG_SOFTMMU
 #pragma GCC poison CONFIG_PCI
+#pragma GCC poison CONFIG_ROCKER
 
 #endif
 #endif

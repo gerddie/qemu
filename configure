@@ -6178,6 +6178,11 @@ case "$target_name" in
   target_pci=yes
   ;;
 esac
+target_rocker="$target_pci"
+case "$target_name" in
+    s390x)
+        target_rocker="no"
+esac
 
 target_softmmu="no"
 target_user_only="no"
@@ -6376,6 +6381,9 @@ if test "$target_bigendian" = "yes" ; then
 fi
 if test "$target_pci" = "yes" ; then
   echo "CONFIG_PCI=y" >> $config_target_mak
+fi
+if test "$target_rocker" = "yes" ; then
+    echo "CONFIG_ROCKER=y" >> $config_target_mak
 fi
 if test "$target_softmmu" = "yes" ; then
   echo "CONFIG_SOFTMMU=y" >> $config_target_mak
