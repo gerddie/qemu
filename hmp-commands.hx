@@ -1286,6 +1286,7 @@ STEXI
 Add drive to PCI storage controller.
 ETEXI
 
+#if defined(CONFIG_PCI)
     {
         .name       = "pcie_aer_inject_error",
         .args_type  = "advisory_non_fatal:-a,correctable:-c,"
@@ -1303,6 +1304,7 @@ ETEXI
                       "<tlb header prefix> = 32bit x 4",
         .cmd        = hmp_pcie_aer_inject_error,
     },
+#endif
 
 STEXI
 @item pcie_aer_inject_error

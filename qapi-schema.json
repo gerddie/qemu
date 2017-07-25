@@ -2073,7 +2073,8 @@
 #
 # Since: 0.14.0
 ##
-{ 'struct': 'PciMemoryRange', 'data': {'base': 'int', 'limit': 'int'} }
+{ 'struct': 'PciMemoryRange', 'data': {'base': 'int', 'limit': 'int'},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciMemoryRegion:
@@ -2095,7 +2096,8 @@
 ##
 { 'struct': 'PciMemoryRegion',
   'data': {'bar': 'int', 'type': 'str', 'address': 'int', 'size': 'int',
-           '*prefetch': 'bool', '*mem_type_64': 'bool' } }
+           '*prefetch': 'bool', '*mem_type_64': 'bool' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciBusInfo:
@@ -2124,7 +2126,8 @@
   'data': {'number': 'int', 'secondary': 'int', 'subordinate': 'int',
            'io_range': 'PciMemoryRange',
            'memory_range': 'PciMemoryRange',
-           'prefetchable_range': 'PciMemoryRange' } }
+           'prefetchable_range': 'PciMemoryRange' },
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciBridgeInfo:
@@ -2138,7 +2141,8 @@
 # Since: 0.14.0
 ##
 { 'struct': 'PciBridgeInfo',
-  'data': {'bus': 'PciBusInfo', '*devices': ['PciDeviceInfo']} }
+  'data': {'bus': 'PciBusInfo', '*devices': ['PciDeviceInfo']},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciDeviceClass:
@@ -2152,7 +2156,8 @@
 # Since: 2.4
 ##
 { 'struct': 'PciDeviceClass',
-  'data': {'*desc': 'str', 'class': 'int'} }
+  'data': {'*desc': 'str', 'class': 'int'},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciDeviceId:
@@ -2166,7 +2171,8 @@
 # Since: 2.4
 ##
 { 'struct': 'PciDeviceId',
-  'data': {'device': 'int', 'vendor': 'int'} }
+  'data': {'device': 'int', 'vendor': 'int'},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciDeviceInfo:
@@ -2200,7 +2206,8 @@
   'data': {'bus': 'int', 'slot': 'int', 'function': 'int',
            'class_info': 'PciDeviceClass', 'id': 'PciDeviceId',
            '*irq': 'int', 'qdev_id': 'str', '*pci_bridge': 'PciBridgeInfo',
-           'regions': ['PciMemoryRegion']} }
+           'regions': ['PciMemoryRegion']},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @PciInfo:
@@ -2213,7 +2220,8 @@
 #
 # Since: 0.14.0
 ##
-{ 'struct': 'PciInfo', 'data': {'bus': 'int', 'devices': ['PciDeviceInfo']} }
+{ 'struct': 'PciInfo', 'data': {'bus': 'int', 'devices': ['PciDeviceInfo']},
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @query-pci:
@@ -2359,7 +2367,8 @@
 # Note: This example has been shortened as the real response is too long.
 #
 ##
-{ 'command': 'query-pci', 'returns': ['PciInfo'] }
+{ 'command': 'query-pci', 'returns': ['PciInfo'],
+  'if': ['defined(NEED_CPU_H)', 'defined(CONFIG_PCI)'] }
 
 ##
 # @quit:

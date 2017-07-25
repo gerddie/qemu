@@ -200,6 +200,7 @@ STEXI
 Show i8259 (PIC) state.
 ETEXI
 
+#if defined(CONFIG_PCI)
     {
         .name       = "pci",
         .args_type  = "",
@@ -207,6 +208,7 @@ ETEXI
         .help       = "show PCI info",
         .cmd        = hmp_info_pci,
     },
+#endif
 
 STEXI
 @item info pci

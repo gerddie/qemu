@@ -793,6 +793,7 @@ void hmp_info_balloon(Monitor *mon, const QDict *qdict)
     qapi_free_BalloonInfo(info);
 }
 
+#ifdef CONFIG_PCI
 static void hmp_info_pci_device(Monitor *mon, const PciDeviceInfo *dev)
 {
     PciMemoryRegionList *region;
@@ -870,6 +871,7 @@ static void hmp_info_pci_device(Monitor *mon, const PciDeviceInfo *dev)
         }
     }
 }
+#endif
 
 static int hmp_info_irq_foreach(Object *obj, void *opaque)
 {
@@ -935,6 +937,7 @@ void hmp_info_pic(Monitor *mon, const QDict *qdict)
                                    hmp_info_pic_foreach, mon);
 }
 
+#ifdef CONFIG_PCI
 void hmp_info_pci(Monitor *mon, const QDict *qdict)
 {
     PciInfoList *info_list, *info;
@@ -957,6 +960,7 @@ void hmp_info_pci(Monitor *mon, const QDict *qdict)
 
     qapi_free_PciInfoList(info_list);
 }
+#endif
 
 void hmp_info_block_jobs(Monitor *mon, const QDict *qdict)
 {
