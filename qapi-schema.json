@@ -1418,7 +1418,14 @@
 # Since: 2.6
 ##
 { 'enum': 'CpuInfoArch',
-  'data': ['x86', 'sparc', 'ppc', 'mips', 'tricore', 'other' ] }
+  'data': [
+      { 'name': 'x86', 'if': 'defined(TARGET_I386)' },
+      { 'name': 'sparc', 'if': 'defined(TARGET_SPARC)' },
+      { 'name': 'ppc', 'if': 'defined(TARGET_PPC)' },
+      { 'name': 'mips', 'if': 'defined(TARGET_MIPS)' },
+      { 'name': 'tricore', 'if': 'defined(TARGET_TRICORE)' },
+      'other' ],
+  'if': 'defined(NEED_CPU_H)' }
 
 ##
 # @CpuInfo:
@@ -1452,12 +1459,18 @@
            'qom_path': 'str', 'thread_id': 'int',
            '*props': 'CpuInstanceProperties', 'arch': 'CpuInfoArch' },
   'discriminator': 'arch',
-  'data': { 'x86': 'CpuInfoX86',
-            'sparc': 'CpuInfoSPARC',
-            'ppc': 'CpuInfoPPC',
-            'mips': 'CpuInfoMIPS',
-            'tricore': 'CpuInfoTricore',
-            'other': 'CpuInfoOther' } }
+  'data': { 'x86': { 'type': 'CpuInfoX86',
+                     'if': 'defined(TARGET_I386)' },
+            'sparc': { 'type': 'CpuInfoSPARC',
+                       'if': 'defined(TARGET_SPARC)' },
+            'ppc': { 'type': 'CpuInfoPPC',
+                     'if': 'defined(TARGET_PPC)' },
+            'mips': { 'type': 'CpuInfoMIPS',
+                      'if': 'defined(TARGET_MIPS)' },
+            'tricore': { 'type': 'CpuInfoTricore',
+                         'if': 'defined(TARGET_TRICORE)' },
+            'other': 'CpuInfoOther' },
+  'if': 'defined(NEED_CPU_H)' }
 
 ##
 # @CpuInfoX86:
@@ -1468,7 +1481,8 @@
 #
 # Since: 2.6
 ##
-{ 'struct': 'CpuInfoX86', 'data': { 'pc': 'int' } }
+{ 'struct': 'CpuInfoX86', 'data': { 'pc': 'int' },
+  'if': ['defined(NEED_CPU_H)', 'defined(TARGET_I386)'] }
 
 ##
 # @CpuInfoSPARC:
@@ -1481,7 +1495,8 @@
 #
 # Since: 2.6
 ##
-{ 'struct': 'CpuInfoSPARC', 'data': { 'pc': 'int', 'npc': 'int' } }
+{ 'struct': 'CpuInfoSPARC', 'data': { 'pc': 'int', 'npc': 'int' },
+  'if': ['defined(NEED_CPU_H)', 'defined(TARGET_SPARC)'] }
 
 ##
 # @CpuInfoPPC:
@@ -1492,7 +1507,8 @@
 #
 # Since: 2.6
 ##
-{ 'struct': 'CpuInfoPPC', 'data': { 'nip': 'int' } }
+{ 'struct': 'CpuInfoPPC', 'data': { 'nip': 'int' },
+  'if': ['defined(NEED_CPU_H)', 'defined(TARGET_PPC)'] }
 
 ##
 # @CpuInfoMIPS:
@@ -1503,7 +1519,8 @@
 #
 # Since: 2.6
 ##
-{ 'struct': 'CpuInfoMIPS', 'data': { 'PC': 'int' } }
+{ 'struct': 'CpuInfoMIPS', 'data': { 'PC': 'int' },
+  'if': ['defined(NEED_CPU_H)', 'defined(TARGET_MIPS)'] }
 
 ##
 # @CpuInfoTricore:
@@ -1514,7 +1531,8 @@
 #
 # Since: 2.6
 ##
-{ 'struct': 'CpuInfoTricore', 'data': { 'PC': 'int' } }
+{ 'struct': 'CpuInfoTricore', 'data': { 'PC': 'int' },
+  'if': ['defined(NEED_CPU_H)', 'defined(TARGET_TRICORE)'] }
 
 ##
 # @CpuInfoOther:
@@ -1524,7 +1542,8 @@
 # Since: 2.6
 #
 ##
-{ 'struct': 'CpuInfoOther', 'data': { } }
+{ 'struct': 'CpuInfoOther', 'data': { },
+  'if': 'defined(NEED_CPU_H)' }
 
 ##
 # @query-cpus:
@@ -1561,7 +1580,8 @@
 #    }
 #
 ##
-{ 'command': 'query-cpus', 'returns': ['CpuInfo'] }
+{ 'command': 'query-cpus', 'returns': ['CpuInfo'],
+  'if': 'defined(NEED_CPU_H)' }
 
 ##
 # @IOThreadInfo:

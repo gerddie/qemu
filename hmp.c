@@ -366,26 +366,35 @@ void hmp_info_cpus(Monitor *mon, const QDict *qdict)
         monitor_printf(mon, "%c CPU #%" PRId64 ":", active, cpu->value->CPU);
 
         switch (cpu->value->arch) {
+#if defined(TARGET_I386)
         case CPU_INFO_ARCH_X86:
             monitor_printf(mon, " pc=0x%016" PRIx64, cpu->value->u.x86.pc);
             break;
+#elif defined(TARGET_PPC)
         case CPU_INFO_ARCH_PPC:
             monitor_printf(mon, " nip=0x%016" PRIx64, cpu->value->u.ppc.nip);
             break;
+#elif defined(TARGET_SPARC)
         case CPU_INFO_ARCH_SPARC:
             monitor_printf(mon, " pc=0x%016" PRIx64,
                            cpu->value->u.q_sparc.pc);
             monitor_printf(mon, " npc=0x%016" PRIx64,
                            cpu->value->u.q_sparc.npc);
             break;
+#elif defined(TARGET_MIPS)
         case CPU_INFO_ARCH_MIPS:
             monitor_printf(mon, " PC=0x%016" PRIx64, cpu->value->u.q_mips.PC);
             break;
+#elif defined(TARGET_TRICORE)
         case CPU_INFO_ARCH_TRICORE:
             monitor_printf(mon, " PC=0x%016" PRIx64, cpu->value->u.tricore.PC);
             break;
-        default:
+#else
+        case CPU_INFO_ARCH_OTHER:
             break;
+#endif
+        default:
+            assert(0);
         }
 
         if (cpu->value->halted) {
