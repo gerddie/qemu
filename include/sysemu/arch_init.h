@@ -1,7 +1,7 @@
 #ifndef QEMU_ARCH_INIT_H
 #define QEMU_ARCH_INIT_H
 
-#include "qmp-commands.h"
+#include "qapi/error.h"
 #include "qemu/option.h"
 
 enum {
