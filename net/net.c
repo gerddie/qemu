@@ -1017,10 +1017,12 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_SOCKET;
             legacy.u.socket = opts->u.socket;
             break;
+#ifdef CONFIG_VDE
         case NET_LEGACY_OPTIONS_TYPE_VDE:
             legacy.type = NET_CLIENT_DRIVER_VDE;
             legacy.u.vde = opts->u.vde;
             break;
+#endif
         case NET_LEGACY_OPTIONS_TYPE_DUMP:
             legacy.type = NET_CLIENT_DRIVER_DUMP;
             legacy.u.dump = opts->u.dump;

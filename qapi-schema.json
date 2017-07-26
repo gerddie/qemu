@@ -4006,7 +4006,8 @@
     '*sock':  'str',
     '*port':  'uint16',
     '*group': 'str',
-    '*mode':  'uint16' } }
+    '*mode':  'uint16' },
+  'if': 'defined(CONFIG_VDE)' }
 
 ##
 # @NetdevDumpOptions:
@@ -4103,7 +4104,9 @@
 # Since: 2.7
 ##
 { 'enum': 'NetClientDriver',
-  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde', 'dump',
+  'data': [ 'none', 'nic', 'user', 'tap', 'l2tpv3', 'socket',
+            { 'name': 'vde', 'if': 'defined(CONFIG_VDE)'},
+            'dump',
             'bridge', 'hubport', 'netmap', 'vhost-user' ] }
 
 ##
@@ -4129,7 +4132,7 @@
     'tap':      'NetdevTapOptions',
     'l2tpv3':   'NetdevL2TPv3Options',
     'socket':   'NetdevSocketOptions',
-    'vde':      'NetdevVdeOptions',
+    'vde':      { 'type': 'NetdevVdeOptions', 'if': 'defined(CONFIG_VDE)' },
     'dump':     'NetdevDumpOptions',
     'bridge':   'NetdevBridgeOptions',
     'hubport':  'NetdevHubPortOptions',
@@ -4164,7 +4167,8 @@
 # Since: 1.2
 ##
 { 'enum': 'NetLegacyOptionsType',
-  'data': ['none', 'nic', 'user', 'tap', 'l2tpv3', 'socket', 'vde',
+  'data': ['none', 'nic', 'user', 'tap', 'l2tpv3', 'socket',
+           { 'name': 'vde', 'if': 'defined(CONFIG_VDE)' },
            'dump', 'bridge', 'netmap', 'vhost-user'] }
 
 ##
@@ -4184,7 +4188,7 @@
     'tap':      'NetdevTapOptions',
     'l2tpv3':   'NetdevL2TPv3Options',
     'socket':   'NetdevSocketOptions',
-    'vde':      'NetdevVdeOptions',
+    'vde':      { 'type': 'NetdevVdeOptions', 'if': 'defined(CONFIG_VDE)' },
     'dump':     'NetdevDumpOptions',
     'bridge':   'NetdevBridgeOptions',
     'netmap':   'NetdevNetmapOptions',
