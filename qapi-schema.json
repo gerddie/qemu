@@ -3329,7 +3329,8 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'xen-save-devices-state', 'data': {'filename': 'str'} }
+{ 'command': 'xen-save-devices-state', 'data': {'filename': 'str'},
+  'if': 'defined(CONFIG_XEN)' }
 
 ##
 # @xen-set-global-dirty-log:
@@ -3349,7 +3350,8 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'xen-set-global-dirty-log', 'data': { 'enable': 'bool' } }
+{ 'command': 'xen-set-global-dirty-log', 'data': { 'enable': 'bool' },
+  'if': 'defined(CONFIG_XEN)' }
 
 ##
 # @device_add:
@@ -6352,7 +6354,8 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'xen-load-devices-state', 'data': {'filename': 'str'} }
+{ 'command': 'xen-load-devices-state', 'data': {'filename': 'str'},
+  'if': 'defined(CONFIG_XEN)' }
 
 ##
 # @xen-set-replication:
@@ -6378,7 +6381,7 @@
 ##
 { 'command': 'xen-set-replication',
   'data': { 'enable': 'bool', 'primary': 'bool', '*failover' : 'bool' },
-  'if': 'defined(CONFIG_REPLICATION)' }
+  'if': 'defined(CONFIG_REPLICATION) && defined(CONFIG_XEN)' }
 
 ##
 # @ReplicationStatus:
@@ -6394,7 +6397,7 @@
 ##
 { 'struct': 'ReplicationStatus',
   'data': { 'error': 'bool', '*desc': 'str' },
-  'if': 'defined(CONFIG_REPLICATION)' }
+  'if': 'defined(CONFIG_REPLICATION) && defined(CONFIG_XEN)' }
 
 ##
 # @query-xen-replication-status:
@@ -6412,7 +6415,7 @@
 ##
 { 'command': 'query-xen-replication-status',
   'returns': 'ReplicationStatus',
-  'if': 'defined(CONFIG_REPLICATION)' }
+  'if': 'defined(CONFIG_REPLICATION) && defined(CONFIG_XEN)' }
 
 ##
 # @xen-colo-do-checkpoint:
@@ -6429,7 +6432,7 @@
 # Since: 2.9
 ##
 { 'command': 'xen-colo-do-checkpoint',
-  'if': 'defined(CONFIG_REPLICATION)' }
+  'if': 'defined(CONFIG_REPLICATION) && defined(CONFIG_XEN)' }
 
 ##
 # @GICCapability:

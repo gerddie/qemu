@@ -147,7 +147,7 @@ void colo_do_failover(MigrationState *s)
     }
 }
 
-#ifdef CONFIG_REPLICATION
+#if defined(CONFIG_REPLICATION) && defined(CONFIG_XEN)
 void qmp_xen_set_replication(bool enable, bool primary,
                              bool has_failover, bool failover,
                              Error **errp)

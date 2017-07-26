@@ -1275,6 +1275,7 @@ done:
     return ret;
 }
 
+#ifdef CONFIG_XEN
 static int qemu_save_device_state(QEMUFile *f)
 {
     SaveStateEntry *se;
@@ -1306,6 +1307,7 @@ static int qemu_save_device_state(QEMUFile *f)
 
     return qemu_file_get_error(f);
 }
+#endif
 
 static SaveStateEntry *find_se(const char *idstr, int instance_id)
 {
@@ -2197,6 +2199,7 @@ int save_snapshot(const char *name, Error **errp)
     return ret;
 }
 
+#ifdef CONFIG_XEN
 void qmp_xen_save_devices_state(const char *filename, Error **errp)
 {
     QEMUFile *f;
@@ -2255,6 +2258,7 @@ void qmp_xen_load_devices_state(const char *filename, Error **errp)
     }
     migration_incoming_state_destroy();
 }
+#endif
 
 int load_snapshot(const char *name, Error **errp)
 {

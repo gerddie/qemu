@@ -57,7 +57,3 @@ void xen_hvm_modified_memory(ram_addr_t start, ram_addr_t length)
 void xen_hvm_init(PCMachineState *pcms, MemoryRegion **ram_memory)
 {
 }
-
-void qmp_xen_set_global_dirty_log(bool enable, Error **errp)
-{
-}
