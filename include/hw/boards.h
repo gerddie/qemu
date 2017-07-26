@@ -171,10 +171,11 @@ struct MachineClass {
     bool rom_file_has_mr;
     int minimum_page_bits;
     bool has_hotpluggable_cpus;
+#ifdef CONFIG_NUMA
     int numa_mem_align_shift;
     void (*numa_auto_assign_ram)(MachineClass *mc, NodeInfo *nodes,
                                  int nb_nodes, ram_addr_t size);
-
+#endif
     HotplugHandler *(*get_hotplug_handler)(MachineState *machine,
                                            DeviceState *dev);
     CpuInstanceProperties (*cpu_index_to_instance_props)(MachineState *machine,

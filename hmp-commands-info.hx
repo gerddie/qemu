@@ -311,6 +311,7 @@ STEXI
 Show KVM information.
 ETEXI
 
+#if defined(CONFIG_NUMA)
     {
         .name       = "numa",
         .args_type  = "",
@@ -318,6 +319,7 @@ ETEXI
         .help       = "show NUMA information",
         .cmd        = hmp_info_numa,
     },
+#endif
 
 STEXI
 @item info numa

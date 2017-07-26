@@ -3557,7 +3557,9 @@ static void spapr_machine_2_9_class_options(MachineClass *mc)
 
     spapr_machine_2_10_class_options(mc);
     SET_MACHINE_COMPAT(mc, SPAPR_COMPAT_2_9);
+#ifdef CONFIG_NUMA
     mc->numa_auto_assign_ram = numa_legacy_auto_assign_ram;
+#endif
     smc->pre_2_10_has_unused_icps = true;
     smc->resize_hpt_default = SPAPR_RESIZE_HPT_DISABLED;
 }

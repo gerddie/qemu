@@ -306,7 +306,9 @@ static void pc_q35_2_10_machine_options(MachineClass *m)
 {
     pc_q35_machine_options(m);
     m->alias = "q35";
+#ifdef CONFIG_NUMA
     m->numa_auto_assign_ram = numa_legacy_auto_assign_ram;
+#endif
 }
 
 DEFINE_Q35_MACHINE(v2_10, "pc-q35-2.10", NULL,

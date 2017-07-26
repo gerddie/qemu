@@ -2868,9 +2868,11 @@ void hmp_hotpluggable_cpus(Monitor *mon, const QDict *qdict)
 
         c = l->value->props;
         monitor_printf(mon, "  CPUInstance Properties:\n");
+#ifdef CONFIG_NUMA
         if (c->has_node_id) {
             monitor_printf(mon, "    node-id: \"%" PRIu64 "\"\n", c->node_id);
         }
+#endif
         if (c->has_socket_id) {
             monitor_printf(mon, "    socket-id: \"%" PRIu64 "\"\n", c->socket_id);
         }

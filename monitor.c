@@ -1661,6 +1661,7 @@ static void hmp_info_mtree(Monitor *mon, const QDict *qdict)
     mtree_info((fprintf_function)monitor_printf, mon, flatview);
 }
 
+#ifdef CONFIG_NUMA
 static void hmp_info_numa(Monitor *mon, const QDict *qdict)
 {
     int i;
@@ -1686,6 +1687,7 @@ static void hmp_info_numa(Monitor *mon, const QDict *qdict)
     qapi_free_CpuInfoList(cpu_list);
     g_free(node_mem);
 }
+#endif
 
 #ifdef CONFIG_PROFILER
 

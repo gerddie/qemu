@@ -5917,7 +5917,8 @@
 # Since: 2.1
 ##
 { 'enum': 'NumaOptionsType',
-  'data': [ 'node', 'dist', 'cpu' ] }
+  'data': [ 'node', 'dist', 'cpu' ],
+  'if': 'defined(CONFIG_NUMA)' }
 
 ##
 # @NumaOptions:
@@ -5932,7 +5933,8 @@
   'data': {
     'node': 'NumaNodeOptions',
     'dist': 'NumaDistOptions',
-    'cpu': 'NumaCpuOptions' }}
+    'cpu': 'NumaCpuOptions' },
+  'if': 'defined(CONFIG_NUMA)' }
 
 ##
 # @NumaNodeOptions:
@@ -5958,7 +5960,8 @@
    '*nodeid': 'uint16',
    '*cpus':   ['uint16'],
    '*mem':    'size',
-   '*memdev': 'str' }}
+   '*memdev': 'str' },
+  'if': 'defined(CONFIG_NUMA)' }
 
 ##
 # @NumaDistOptions:
@@ -5979,7 +5982,8 @@
   'data': {
    'src': 'uint16',
    'dst': 'uint16',
-   'val': 'uint8' }}
+   'val': 'uint8' },
+  'if': 'defined(CONFIG_NUMA)' }
 
 ##
 # @NumaCpuOptions:
@@ -5993,7 +5997,8 @@
 ##
 { 'struct': 'NumaCpuOptions',
    'base': 'CpuInstanceProperties',
-   'data' : {} }
+   'data' : {},
+  'if': 'defined(CONFIG_NUMA)' }
 
 ##
 # @HostMemPolicy:
@@ -6499,7 +6504,7 @@
 # Since: 2.7
 ##
 { 'struct': 'CpuInstanceProperties',
-  'data': { '*node-id': 'int',
+  'data': { '*node-id': { 'type': 'int', 'if': 'defined(CONFIG_NUMA)' },
             '*socket-id': 'int',
             '*core-id': 'int',
             '*thread-id': 'int'

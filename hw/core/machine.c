@@ -391,6 +391,7 @@ HotpluggableCPUList *machine_query_hotpluggable_cpus(MachineState *machine)
     return head;
 }
 
+#ifdef CONFIG_NUMA
 /**
  * machine_set_cpu_numa_node:
  * @machine: machine object to modify
@@ -486,6 +487,7 @@ void machine_set_cpu_numa_node(MachineState *machine,
         error_setg(errp, "no match found");
     }
 }
+#endif
 
 static void machine_class_init(ObjectClass *oc, void *data)
 {
@@ -495,11 +497,13 @@ static void machine_class_init(ObjectClass *oc, void *data)
     mc->default_ram_size = 128 * M_BYTE;
     mc->rom_file_has_mr = true;
 
+#ifdef CONFIG_NUMA
     /* numa node memory size aligned on 8MB by default.
      * On Linux, each node's border has to be 8MB aligned
      */
     mc->numa_mem_align_shift = 23;
     mc->numa_auto_assign_ram = numa_default_auto_assign_ram;
+#endif
 
     object_class_property_add_str(oc, "accel",
         machine_get_accel, machine_set_accel, &error_abort);
@@ -680,6 +684,7 @@ bool machine_mem_merge(MachineState *machine)
     return machine->mem_merge;
 }
 
+#ifdef CONFIG_NUMA
 static char *cpu_slot_to_string(const CPUArchId *cpu)
 {
     GString *s = g_string_new(NULL);
@@ -749,14 +754,17 @@ static void machine_numa_finish_init(MachineState *machine)
     }
     g_string_free(s, true);
 }
+#endif
 
 void machine_run_board_init(MachineState *machine)
 {
     MachineClass *machine_class = MACHINE_GET_CLASS(machine);
 
+#ifdef CONFIG_NUMA
     if (nb_numa_nodes) {
         machine_numa_finish_init(machine);
     }
+#endif
     machine_class->init(machine);
 }
 

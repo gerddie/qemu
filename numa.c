@@ -47,9 +47,7 @@ QemuOptsList qemu_numa_opts = {
 };
 
 static int have_memdevs = -1;
-static int max_numa_nodeid; /* Highest specified NUMA node ID, plus one.
-                             * For all nodes, nodeid < max_numa_nodeid
-                             */
+
 int nb_numa_nodes;
 bool have_numa_distance;
 NodeInfo numa_info[MAX_NODES];
@@ -84,6 +82,12 @@ void numa_unset_mem_node_id(ram_addr_t addr, uint64_t size, uint32_t node)
         }
     }
 }
+
+#ifdef CONFIG_NUMA
+
+static int max_numa_nodeid; /* Highest specified NUMA node ID, plus one.
+                             * For all nodes, nodeid < max_numa_nodeid
+                             */
 
 static void numa_set_mem_ranges(void)
 {
@@ -524,6 +528,45 @@ void numa_cpu_pre_plug(const CPUArchId *slot, DeviceState *dev, Error **errp)
     }
 }
 
+static void numa_stat_memory_devices(uint64_t node_mem[])
+{
+    MemoryDeviceInfoList *info_list = NULL;
+    MemoryDeviceInfoList **prev = &info_list;
+    MemoryDeviceInfoList *info;
+
+    qmp_pc_dimm_device_list(qdev_get_machine(), &prev);
+    for (info = info_list; info; info = info->next) {
+        MemoryDeviceInfo *value = info->value;
+
+        if (value) {
+            switch (value->type) {
+            case MEMORY_DEVICE_INFO_KIND_DIMM:
+                node_mem[value->u.dimm.data->node] += value->u.dimm.data->size;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    qapi_free_MemoryDeviceInfoList(info_list);
+}
+
+void query_numa_node_mem(uint64_t node_mem[])
+{
+    int i;
+
+    if (nb_numa_nodes <= 0) {
+        return;
+    }
+
+    numa_stat_memory_devices(node_mem);
+    for (i = 0; i < nb_numa_nodes; i++) {
+        node_mem[i] += numa_info[i].node_mem;
+    }
+}
+
+#endif
+
 static void allocate_system_memory_nonnuma(MemoryRegion *mr, Object *owner,
                                            const char *name,
                                            uint64_t ram_size)
@@ -588,43 +631,6 @@ void memory_region_allocate_system_memory(MemoryRegion *mr, Object *owner,
         memory_region_add_subregion(mr, addr, seg);
         vmstate_register_ram_global(seg);
         addr += size;
-    }
-}
-
-static void numa_stat_memory_devices(uint64_t node_mem[])
-{
-    MemoryDeviceInfoList *info_list = NULL;
-    MemoryDeviceInfoList **prev = &info_list;
-    MemoryDeviceInfoList *info;
-
-    qmp_pc_dimm_device_list(qdev_get_machine(), &prev);
-    for (info = info_list; info; info = info->next) {
-        MemoryDeviceInfo *value = info->value;
-
-        if (value) {
-            switch (value->type) {
-            case MEMORY_DEVICE_INFO_KIND_DIMM:
-                node_mem[value->u.dimm.data->node] += value->u.dimm.data->size;
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    qapi_free_MemoryDeviceInfoList(info_list);
-}
-
-void query_numa_node_mem(uint64_t node_mem[])
-{
-    int i;
-
-    if (nb_numa_nodes <= 0) {
-        return;
-    }
-
-    numa_stat_memory_devices(node_mem);
-    for (i = 0; i < nb_numa_nodes; i++) {
-        node_mem[i] += numa_info[i].node_mem;
     }
 }
 

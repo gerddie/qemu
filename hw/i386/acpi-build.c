@@ -2313,8 +2313,6 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
     int i;
     int srat_start, numa_start, slots;
     uint64_t mem_len, mem_base, next_base;
-    MachineClass *mc = MACHINE_GET_CLASS(machine);
-    const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(machine);
     PCMachineState *pcms = PC_MACHINE(machine);
     ram_addr_t hotplugabble_address_space_size =
         object_property_get_int(OBJECT(pcms), PC_MACHINE_MEMHP_REGION_SIZE,
@@ -2324,6 +2322,10 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
 
     srat = acpi_data_push(table_data, sizeof *srat);
     srat->reserved1 = cpu_to_le32(1);
+
+#ifdef CONFIG_NUMA
+    MachineClass *mc = MACHINE_GET_CLASS(machine);
+    const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(machine);
 
     for (i = 0; i < apic_ids->len; i++) {
         int node_id = apic_ids->cpus[i].props.node_id;
@@ -2351,7 +2353,7 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
             core->flags = cpu_to_le32(1);
         }
     }
-
+#endif
 
     /* the memory map is a bit tricky, it contains at least one hole
      * from 640k-1M and possibly another one from 3.5G-4G.

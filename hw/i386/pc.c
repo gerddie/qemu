@@ -746,10 +746,6 @@ static void pc_build_smbios(PCMachineState *pcms)
 static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
 {
     FWCfgState *fw_cfg;
-    uint64_t *numa_fw_cfg;
-    int i;
-    const CPUArchIdList *cpus;
-    MachineClass *mc = MACHINE_GET_CLASS(pcms);
 
     fw_cfg = fw_cfg_init_io_dma(FW_CFG_IO_BASE, FW_CFG_IO_BASE + 4, as);
     fw_cfg_add_i16(fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
@@ -778,6 +774,13 @@ static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
                     sizeof(struct e820_entry) * e820_entries);
 
     fw_cfg_add_bytes(fw_cfg, FW_CFG_HPET, &hpet_cfg, sizeof(hpet_cfg));
+
+#ifdef CONFIG_NUMA
+    int i;
+    const CPUArchIdList *cpus;
+    MachineClass *mc = MACHINE_GET_CLASS(pcms);
+    uint64_t *numa_fw_cfg;
+
     /* allocate memory for the NUMA channel: one (64bit) word for the number
      * of nodes, one word for each VCPU->node and one word for each node to
      * hold the amount of memory.
@@ -797,6 +800,7 @@ static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
     fw_cfg_add_bytes(fw_cfg, FW_CFG_NUMA, numa_fw_cfg,
                      (1 + pcms->apic_id_limit + nb_numa_nodes) *
                      sizeof(*numa_fw_cfg));
+#endif
 
     return fw_cfg;
 }
@@ -1981,7 +1985,9 @@ static void pc_cpu_pre_plug(HotplugHandler *hotplug_dev,
     cs = CPU(cpu);
     cs->cpu_index = idx;
 
+#ifdef CONFIG_NUMA
     numa_cpu_pre_plug(cpu_slot, dev, errp);
+#endif
 }
 
 static void pc_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
@@ -2283,6 +2289,7 @@ static const CPUArchIdList *pc_possible_cpu_arch_ids(MachineState *ms)
         ms->possible_cpus->cpus[i].props.has_thread_id = true;
         ms->possible_cpus->cpus[i].props.thread_id = topo.smt_id;
 
+#ifdef CONFIG_NUMA
         /* default distribution of CPUs over NUMA nodes */
         if (nb_numa_nodes) {
             /* preset values but do not enable them i.e. 'has_node_id = false',
@@ -2291,6 +2298,7 @@ static const CPUArchIdList *pc_possible_cpu_arch_ids(MachineState *ms)
             ms->possible_cpus->cpus[i].props.node_id =
                 topo.pkg_id % nb_numa_nodes;
         }
+#endif
     }
     return ms->possible_cpus;
 }

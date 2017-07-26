@@ -556,11 +556,12 @@ void build_cpus_aml(Aml *table, MachineState *machine, CPUHotplugFeatures opts,
              * as a result _PXM is required for all CPUs which might
              * be hot-plugged. For simplicity, add it for all CPUs.
              */
+#ifdef CONFIG_NUMA
             if (arch_ids->cpus[i].props.has_node_id) {
                 aml_append(dev, aml_name_decl("_PXM",
                            aml_int(arch_ids->cpus[i].props.node_id)));
             }
-
+#endif
             aml_append(cpus_dev, dev);
         }
     }
