@@ -1001,10 +1001,12 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_NIC;
             legacy.u.nic = opts->u.nic;
             break;
+#ifdef CONFIG_SLIRP
         case NET_LEGACY_OPTIONS_TYPE_USER:
             legacy.type = NET_CLIENT_DRIVER_USER;
             legacy.u.user = opts->u.user;
             break;
+#endif
         case NET_LEGACY_OPTIONS_TYPE_TAP:
             legacy.type = NET_CLIENT_DRIVER_TAP;
             legacy.u.tap = opts->u.tap;

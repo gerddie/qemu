@@ -318,7 +318,9 @@ void net_hub_check_clients(void)
             case NET_CLIENT_DRIVER_NIC:
                 has_nic = 1;
                 break;
+#ifdef CONFIG_SLIRP
             case NET_CLIENT_DRIVER_USER:
+#endif
             case NET_CLIENT_DRIVER_TAP:
             case NET_CLIENT_DRIVER_SOCKET:
 #ifdef CONFIG_VDE
