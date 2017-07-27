@@ -1392,10 +1392,19 @@ int main(int argc, char **argv)
 
         addr = socket_local_address(FIRST_SOCKET_ACTIVATION_FD, NULL);
         if (addr) {
-            if (addr->type == SOCKET_ADDRESS_TYPE_UNIX) {
+            switch (addr->type) {
+#if !defined(_WIN32)
+            case SOCKET_ADDRESS_TYPE_UNIX:
                 config->method = g_strdup("unix-listen");
-            } else if (addr->type == SOCKET_ADDRESS_TYPE_VSOCK) {
+                break;
+#endif
+#if defined(CONFIG_AF_VSOCK)
+            case SOCKET_ADDRESS_TYPE_VSOCK:
                 config->method = g_strdup("vsock-listen");
+                break;
+#endif
+            default:
+                break;
             }
 
             qapi_free_SocketAddress(addr);
