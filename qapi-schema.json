@@ -4096,7 +4096,8 @@
   'data': {
     'chardev':        'str',
     '*vhostforce':    'bool',
-    '*queues':        'int' } }
+    '*queues':        'int' },
+  'if': 'defined(CONFIG_VHOST_NET_USED)' }
 
 ##
 # @NetClientDriver:
@@ -4113,7 +4114,9 @@
             'socket',
             { 'name': 'vde', 'if': 'defined(CONFIG_VDE)'},
             'dump',
-            'bridge', 'hubport', 'netmap', 'vhost-user' ] }
+            'bridge', 'hubport', 'netmap',
+            { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
+  ] }
 
 ##
 # @Netdev:
@@ -4143,7 +4146,8 @@
     'bridge':   'NetdevBridgeOptions',
     'hubport':  'NetdevHubPortOptions',
     'netmap':   'NetdevNetmapOptions',
-    'vhost-user': 'NetdevVhostUserOptions' } }
+    'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
+  } }
 
 ##
 # @NetLegacy:
@@ -4179,7 +4183,9 @@
            { 'name': 'l2tpv3', 'if': 'defined(CONFIG_L2TPV3)' },
            'socket',
            { 'name': 'vde', 'if': 'defined(CONFIG_VDE)' },
-           'dump', 'bridge', 'netmap', 'vhost-user'] }
+           'dump', 'bridge', 'netmap',
+           { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
+  ] }
 
 ##
 # @NetLegacyOptions:
@@ -4202,7 +4208,8 @@
     'dump':     'NetdevDumpOptions',
     'bridge':   'NetdevBridgeOptions',
     'netmap':   'NetdevNetmapOptions',
-    'vhost-user': 'NetdevVhostUserOptions' } }
+    'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
+  } }
 
 ##
 # @NetFilterDirection:

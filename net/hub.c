@@ -326,7 +326,9 @@ void net_hub_check_clients(void)
 #ifdef CONFIG_VDE
             case NET_CLIENT_DRIVER_VDE:
 #endif
+#ifdef CONFIG_VHOST_NET_USED
             case NET_CLIENT_DRIVER_VHOST_USER:
+#endif
                 has_host_dev = 1;
                 break;
             default:

@@ -1041,10 +1041,12 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_NETMAP;
             legacy.u.netmap = opts->u.netmap;
             break;
+#ifdef CONFIG_VHOST_NET_USED
         case NET_LEGACY_OPTIONS_TYPE_VHOST_USER:
             legacy.type = NET_CLIENT_DRIVER_VHOST_USER;
             legacy.u.vhost_user = opts->u.vhost_user;
             break;
+#endif
         default:
             abort();
         }
