@@ -84,7 +84,9 @@ NetworkAddressFamily inet_netfamily(int family)
     switch (family) {
     case PF_INET6: return NETWORK_ADDRESS_FAMILY_IPV6;
     case PF_INET:  return NETWORK_ADDRESS_FAMILY_IPV4;
+#if !defined(_WIN32)
     case PF_UNIX:  return NETWORK_ADDRESS_FAMILY_UNIX;
+#endif
 #ifdef CONFIG_AF_VSOCK
     case PF_VSOCK: return NETWORK_ADDRESS_FAMILY_VSOCK;
 #endif /* CONFIG_AF_VSOCK */
@@ -1022,27 +1024,6 @@ static int unix_connect_saddr(UnixSocketAddress *saddr,
     return -1;
 }
 
-#else
-
-static int unix_listen_saddr(UnixSocketAddress *saddr,
-                             bool update_addr,
-                             Error **errp)
-{
-    error_setg(errp, "unix sockets are not available on windows");
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int unix_connect_saddr(UnixSocketAddress *saddr,
-                              NonBlockingConnectHandler *callback, void *opaque,
-                              Error **errp)
-{
-    error_setg(errp, "unix sockets are not available on windows");
-    errno = ENOTSUP;
-    return -1;
-}
-#endif
-
 /* compatibility wrapper */
 int unix_listen(const char *str, char *ostr, int olen, Error **errp)
 {
@@ -1087,11 +1068,30 @@ int unix_connect(const char *path, Error **errp)
 }
 
 
+#else
+
+int unix_listen(const char *str, char *ostr, int olen, Error **errp)
+{
+    error_setg(errp, "unix sockets are not available on windows");
+    errno = ENOTSUP;
+    return -1;
+}
+
+int unix_connect(const char *path, Error **errp)
+{
+    error_setg(errp, "unix sockets are not available on windows");
+    errno = ENOTSUP;
+    return -1;
+}
+
+#endif
+
 SocketAddress *socket_parse(const char *str, Error **errp)
 {
     SocketAddress *addr;
 
     addr = g_new0(SocketAddress, 1);
+#if !defined(_WIN32)
     if (strstart(str, "unix:", NULL)) {
         if (str[5] == '\0') {
             error_setg(errp, "invalid Unix socket address");
@@ -1100,7 +1100,9 @@ SocketAddress *socket_parse(const char *str, Error **errp)
             addr->type = SOCKET_ADDRESS_TYPE_UNIX;
             addr->u.q_unix.path = g_strdup(str + 5);
         }
-    } else if (strstart(str, "fd:", NULL)) {
+    } else
+#endif
+    if (strstart(str, "fd:", NULL)) {
         if (str[3] == '\0') {
             error_setg(errp, "invalid file descriptor address");
             goto fail;
@@ -1136,9 +1138,11 @@ int socket_connect(SocketAddress *addr, NonBlockingConnectHandler *callback,
         fd = inet_connect_saddr(&addr->u.inet, callback, opaque, errp);
         break;
 
+#if !defined(_WIN32)
     case SOCKET_ADDRESS_TYPE_UNIX:
         fd = unix_connect_saddr(&addr->u.q_unix, callback, opaque, errp);
         break;
+#endif
 
     case SOCKET_ADDRESS_TYPE_FD:
         fd = monitor_get_fd(cur_mon, addr->u.fd.str, errp);
@@ -1191,6 +1195,7 @@ void socket_listen_cleanup(int fd, Error **errp)
 
     addr = socket_local_address(fd, errp);
 
+#if !defined(_WIN32)
     if (addr->type == SOCKET_ADDRESS_TYPE_UNIX
         && addr->u.q_unix.path) {
         if (unlink(addr->u.q_unix.path) < 0 && errno != ENOENT) {
@@ -1199,6 +1204,7 @@ void socket_listen_cleanup(int fd, Error **errp)
                              addr->u.q_unix.path);
         }
     }
+#endif
 
     qapi_free_SocketAddress(addr);
 }
@@ -1375,11 +1381,13 @@ SocketAddress *socket_address_flatten(SocketAddressLegacy *addr_legacy)
         QAPI_CLONE_MEMBERS(InetSocketAddress, &addr->u.inet,
                            addr_legacy->u.inet.data);
         break;
+#if !defined(_WIN32)
     case SOCKET_ADDRESS_LEGACY_KIND_UNIX:
         addr->type = SOCKET_ADDRESS_TYPE_UNIX;
         QAPI_CLONE_MEMBERS(UnixSocketAddress, &addr->u.q_unix,
                            addr_legacy->u.q_unix.data);
         break;
+#endif
     case SOCKET_ADDRESS_LEGACY_KIND_VSOCK:
         addr->type = SOCKET_ADDRESS_TYPE_VSOCK;
         QAPI_CLONE_MEMBERS(VsockSocketAddress, &addr->u.vsock,
