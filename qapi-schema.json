@@ -1659,7 +1659,8 @@
 # Since: 2.1
 ##
 { 'enum': 'NetworkAddressFamily',
-  'data': [ 'ipv4', 'ipv6', 'unix',
+  'data': [ 'ipv4', 'ipv6',
+            { 'name': 'unix', 'if': '!defined(_WIN32)' },
             { 'name': 'vsock', 'if': 'defined(CONFIG_AF_VSOCK)' },
             'unknown' ] }
 
@@ -4287,8 +4288,8 @@
 ##
 { 'struct': 'UnixSocketAddress',
   'data': {
-    'path': 'str' } }
-
+  'path': 'str' },
+  'if': '!defined(_WIN32)' }
 ##
 # @VsockSocketAddress:
 #
@@ -4324,7 +4325,7 @@
 { 'union': 'SocketAddressLegacy',
   'data': {
     'inet': 'InetSocketAddress',
-    'unix': 'UnixSocketAddress',
+    'unix': { 'type': 'UnixSocketAddress','if': '!defined(_WIN32)' },
     'vsock': { 'type': 'VsockSocketAddress', 'if': 'defined(CONFIG_AF_VSOCK)' },
     'fd': 'String' } }
 
@@ -4340,7 +4341,8 @@
 # Since: 2.9
 ##
 { 'enum': 'SocketAddressType',
-  'data': [ 'inet', 'unix',
+  'data': [ 'inet',
+            { 'name': 'unix', 'if': '!defined(_WIN32)' },
             { 'name': 'vsock', 'if': 'defined(CONFIG_AF_VSOCK)' },
             'fd' ] }
 
@@ -4358,7 +4360,7 @@
   'base': { 'type': 'SocketAddressType' },
   'discriminator': 'type',
   'data': { 'inet': 'InetSocketAddress',
-            'unix': 'UnixSocketAddress',
+            'unix': { 'type': 'UnixSocketAddress', 'if': '!defined(_WIN32)' },
             'vsock': { 'type': 'VsockSocketAddress', 'if': 'defined(CONFIG_AF_VSOCK)' },
             'fd': 'String' } }
 
