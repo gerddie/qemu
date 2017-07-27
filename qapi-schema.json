@@ -4076,7 +4076,8 @@
 { 'struct': 'NetdevNetmapOptions',
   'data': {
     'ifname':     'str',
-    '*devname':    'str' } }
+    '*devname':    'str' },
+  'if': 'defined(CONFIG_NETMAP)' }
 
 ##
 # @NetdevVhostUserOptions:
@@ -4114,7 +4115,8 @@
             'socket',
             { 'name': 'vde', 'if': 'defined(CONFIG_VDE)'},
             'dump',
-            'bridge', 'hubport', 'netmap',
+            'bridge', 'hubport',
+            { 'name': 'netmap', 'if': 'defined(CONFIG_NETMAP)' },
             { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   ] }
 
@@ -4145,7 +4147,7 @@
     'dump':     'NetdevDumpOptions',
     'bridge':   'NetdevBridgeOptions',
     'hubport':  'NetdevHubPortOptions',
-    'netmap':   'NetdevNetmapOptions',
+    'netmap':   { 'type': 'NetdevNetmapOptions', 'if': 'defined(CONFIG_NETMAP)' },
     'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   } }
 
@@ -4183,7 +4185,8 @@
            { 'name': 'l2tpv3', 'if': 'defined(CONFIG_L2TPV3)' },
            'socket',
            { 'name': 'vde', 'if': 'defined(CONFIG_VDE)' },
-           'dump', 'bridge', 'netmap',
+           'dump', 'bridge',
+           { 'name': 'netmap', 'if': 'defined(CONFIG_NETMAP)' },
            { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   ] }
 
@@ -4207,7 +4210,7 @@
     'vde':      { 'type': 'NetdevVdeOptions', 'if': 'defined(CONFIG_VDE)' },
     'dump':     'NetdevDumpOptions',
     'bridge':   'NetdevBridgeOptions',
-    'netmap':   'NetdevNetmapOptions',
+    'netmap':   { 'type': 'NetdevNetmapOptions', 'if': 'defined(CONFIG_NETMAP)' },
     'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   } }
 
