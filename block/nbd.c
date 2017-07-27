@@ -528,9 +528,12 @@ static void nbd_refresh_filename(BlockDriverState *bs, QDict *options)
             host = inet->host;
             port = inet->port;
         }
-    } else if (s->saddr->type == SOCKET_ADDRESS_TYPE_UNIX) {
+    }
+#if !defined(_WIN32)
+    else if (s->saddr->type == SOCKET_ADDRESS_TYPE_UNIX) {
         path = s->saddr->u.q_unix.path;
     } /* else can't represent as pseudo-filename */
+#endif
 
     qdict_put_str(opts, "driver", "nbd");
 

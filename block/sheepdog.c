@@ -538,8 +538,10 @@ static SocketAddress *sd_socket_address(const char *path,
     SocketAddress *addr = g_new0(SocketAddress, 1);
 
     if (path) {
+#if !defined(_WIN32)
         addr->type = SOCKET_ADDRESS_TYPE_UNIX;
         addr->u.q_unix.path = g_strdup(path);
+#endif
     } else {
         addr->type = SOCKET_ADDRESS_TYPE_INET;
         addr->u.inet.host = g_strdup(host ?: SD_DEFAULT_ADDR);
@@ -1985,6 +1987,11 @@ static int sd_create(const char *filename, QemuOpts *opts,
     } else {
         parse_vdiname(&cfg, filename, &err);
     }
+#if !defined(_WIN32)
+    if (cfg.path) {
+        error_setg(&err, "unix address is not supported");
+    }
+#endif
     if (err) {
         error_propagate(errp, err);
         goto out;

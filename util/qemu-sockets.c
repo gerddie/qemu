@@ -843,33 +843,6 @@ static int vsock_parse(VsockSocketAddress *addr, const char *str,
     addr->port = g_strdup(port);
     return 0;
 }
-#else
-static void vsock_unsupported(Error **errp)
-{
-    error_setg(errp, "socket family AF_VSOCK unsupported");
-}
-
-static int vsock_connect_saddr(VsockSocketAddress *vaddr,
-                               NonBlockingConnectHandler *callback,
-                               void *opaque, Error **errp)
-{
-    vsock_unsupported(errp);
-    return -1;
-}
-
-static int vsock_listen_saddr(VsockSocketAddress *vaddr,
-                              Error **errp)
-{
-    vsock_unsupported(errp);
-    return -1;
-}
-
-static int vsock_parse(VsockSocketAddress *addr, const char *str,
-                        Error **errp)
-{
-    vsock_unsupported(errp);
-    return -1;
-}
 #endif /* CONFIG_AF_VSOCK */
 
 #ifndef _WIN32
@@ -1110,12 +1083,16 @@ SocketAddress *socket_parse(const char *str, Error **errp)
             addr->type = SOCKET_ADDRESS_TYPE_FD;
             addr->u.fd.str = g_strdup(str + 3);
         }
-    } else if (strstart(str, "vsock:", NULL)) {
+    } else
+#if defined(CONFIG_AF_VSOCK)
+    if (strstart(str, "vsock:", NULL)) {
         addr->type = SOCKET_ADDRESS_TYPE_VSOCK;
         if (vsock_parse(&addr->u.vsock, str + strlen("vsock:"), errp)) {
             goto fail;
         }
-    } else {
+    } else
+#endif
+    {
         addr->type = SOCKET_ADDRESS_TYPE_INET;
         if (inet_parse(&addr->u.inet, str, errp)) {
             goto fail;
@@ -1152,9 +1129,11 @@ int socket_connect(SocketAddress *addr, NonBlockingConnectHandler *callback,
         }
         break;
 
+#if defined(CONFIG_AF_VSOCK)
     case SOCKET_ADDRESS_TYPE_VSOCK:
         fd = vsock_connect_saddr(&addr->u.vsock, callback, opaque, errp);
         break;
+#endif
 
     default:
         abort();
@@ -1171,17 +1150,21 @@ int socket_listen(SocketAddress *addr, Error **errp)
         fd = inet_listen_saddr(&addr->u.inet, 0, false, errp);
         break;
 
+#if !defined(_WIN32)
     case SOCKET_ADDRESS_TYPE_UNIX:
         fd = unix_listen_saddr(&addr->u.q_unix, false, errp);
         break;
+#endif
 
     case SOCKET_ADDRESS_TYPE_FD:
         fd = monitor_get_fd(cur_mon, addr->u.fd.str, errp);
         break;
 
+#if defined(CONFIG_AF_VSOCK)
     case SOCKET_ADDRESS_TYPE_VSOCK:
         fd = vsock_listen_saddr(&addr->u.vsock, errp);
         break;
+#endif
 
     default:
         abort();
@@ -1388,11 +1371,13 @@ SocketAddress *socket_address_flatten(SocketAddressLegacy *addr_legacy)
                            addr_legacy->u.q_unix.data);
         break;
 #endif
+#if defined(CONFIG_AF_VSOCK)
     case SOCKET_ADDRESS_LEGACY_KIND_VSOCK:
         addr->type = SOCKET_ADDRESS_TYPE_VSOCK;
         QAPI_CLONE_MEMBERS(VsockSocketAddress, &addr->u.vsock,
                            addr_legacy->u.vsock.data);
         break;
+#endif
     case SOCKET_ADDRESS_LEGACY_KIND_FD:
         addr->type = SOCKET_ADDRESS_TYPE_FD;
         QAPI_CLONE_MEMBERS(String, &addr->u.fd, addr_legacy->u.fd.data);

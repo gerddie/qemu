@@ -157,8 +157,12 @@ int qio_dns_resolver_lookup_sync(QIODNSResolver *resolver,
                                                  addrs,
                                                  errp);
 
+#if !defined(_WIN32)
     case SOCKET_ADDRESS_TYPE_UNIX:
+#endif
+#if defined(CONFIG_AF_VSOCK)
     case SOCKET_ADDRESS_TYPE_VSOCK:
+#endif
     case SOCKET_ADDRESS_TYPE_FD:
         return qio_dns_resolver_lookup_sync_nop(resolver,
                                                 addr,
