@@ -1011,10 +1011,12 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_TAP;
             legacy.u.tap = opts->u.tap;
             break;
+#ifdef CONFIG_L2TPV3
         case NET_LEGACY_OPTIONS_TYPE_L2TPV3:
             legacy.type = NET_CLIENT_DRIVER_L2TPV3;
             legacy.u.l2tpv3 = opts->u.l2tpv3;
             break;
+#endif
         case NET_LEGACY_OPTIONS_TYPE_SOCKET:
             legacy.type = NET_CLIENT_DRIVER_SOCKET;
             legacy.u.socket = opts->u.socket;
