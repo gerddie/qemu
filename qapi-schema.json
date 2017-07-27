@@ -1659,7 +1659,9 @@
 # Since: 2.1
 ##
 { 'enum': 'NetworkAddressFamily',
-  'data': [ 'ipv4', 'ipv6', 'unix', 'vsock', 'unknown' ] }
+  'data': [ 'ipv4', 'ipv6', 'unix',
+            { 'name': 'vsock', 'if': 'defined(CONFIG_AF_VSOCK)' },
+            'unknown' ] }
 
 ##
 # @VncBasicInfo:
@@ -4303,7 +4305,8 @@
 { 'struct': 'VsockSocketAddress',
   'data': {
     'cid': 'str',
-    'port': 'str' } }
+    'port': 'str' },
+  'if': 'defined(CONFIG_AF_VSOCK)' }
 
 ##
 # @SocketAddressLegacy:
@@ -4322,7 +4325,7 @@
   'data': {
     'inet': 'InetSocketAddress',
     'unix': 'UnixSocketAddress',
-    'vsock': 'VsockSocketAddress',
+    'vsock': { 'type': 'VsockSocketAddress', 'if': 'defined(CONFIG_AF_VSOCK)' },
     'fd': 'String' } }
 
 ##
@@ -4337,7 +4340,9 @@
 # Since: 2.9
 ##
 { 'enum': 'SocketAddressType',
-  'data': [ 'inet', 'unix', 'vsock', 'fd' ] }
+  'data': [ 'inet', 'unix',
+            { 'name': 'vsock', 'if': 'defined(CONFIG_AF_VSOCK)' },
+            'fd' ] }
 
 ##
 # @SocketAddress:
@@ -4354,7 +4359,7 @@
   'discriminator': 'type',
   'data': { 'inet': 'InetSocketAddress',
             'unix': 'UnixSocketAddress',
-            'vsock': 'VsockSocketAddress',
+            'vsock': { 'type': 'VsockSocketAddress', 'if': 'defined(CONFIG_AF_VSOCK)' },
             'fd': 'String' } }
 
 ##
