@@ -73,7 +73,9 @@ const char *host_net_devices[] = {
 #ifdef CONFIG_VDE
     "vde",
 #endif
+#ifdef CONFIG_VHOST_NET_USED
     "vhost-user",
+#endif
     NULL,
 };
 
