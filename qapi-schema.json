@@ -4042,7 +4042,8 @@
 { 'struct': 'NetdevBridgeOptions',
   'data': {
     '*br':     'str',
-    '*helper': 'str' } }
+    '*helper': 'str' },
+  'if': '!defined(_WIN32)' }
 
 ##
 # @NetdevHubPortOptions:
@@ -4115,7 +4116,8 @@
             'socket',
             { 'name': 'vde', 'if': 'defined(CONFIG_VDE)'},
             'dump',
-            'bridge', 'hubport',
+            { 'name': 'bridge', 'if': '!defined(_WIN32)' },
+            'hubport',
             { 'name': 'netmap', 'if': 'defined(CONFIG_NETMAP)' },
             { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   ] }
@@ -4145,7 +4147,7 @@
     'socket':   'NetdevSocketOptions',
     'vde':      { 'type': 'NetdevVdeOptions', 'if': 'defined(CONFIG_VDE)' },
     'dump':     'NetdevDumpOptions',
-    'bridge':   'NetdevBridgeOptions',
+    'bridge':   { 'type': 'NetdevBridgeOptions', 'if': '!defined(_WIN32)' },
     'hubport':  'NetdevHubPortOptions',
     'netmap':   { 'type': 'NetdevNetmapOptions', 'if': 'defined(CONFIG_NETMAP)' },
     'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
@@ -4185,7 +4187,8 @@
            { 'name': 'l2tpv3', 'if': 'defined(CONFIG_L2TPV3)' },
            'socket',
            { 'name': 'vde', 'if': 'defined(CONFIG_VDE)' },
-           'dump', 'bridge',
+           'dump',
+           { 'name': 'bridge', 'if': '!defined(_WIN32)' },
            { 'name': 'netmap', 'if': 'defined(CONFIG_NETMAP)' },
            { 'name': 'vhost-user', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   ] }
@@ -4209,7 +4212,7 @@
     'socket':   'NetdevSocketOptions',
     'vde':      { 'type': 'NetdevVdeOptions', 'if': 'defined(CONFIG_VDE)' },
     'dump':     'NetdevDumpOptions',
-    'bridge':   'NetdevBridgeOptions',
+    'bridge':   { 'type': 'NetdevBridgeOptions', 'if': '!defined(_WIN32)' },
     'netmap':   { 'type': 'NetdevNetmapOptions', 'if': 'defined(CONFIG_NETMAP)' },
     'vhost-user': { 'type': 'NetdevVhostUserOptions', 'if': 'defined(CONFIG_VHOST_NET_USED)' }
   } }

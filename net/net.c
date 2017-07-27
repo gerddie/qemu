@@ -1033,10 +1033,12 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_DUMP;
             legacy.u.dump = opts->u.dump;
             break;
+#ifdef CONFIG_NET_BRIDGE
         case NET_LEGACY_OPTIONS_TYPE_BRIDGE:
             legacy.type = NET_CLIENT_DRIVER_BRIDGE;
             legacy.u.bridge = opts->u.bridge;
             break;
+#endif
 #ifdef CONFIG_NETMAP
         case NET_LEGACY_OPTIONS_TYPE_NETMAP:
             legacy.type = NET_CLIENT_DRIVER_NETMAP;
