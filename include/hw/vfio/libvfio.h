@@ -21,6 +21,7 @@ typedef struct libvfio_group {
 
 typedef struct libvfio_dev {
     libvfio *vfio;
+    int fd;
     int groupid;
     char *name;
 } libvfio_dev;
@@ -76,5 +77,10 @@ bool libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
 
 const char *libvfio_dev_get_name(libvfio_dev *dev);
 int libvfio_dev_get_groupid(libvfio_dev *dev);
+bool libvfio_dev_set_irqs(libvfio_dev *dev,
+                          uint32_t index,
+                          int fd,
+                          uint32_t flags,
+                          Error **errp);
 
 #endif /* LIBVFIO_H_ */

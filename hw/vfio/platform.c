@@ -104,28 +104,21 @@ static VFIOINTp *vfio_init_intp(VFIODevice *vbasedev,
 static int vfio_set_trigger_eventfd(VFIOINTp *intp,
                                     eventfd_user_side_handler_t handler)
 {
+    Error *err = NULL;
     VFIODevice *vbasedev = &intp->vdev->vbasedev;
-    struct vfio_irq_set *irq_set;
-    int argsz, ret;
-    int32_t *pfd;
+    int fd = event_notifier_get_fd(intp->interrupt);
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = intp->pin;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-    *pfd = event_notifier_get_fd(intp->interrupt);
-    qemu_set_fd_handler(*pfd, (IOHandler *)handler, NULL, intp);
-    ret = ioctl(vbasedev->fd, VFIO_DEVICE_SET_IRQS, irq_set);
-    if (ret < 0) {
-        error_report("vfio: Failed to set trigger eventfd: %m");
-        qemu_set_fd_handler(*pfd, NULL, NULL, NULL);
+    qemu_set_fd_handler(fd, (IOHandler *)handler, NULL, intp);
+    if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev,
+            intp->pin, fd,
+            VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER,
+            &err)) {
+        error_report_err(err);
+        qemu_set_fd_handler(fd, NULL, NULL, NULL);
+        return -1;
     }
-    g_free(irq_set);
-    return ret;
+
+    return 0;
 }
 
 /*
@@ -598,7 +591,7 @@ static int vfio_base_device_init(VFIODevice *vbasedev, Error **errp)
 
     trace_vfio_platform_base_device_init(vbasedev->name, groupid);
 
-    group = vfio_get_group(groupid, &address_space_memory, errp);
+    group = vfio_get_group(vbasedev, &address_space_memory, errp);
     if (!group) {
         return -ENOENT;
     }

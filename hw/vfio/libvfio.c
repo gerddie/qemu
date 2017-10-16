@@ -302,3 +302,35 @@ libvfio_dev_get_groupid(libvfio_dev *dev)
 {
     return dev->groupid;
 }
+
+bool
+libvfio_dev_set_irqs(libvfio_dev *dev,
+                     uint32_t index,
+                     int fd,
+                     uint32_t flags,
+                     Error **errp)
+{
+    struct vfio_irq_set *irq_set;
+    int argsz;
+    int32_t *pfd;
+
+    argsz = sizeof(*irq_set) + sizeof(*pfd);
+    irq_set = g_alloca(argsz);
+    *irq_set = (struct vfio_irq_set) {
+        .argsz = argsz,
+        .flags = flags,
+        .index = index,
+        .start = 0,
+        .count = 1,
+    };
+    pfd = (int32_t *)&irq_set->data;
+    *pfd = fd;
+
+    if (!ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
+        error_setg_errno(errp, errno, "vfio: Failed to set trigger eventfd");
+        return false;
+    }
+
+    return true;
+
+}
