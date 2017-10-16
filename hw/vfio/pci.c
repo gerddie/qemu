@@ -2642,59 +2642,50 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     VFIOPCIDevice *vdev = DO_UPCAST(VFIOPCIDevice, pdev, pdev);
     VFIODevice *vbasedev_iter;
     VFIOGroup *group;
-    char *tmp, group_path[PATH_MAX], *group_name;
     Error *err = NULL;
-    ssize_t len;
-    struct stat st;
-    int groupid;
     int i, ret;
 
-    if (!vdev->vbasedev.sysfsdev) {
-        if (!(~vdev->host.domain || ~vdev->host.bus ||
-              ~vdev->host.slot || ~vdev->host.function)) {
-            error_setg(errp, "No provided host device");
-            error_append_hint(errp, "Use -device vfio-pci,host=DDDD:BB:DD.F "
-                              "or -device vfio-pci,sysfsdev=PATH_TO_DEVICE\n");
+    if (vdev->vbasedev.test) {
+        if (!libvfio_init_user(&vdev->vbasedev.libvfio, -1, errp)) {
             return;
         }
-        vdev->vbasedev.sysfsdev =
-            g_strdup_printf("/sys/bus/pci/devices/%04x:%02x:%02x.%01x",
-                            vdev->host.domain, vdev->host.bus,
-                            vdev->host.slot, vdev->host.function);
+        if (!libvfio_init_dev(&vdev->vbasedev.libvfio,
+                              &vdev->vbasedev.libvfio_dev, NULL, errp)) {
+            return;
+        }
+    } else {
+        if (!vdev->vbasedev.sysfsdev) {
+            if (!(~vdev->host.domain || ~vdev->host.bus ||
+                  ~vdev->host.slot || ~vdev->host.function)) {
+                error_setg(errp, "No provided host device");
+                error_append_hint(errp, "Use -device vfio-pci,host=DDDD:BB:DD.F "
+                                  "or -device vfio-pci,sysfsdev=PATH_TO_DEVICE\n");
+                return;
+            }
+            vdev->vbasedev.sysfsdev =
+                g_strdup_printf("/sys/bus/pci/devices/%04x:%02x:%02x.%01x",
+                                vdev->host.domain, vdev->host.bus,
+                                vdev->host.slot, vdev->host.function);
+        }
+
+        if (!libvfio_init_host(&vdev->libvfio, errp)) {
+            return;
+        }
+        if (!libvfio_init_dev(&vdev->libvfio, &vdev->libvfio_dev,
+                              vdev->vbasedev.sysfsdev, errp)) {
+            return;
+        }
     }
 
-    if (stat(vdev->vbasedev.sysfsdev, &st) < 0) {
-        error_setg_errno(errp, errno, "no such host device");
-        error_prepend(errp, ERR_PREFIX, vdev->vbasedev.sysfsdev);
-        return;
-    }
-
-    vdev->vbasedev.name = g_strdup(basename(vdev->vbasedev.sysfsdev));
+    vdev->vbasedev.name = g_strdup(libvfio_dev_get_name(&vdev->libvfio_dev));
     vdev->vbasedev.ops = &vfio_pci_ops;
     vdev->vbasedev.type = VFIO_DEVICE_TYPE_PCI;
     vdev->vbasedev.dev = &vdev->pdev.qdev;
 
-    tmp = g_strdup_printf("%s/iommu_group", vdev->vbasedev.sysfsdev);
-    len = readlink(tmp, group_path, sizeof(group_path));
-    g_free(tmp);
+    trace_vfio_realize(vdev->vbasedev.name, vdev->vbasedev.libvfio_dev.group);
 
-    if (len <= 0 || len >= sizeof(group_path)) {
-        error_setg_errno(errp, len < 0 ? errno : ENAMETOOLONG,
-                         "no iommu_group found");
-        goto error;
-    }
-
-    group_path[len] = 0;
-
-    group_name = basename(group_path);
-    if (sscanf(group_name, "%d", &groupid) != 1) {
-        error_setg_errno(errp, errno, "failed to read %s", group_path);
-        goto error;
-    }
-
-    trace_vfio_realize(vdev->vbasedev.name, groupid);
-
-    group = vfio_get_group(groupid, pci_device_iommu_address_space(pdev), errp);
+    group = vfio_get_group(vdev->vbasedev.libvfio_dev.group,
+                           pci_device_iommu_address_space(pdev), errp);
     if (!group) {
         goto error;
     }
