@@ -2668,23 +2668,25 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
                                 vdev->host.slot, vdev->host.function);
         }
 
-        if (!libvfio_init_host(&vdev->libvfio, errp)) {
+        if (!libvfio_init_host(&vdev->vbasedev.libvfio, errp)) {
             return;
         }
-        if (!libvfio_init_dev(&vdev->libvfio, &vdev->libvfio_dev,
+        if (!libvfio_init_dev(&vdev->vbasedev.libvfio,
+                              &vdev->vbasedev.libvfio_dev,
                               vdev->vbasedev.sysfsdev, errp)) {
             return;
         }
     }
 
-    vdev->vbasedev.name = g_strdup(libvfio_dev_get_name(&vdev->libvfio_dev));
+    const char *name = libvfio_dev_get_name(&vdev->vbasedev.libvfio_dev);
+    vdev->vbasedev.name = g_strdup(name);
     vdev->vbasedev.ops = &vfio_pci_ops;
     vdev->vbasedev.type = VFIO_DEVICE_TYPE_PCI;
     vdev->vbasedev.dev = &vdev->pdev.qdev;
 
     trace_vfio_realize(vdev->vbasedev.name, vdev->vbasedev.libvfio_dev.group);
 
-    group = vfio_get_group(vdev->vbasedev.libvfio_dev.group,
+    group = vfio_get_group(&vdev->vbasedev,
                            pci_device_iommu_address_space(pdev), errp);
     if (!group) {
         goto error;

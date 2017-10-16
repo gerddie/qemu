@@ -1183,8 +1183,9 @@ static void vfio_disconnect_container(VFIOGroup *group)
     }
 }
 
-VFIOGroup *vfio_get_group(int groupid, AddressSpace *as, Error **errp)
+VFIOGroup *vfio_get_group(VFIODevice *dev, AddressSpace *as, Error **errp)
 {
+    int groupid = dev->libvfio_dev.group;
     VFIOGroup *group;
     char path[32];
     struct vfio_group_status status = { .argsz = sizeof(status) };
