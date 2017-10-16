@@ -326,11 +326,26 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
     pfd = (int32_t *)&irq_set->data;
     *pfd = fd;
 
-    if (!ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
+    if (ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
         error_setg_errno(errp, errno, "vfio: Failed to set trigger eventfd");
         return false;
     }
 
     return true;
+}
 
+bool
+libvfio_dev_get_irq_info(libvfio_dev *dev,
+                         uint32_t index,
+                         struct vfio_irq_info *irq,
+                         Error **errp)
+{
+    irq->argsz = sizeof(*irq);
+    irq->index = index;
+    if (ioctl(dev->fd, VFIO_DEVICE_GET_IRQ_INFO, irq)) {
+        error_setg_errno(errp, errno, "failed to get device irq info");
+        return false;
+    }
+
+    return true;
 }

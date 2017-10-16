@@ -82,5 +82,9 @@ bool libvfio_dev_set_irqs(libvfio_dev *dev,
                           int fd,
                           uint32_t flags,
                           Error **errp);
+bool libvfio_dev_get_irq_info(libvfio_dev *dev,
+                              uint32_t index,
+                              struct vfio_irq_info *irq,
+                              Error **errp);
 
 #endif /* LIBVFIO_H_ */
