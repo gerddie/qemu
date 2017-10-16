@@ -116,7 +116,6 @@ typedef struct VhostUserMsg {
 
     int fds[VHOST_MEMORY_MAX_NREGIONS];
     int fd_num;
-    uint8_t *data;
 } VU_PACKED VhostUserMsg;
 
 typedef struct VuDevRegion {

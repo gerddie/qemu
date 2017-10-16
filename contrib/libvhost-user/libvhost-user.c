@@ -247,11 +247,7 @@ vu_message_write(VuDev *dev, int conn_fd, VhostUserMsg *vmsg)
     } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
 
     do {
-        if (vmsg->data) {
-            rc = write(conn_fd, vmsg->data, vmsg->size);
-        } else {
-            rc = write(conn_fd, p + VHOST_USER_HDR_SIZE, vmsg->size);
-        }
+        rc = write(conn_fd, p + VHOST_USER_HDR_SIZE, vmsg->size);
     } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
 
     if (rc <= 0) {
@@ -877,27 +873,21 @@ vu_dispatch(VuDev *dev)
 {
     VhostUserMsg vmsg = { 0, };
     int reply_requested;
-    bool success = false;
 
     if (!vu_message_read(dev, dev->sock, &vmsg)) {
-        goto end;
+        return false;
     }
 
     reply_requested = vu_process_message(dev, &vmsg);
     if (!reply_requested) {
-        success = true;
-        goto end;
+        return true;
     }
 
     if (!vu_message_write(dev, dev->sock, &vmsg)) {
-        goto end;
+        return false;
     }
 
-    success = true;
-
-end:
-    free(vmsg.data);
-    return success;
+    return true;
 }
 
 void
