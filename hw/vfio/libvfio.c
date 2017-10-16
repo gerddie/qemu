@@ -1,4 +1,4 @@
-#include "libvfio.h"
+#include "hw/vfio/libvfio.h"
 #include "qapi/error.h"
 
 #define ERR_PREFIX "libvfio error: %s: "
@@ -50,6 +50,7 @@ libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
     }
 
     dev->group = groupid;
+    dev->name = g_strdup(basename(path));
     return true;
 }
 
