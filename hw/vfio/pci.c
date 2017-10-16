@@ -2122,7 +2122,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         }
 
         QLIST_FOREACH(group, &vfio_group_list, next) {
-            if (group->groupid == devices[i].group_id) {
+            if (group->libvfio_group.groupid == devices[i].group_id) {
                 break;
             }
         }
@@ -2166,7 +2166,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     count = 0;
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
-            if (group->groupid == devices[i].group_id) {
+            if (group->libvfio_group.groupid == devices[i].group_id) {
                 count++;
                 break;
             }
@@ -2180,7 +2180,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     /* Fill in group fds */
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
-            if (group->groupid == devices[i].group_id) {
+            if (group->libvfio_group.groupid == devices[i].group_id) {
                 fds[reset->count++] = group->fd;
                 break;
             }
@@ -2211,7 +2211,7 @@ out:
         }
 
         QLIST_FOREACH(group, &vfio_group_list, next) {
-            if (group->groupid == devices[i].group_id) {
+            if (group->libvfio_group.groupid == devices[i].group_id) {
                 break;
             }
         }
@@ -2684,7 +2684,7 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     vdev->vbasedev.type = VFIO_DEVICE_TYPE_PCI;
     vdev->vbasedev.dev = &vdev->pdev.qdev;
 
-    trace_vfio_realize(vdev->vbasedev.name, vdev->vbasedev.libvfio_dev.group);
+    trace_vfio_realize(vdev->vbasedev.name, vdev->vbasedev.libvfio_dev.groupid);
 
     group = vfio_get_group(&vdev->vbasedev,
                            pci_device_iommu_address_space(pdev), errp);

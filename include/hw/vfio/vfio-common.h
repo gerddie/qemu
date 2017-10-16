@@ -78,7 +78,7 @@ struct VFIOGroup;
 
 typedef struct VFIOContainer {
     VFIOAddressSpace *space;
-    int fd; /* /dev/vfio/vfio, empowered by the attached groups */
+    int fd;
     MemoryListener listener;
     MemoryListener prereg_listener;
     unsigned iommu_type;
@@ -93,6 +93,7 @@ typedef struct VFIOContainer {
     QLIST_HEAD(, VFIOHostDMAWindow) hostwin_list;
     QLIST_HEAD(, VFIOGroup) group_list;
     QLIST_ENTRY(VFIOContainer) next;
+    libvfio_container libvfio_container;
 } VFIOContainer;
 
 typedef struct VFIOGuestIOMMU {
@@ -140,7 +141,7 @@ struct VFIODeviceOps {
 
 typedef struct VFIOGroup {
     int fd;
-    int groupid;
+    libvfio_group libvfio_group;
     VFIOContainer *container;
     QLIST_HEAD(, VFIODevice) device_list;
     QLIST_ENTRY(VFIOGroup) next;
