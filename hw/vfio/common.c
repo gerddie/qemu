@@ -57,41 +57,23 @@ static int vfio_kvm_device_fd = -1;
  */
 void vfio_disable_irqindex(VFIODevice *vbasedev, int index)
 {
-    struct vfio_irq_set irq_set = {
-        .argsz = sizeof(irq_set),
-        .flags = VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_TRIGGER,
-        .index = index,
-        .start = 0,
-        .count = 0,
-    };
-
-    ioctl(vbasedev->fd, VFIO_DEVICE_SET_IRQS, &irq_set);
+    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
+                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_TRIGGER,
+                         NULL);
 }
 
 void vfio_unmask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    struct vfio_irq_set irq_set = {
-        .argsz = sizeof(irq_set),
-        .flags = VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_UNMASK,
-        .index = index,
-        .start = 0,
-        .count = 1,
-    };
-
-    ioctl(vbasedev->fd, VFIO_DEVICE_SET_IRQS, &irq_set);
+    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
+                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_UNMASK,
+                         NULL);
 }
 
 void vfio_mask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    struct vfio_irq_set irq_set = {
-        .argsz = sizeof(irq_set),
-        .flags = VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_MASK,
-        .index = index,
-        .start = 0,
-        .count = 1,
-    };
-
-    ioctl(vbasedev->fd, VFIO_DEVICE_SET_IRQS, &irq_set);
+    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
+                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_MASK,
+                         NULL);
 }
 
 /*
@@ -212,16 +194,12 @@ const MemoryRegionOps vfio_region_ops = {
 static int vfio_dma_unmap(VFIOContainer *container,
                           hwaddr iova, ram_addr_t size)
 {
-    struct vfio_iommu_type1_dma_unmap unmap = {
-        .argsz = sizeof(unmap),
-        .flags = 0,
-        .iova = iova,
-        .size = size,
-    };
+    Error *err = NULL;
 
-    if (ioctl(container->fd, VFIO_IOMMU_UNMAP_DMA, &unmap)) {
-        error_report("VFIO_UNMAP_DMA: %d", -errno);
-        return -errno;
+    if (!libvfio_container_iommu_unmap_dma(&container->libvfio_container,
+                                           iova, size, 0, &err)) {
+        error_report_err(err);
+        return -1;
     }
 
     return 0;
@@ -230,31 +208,22 @@ static int vfio_dma_unmap(VFIOContainer *container,
 static int vfio_dma_map(VFIOContainer *container, hwaddr iova,
                         ram_addr_t size, void *vaddr, bool readonly)
 {
-    struct vfio_iommu_type1_dma_map map = {
-        .argsz = sizeof(map),
-        .flags = VFIO_DMA_MAP_FLAG_READ,
-        .vaddr = (__u64)(uintptr_t)vaddr,
-        .iova = iova,
-        .size = size,
-    };
+    Error *err = NULL;
+    uint32_t flags = VFIO_DMA_MAP_FLAG_READ;
 
     if (!readonly) {
-        map.flags |= VFIO_DMA_MAP_FLAG_WRITE;
+        flags |= VFIO_DMA_MAP_FLAG_WRITE;
     }
 
-    /*
-     * Try the mapping, if it fails with EBUSY, unmap the region and try
-     * again.  This shouldn't be necessary, but we sometimes see it in
-     * the VGA ROM space.
-     */
-    if (ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0 ||
-        (errno == EBUSY && vfio_dma_unmap(container, iova, size) == 0 &&
-         ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0)) {
-        return 0;
+    if (!libvfio_container_iommu_map_dma(&container->libvfio_container,
+                                         (__u64)(uintptr_t)vaddr,
+                                         iova, size, flags,
+                                         &err)) {
+        error_report_err(err);
+        return -1;
     }
 
-    error_report("VFIO_MAP_DMA: %d", -errno);
-    return -errno;
+    return 0;
 }
 
 static void vfio_host_win_add(VFIOContainer *container,
@@ -1376,11 +1345,7 @@ static bool vfio_eeh_container_ok(VFIOContainer *container)
 
 static int vfio_eeh_container_op(VFIOContainer *container, uint32_t op)
 {
-    struct vfio_eeh_pe_op pe_op = {
-        .argsz = sizeof(pe_op),
-        .op = op,
-    };
-    int ret;
+    Error *err = NULL;
 
     if (!vfio_eeh_container_ok(container)) {
         error_report("vfio/eeh: EEH_PE_OP 0x%x: "
@@ -1388,13 +1353,12 @@ static int vfio_eeh_container_op(VFIOContainer *container, uint32_t op)
         return -EPERM;
     }
 
-    ret = ioctl(container->fd, VFIO_EEH_PE_OP, &pe_op);
-    if (ret < 0) {
-        error_report("vfio/eeh: EEH_PE_OP 0x%x failed: %m", op);
-        return -errno;
+    if (!libvfio_container_eeh_pe_op(&container->libvfio_container, op, &err)) {
+        error_report_err(err);
+        return -1;
     }
 
-    return ret;
+    return 0;
 }
 
 static VFIOContainer *vfio_eeh_as_container(AddressSpace *as)

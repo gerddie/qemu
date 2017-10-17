@@ -98,6 +98,66 @@ libvfio_container_iommu_enable(libvfio_container *container, Error **errp)
 }
 
 bool
+libvfio_container_iommu_map_dma(libvfio_container *container,
+                                uint64_t vaddr, uint64_t iova,
+                                uint64_t size, uint32_t flags,
+                                Error **errp)
+{
+    struct vfio_iommu_type1_dma_map map = {
+        .argsz = sizeof(map),
+        .flags = flags,
+        .vaddr = vaddr,
+        .iova = iova,
+        .size = size,
+    };
+
+    /*
+     * Try the mapping, if it fails with EBUSY, unmap the region and try
+     * again.  This shouldn't be necessary, but we sometimes see it in
+     * the VGA ROM space.
+     */
+    if (ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0) {
+        return true;
+    }
+
+    if (errno != EBUSY) {
+        goto error;
+    }
+
+    if (!libvfio_container_iommu_unmap_dma(container, iova, size, 0, NULL)) {
+        goto error;
+    }
+
+    if (ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0) {
+        return true;
+    }
+
+error:
+    error_setg_errno(errp, errno, "VFIO_MAP_DMA failed");
+    return false;
+}
+
+bool
+libvfio_container_iommu_unmap_dma(libvfio_container *container,
+                                  uint64_t iova, uint64_t size,
+                                  uint32_t flags, Error **errp)
+{
+    struct vfio_iommu_type1_dma_unmap unmap = {
+        .argsz = sizeof(unmap),
+        .flags = 0,
+        .iova = iova,
+        .size = size,
+    };
+
+    if (ioctl(container->fd, VFIO_IOMMU_UNMAP_DMA, &unmap)) {
+        error_setg_errno(errp, errno, "VFIO_UNMAP_DMA failed");
+        return false;
+    }
+
+    return true;
+}
+
+bool
 libvfio_container_iommu_spapr_tce_get_info(libvfio_container *container,
                                          struct vfio_iommu_spapr_tce_info *info,
                                          Error **errp)
@@ -205,6 +265,23 @@ libvfio_container_iommu_spapr_tce_remove(libvfio_container *container,
 }
 
 bool
+libvfio_container_eeh_pe_op(libvfio_container *container,
+                            uint32_t op, Error **errp)
+{
+    struct vfio_eeh_pe_op pe_op = {
+        .argsz = sizeof(pe_op),
+        .op = op,
+    };
+
+    if (ioctl(container->fd, VFIO_EEH_PE_OP, &pe_op)) {
+        error_setg_errno(errp, errno, "vfio/eeh: EEH_PE_OP 0x%x failed", op);
+        return false;
+    }
+
+    return true;
+}
+
+bool
 libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
                  const char *path, Error **errp)
 {
@@ -304,27 +381,41 @@ libvfio_dev_get_groupid(libvfio_dev *dev)
 }
 
 bool
+libvfio_dev_reset(libvfio_dev *dev, Error **errp)
+{
+    if (ioctl(dev->fd, VFIO_DEVICE_RESET)) {
+        error_setg_errno(errp, errno, "vfio: Failed to reset device");
+        return false;
+    }
+
+    return true;
+}
+
+bool
 libvfio_dev_set_irqs(libvfio_dev *dev,
                      uint32_t index,
-                     int fd,
+                     int *fds,
+                     size_t nfds,
                      uint32_t flags,
                      Error **errp)
 {
     struct vfio_irq_set *irq_set;
-    int argsz;
+    int argsz, i;
     int32_t *pfd;
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
+    argsz = sizeof(*irq_set) + sizeof(*pfd) * nfds;
     irq_set = g_alloca(argsz);
     *irq_set = (struct vfio_irq_set) {
         .argsz = argsz,
         .flags = flags,
         .index = index,
         .start = 0,
-        .count = 1,
+        .count = nfds,
     };
     pfd = (int32_t *)&irq_set->data;
-    *pfd = fd;
+    for (i = 0; i < nfds; i++) {
+        pfd[i] = fds[i];
+    }
 
     if (ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
         error_setg_errno(errp, errno, "vfio: Failed to set trigger eventfd");

@@ -10,15 +10,13 @@
 
 #include "qemu/osdep.h"
 #include "cpu.h"
-#include <sys/ioctl.h>
-#include <linux/vfio.h>
 
 #include "hw/vfio/vfio-common.h"
+#include "hw/vfio/libvfio.h"
 #include "hw/hw.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
 #include "trace.h"
-#include "hw/vfio/libvfio.h"
 
 static bool vfio_prereg_listener_skipped_section(MemoryRegionSection *section)
 {

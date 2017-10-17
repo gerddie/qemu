@@ -16,9 +16,8 @@
 
 #include "qemu/osdep.h"
 #include "qapi/error.h"
-#include <sys/ioctl.h>
-#include <linux/vfio.h>
 
+#include "hw/vfio/libvfio.h"
 #include "hw/vfio/vfio-platform.h"
 #include "qemu/error-report.h"
 #include "qemu/range.h"
@@ -110,7 +109,7 @@ static int vfio_set_trigger_eventfd(VFIOINTp *intp,
 
     qemu_set_fd_handler(fd, (IOHandler *)handler, NULL, intp);
     if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev,
-            intp->pin, fd,
+            intp->pin, &fd, 1,
             VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER,
             &err)) {
         error_report_err(err);
@@ -358,7 +357,7 @@ static int vfio_set_resample_eventfd(VFIOINTp *intp)
     int fd = event_notifier_get_fd(intp->unmask);
 
     qemu_set_fd_handler(fd, NULL, NULL, NULL);
-    if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev, intp->pin, fd,
+    if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev, intp->pin, &fd, 1,
             VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_UNMASK, &err)) {
         error_report_err(err);
         return -1;
