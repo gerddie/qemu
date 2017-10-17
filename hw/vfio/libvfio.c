@@ -459,14 +459,24 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
 }
 
 bool
+libvfio_dev_set_irq_fd(libvfio_dev *dev,
+                       uint32_t index,
+                       int fd,
+                       uint32_t flags,
+                       Error **errp)
+{
+    return libvfio_dev_set_irqs(dev, index, 0,
+                                &fd, 1, flags, errp);
+}
+
+bool
 libvfio_dev_set_irq(libvfio_dev *dev,
                     uint32_t index,
-                    int fd,
                     uint32_t flags,
                     Error **errp)
 {
     return libvfio_dev_set_irqs(dev, index, 0,
-                                &fd, fd != -1 ? 1 : 0, flags, errp);
+                                NULL, 0, flags, errp);
 }
 
 bool

@@ -57,21 +57,21 @@ static int vfio_kvm_device_fd = -1;
  */
 void vfio_disable_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index,
                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_TRIGGER,
                         NULL);
 }
 
 void vfio_unmask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index,
                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_UNMASK,
                         NULL);
 }
 
 void vfio_mask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index,
                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_MASK,
                         NULL);
 }

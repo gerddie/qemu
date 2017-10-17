@@ -135,12 +135,12 @@ static void vfio_intx_enable_kvm(VFIOPCIDevice *vdev, Error **errp)
         goto fail_irqfd;
     }
 
-    if (!libvfio_dev_set_irq(&vdev->vbasedev.libvfio_dev,
-                             VFIO_PCI_INTX_IRQ_INDEX,
-                             irqfd.resamplefd,
-                             VFIO_IRQ_SET_DATA_EVENTFD |
-                             VFIO_IRQ_SET_ACTION_UNMASK,
-                             errp)) {
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_INTX_IRQ_INDEX,
+                                irqfd.resamplefd,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_UNMASK,
+                                errp)) {
         goto fail_vfio;
     }
 
@@ -276,11 +276,11 @@ static int vfio_intx_enable(VFIOPCIDevice *vdev, Error **errp)
     fd = event_notifier_get_fd(&vdev->intx.interrupt);
     qemu_set_fd_handler(fd, vfio_intx_interrupt, NULL, vdev);
 
-    if (!libvfio_dev_set_irq(&vdev->vbasedev.libvfio_dev,
-                             VFIO_PCI_INTX_IRQ_INDEX, fd,
-                             VFIO_IRQ_SET_DATA_EVENTFD |
-                             VFIO_IRQ_SET_ACTION_TRIGGER,
-                             errp)) {
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_INTX_IRQ_INDEX, fd,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                errp)) {
         qemu_set_fd_handler(fd, NULL, NULL, vdev);
         event_notifier_cleanup(&vdev->intx.interrupt);
         return -1;
@@ -544,26 +544,13 @@ static void vfio_msix_vector_release(PCIDevice *pdev, unsigned int nr)
      * be re-asserted on unmask.  Nothing to do if already using QEMU mode.
      */
     if (vector->virq >= 0) {
-        int argsz;
-        struct vfio_irq_set *irq_set;
-        int32_t *pfd;
+        int fd = event_notifier_get_fd(&vector->interrupt);
 
-        argsz = sizeof(*irq_set) + sizeof(*pfd);
-
-        irq_set = g_malloc0(argsz);
-        irq_set->argsz = argsz;
-        irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                         VFIO_IRQ_SET_ACTION_TRIGGER;
-        irq_set->index = VFIO_PCI_MSIX_IRQ_INDEX;
-        irq_set->start = nr;
-        irq_set->count = 1;
-        pfd = (int32_t *)&irq_set->data;
-
-        *pfd = event_notifier_get_fd(&vector->interrupt);
-
-        ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
-
-        g_free(irq_set);
+        libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
+                             VFIO_PCI_MSIX_IRQ_INDEX, nr, &fd, 1,
+                             VFIO_IRQ_SET_DATA_EVENTFD |
+                             VFIO_IRQ_SET_ACTION_TRIGGER,
+                             NULL);
     }
 }
 
@@ -2428,10 +2415,8 @@ static void vfio_err_notifier_handler(void *opaque)
  */
 static void vfio_register_err_notifier(VFIOPCIDevice *vdev)
 {
-    int ret;
-    int argsz;
-    struct vfio_irq_set *irq_set;
-    int32_t *pfd;
+    Error *err = NULL;
+    int fd;
 
     if (!vdev->pci_aer) {
         return;
@@ -2443,58 +2428,37 @@ static void vfio_register_err_notifier(VFIOPCIDevice *vdev)
         return;
     }
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
+    fd = event_notifier_get_fd(&vdev->err_notifier);
+    qemu_set_fd_handler(fd, vfio_err_notifier_handler, NULL, vdev);
 
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                     VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = VFIO_PCI_ERR_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-
-    *pfd = event_notifier_get_fd(&vdev->err_notifier);
-    qemu_set_fd_handler(*pfd, vfio_err_notifier_handler, NULL, vdev);
-
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
-    if (ret) {
-        error_report("vfio: Failed to set up error notification");
-        qemu_set_fd_handler(*pfd, NULL, NULL, vdev);
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_ERR_IRQ_INDEX, fd,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
+        error_report_err(err);
+        qemu_set_fd_handler(fd, NULL, NULL, vdev);
         event_notifier_cleanup(&vdev->err_notifier);
         vdev->pci_aer = false;
     }
-    g_free(irq_set);
 }
 
 static void vfio_unregister_err_notifier(VFIOPCIDevice *vdev)
 {
-    int argsz;
-    struct vfio_irq_set *irq_set;
-    int32_t *pfd;
-    int ret;
+    Error *err = NULL;
 
     if (!vdev->pci_aer) {
         return;
     }
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
-
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                     VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = VFIO_PCI_ERR_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-    *pfd = -1;
-
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
-    if (ret) {
-        error_report("vfio: Failed to de-assign error fd: %m");
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_ERR_IRQ_INDEX, -1,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
+        error_report_err(err);
     }
-    g_free(irq_set);
+
     qemu_set_fd_handler(event_notifier_get_fd(&vdev->err_notifier),
                         NULL, NULL, vdev);
     event_notifier_cleanup(&vdev->err_notifier);
@@ -2517,11 +2481,10 @@ static void vfio_req_notifier_handler(void *opaque)
 
 static void vfio_register_req_notifier(VFIOPCIDevice *vdev)
 {
+    Error *err = NULL;
+    int fd;
     struct vfio_irq_info irq_info = { .argsz = sizeof(irq_info),
                                       .index = VFIO_PCI_REQ_IRQ_INDEX };
-    int argsz;
-    struct vfio_irq_set *irq_set;
-    int32_t *pfd;
 
     if (!(vdev->features & VFIO_FEATURE_ENABLE_REQ)) {
         return;
@@ -2537,57 +2500,37 @@ static void vfio_register_req_notifier(VFIOPCIDevice *vdev)
         return;
     }
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
+    fd = event_notifier_get_fd(&vdev->req_notifier);
+    qemu_set_fd_handler(fd, vfio_req_notifier_handler, NULL, vdev);
 
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                     VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = VFIO_PCI_REQ_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-
-    *pfd = event_notifier_get_fd(&vdev->req_notifier);
-    qemu_set_fd_handler(*pfd, vfio_req_notifier_handler, NULL, vdev);
-
-    if (ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
-        error_report("vfio: Failed to set up device request notification");
-        qemu_set_fd_handler(*pfd, NULL, NULL, vdev);
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_REQ_IRQ_INDEX, fd,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
+        error_report_err(err);
+        qemu_set_fd_handler(fd, NULL, NULL, vdev);
         event_notifier_cleanup(&vdev->req_notifier);
     } else {
         vdev->req_enabled = true;
     }
-
-    g_free(irq_set);
 }
 
 static void vfio_unregister_req_notifier(VFIOPCIDevice *vdev)
 {
-    int argsz;
-    struct vfio_irq_set *irq_set;
-    int32_t *pfd;
+    Error *err = NULL;
 
     if (!vdev->req_enabled) {
         return;
     }
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
-
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                     VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = VFIO_PCI_REQ_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-    *pfd = -1;
-
-    if (ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
-        error_report("vfio: Failed to de-assign device request fd: %m");
+    if (!libvfio_dev_set_irq_fd(&vdev->vbasedev.libvfio_dev,
+                                VFIO_PCI_REQ_IRQ_INDEX, -1,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
+        error_report_err(err);
     }
-    g_free(irq_set);
     qemu_set_fd_handler(event_notifier_get_fd(&vdev->req_notifier),
                         NULL, NULL, vdev);
     event_notifier_cleanup(&vdev->req_notifier);

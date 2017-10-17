@@ -185,11 +185,11 @@ static void vfio_ccw_register_io_notifier(VFIOCCWDevice *vcdev, Error **errp)
 
     fd = event_notifier_get_fd(&vcdev->io_notifier);
     qemu_set_fd_handler(fd, vfio_ccw_io_notifier_handler, NULL, vcdev);
-    if (!libvfio_dev_set_irq(&vdev->libvfio_dev,
-                             VFIO_CCW_IO_IRQ_INDEX, fd,
-                             VFIO_IRQ_SET_DATA_EVENTFD |
-                             VFIO_IRQ_SET_ACTION_TRIGGER,
-                             &err)) {
+    if (!libvfio_dev_set_irq_fd(&vdev->libvfio_dev,
+                                VFIO_CCW_IO_IRQ_INDEX, fd,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
         qemu_set_fd_handler(fd, NULL, NULL, vcdev);
         event_notifier_cleanup(&vcdev->io_notifier);
     }
@@ -199,11 +199,11 @@ static void vfio_ccw_unregister_io_notifier(VFIOCCWDevice *vcdev)
 {
     Error *err = NULL;
 
-    if (!libvfio_dev_set_irq(&vcdev->vdev.libvfio_dev,
-                             VFIO_CCW_IO_IRQ_INDEX, -1,
-                             VFIO_IRQ_SET_DATA_EVENTFD |
-                             VFIO_IRQ_SET_ACTION_TRIGGER,
-                             &err)) {
+    if (!libvfio_dev_set_irq_fd(&vcdev->vdev.libvfio_dev,
+                                VFIO_CCW_IO_IRQ_INDEX, -1,
+                                VFIO_IRQ_SET_DATA_EVENTFD |
+                                VFIO_IRQ_SET_ACTION_TRIGGER,
+                                &err)) {
         error_report_err(err);
     }
 
