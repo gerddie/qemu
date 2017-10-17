@@ -108,9 +108,6 @@ static void vfio_intx_enable_kvm(VFIOPCIDevice *vdev, Error **errp)
         .gsi = vdev->intx.route.irq,
         .flags = KVM_IRQFD_FLAG_RESAMPLE,
     };
-    struct vfio_irq_set *irq_set;
-    int ret, argsz;
-    int32_t *pfd;
 
     if (vdev->no_kvm_intx || !kvm_irqfds_enabled() ||
         vdev->intx.route.mode != PCI_INTX_ENABLED ||
@@ -138,22 +135,12 @@ static void vfio_intx_enable_kvm(VFIOPCIDevice *vdev, Error **errp)
         goto fail_irqfd;
     }
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd);
-
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_UNMASK;
-    irq_set->index = VFIO_PCI_INTX_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = 1;
-    pfd = (int32_t *)&irq_set->data;
-
-    *pfd = irqfd.resamplefd;
-
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
-    g_free(irq_set);
-    if (ret) {
-        error_setg_errno(errp, -ret, "failed to setup INTx unmask fd");
+    if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
+                              VFIO_PCI_INTX_IRQ_INDEX,
+                              (int *)&irqfd.resamplefd, 1,
+                              VFIO_IRQ_SET_DATA_EVENTFD |
+                              VFIO_IRQ_SET_ACTION_UNMASK,
+                              errp)) {
         goto fail_vfio;
     }
 
