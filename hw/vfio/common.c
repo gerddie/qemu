@@ -82,6 +82,7 @@ void vfio_mask_single_irqindex(VFIODevice *vbasedev, int index)
 void vfio_region_write(void *opaque, hwaddr addr,
                        uint64_t data, unsigned size)
 {
+    Error *err = NULL;
     VFIORegion *region = opaque;
     VFIODevice *vbasedev = region->vbasedev;
     union {
@@ -106,15 +107,19 @@ void vfio_region_write(void *opaque, hwaddr addr,
         break;
     default:
         hw_error("vfio: unsupported write size, %d bytes", size);
-        break;
+        axbreaker;
     }
 
-    if (pwrite(vbasedev->fd, &buf, size, region->fd_offset + addr) != size) {
+    if (!libvfio_dev_write(&vbasedev->libvfio_dev,
+                           &buf, size, region->fd_offset + addr,
+                           &err)) {
         error_report("%s(%s:region%d+0x%"HWADDR_PRIx", 0x%"PRIx64
-                     ",%d) failed: %m",
+                     ",%d) failed: %s",
                      __func__, vbasedev->name, region->nr,
-                     addr, data, size);
+                     addr, data, size, error_get_pretty(err));
+        error_free(err);
     }
+
 
     trace_vfio_region_write(vbasedev->name, region->nr, addr, data, size);
 

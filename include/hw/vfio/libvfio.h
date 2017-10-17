@@ -122,5 +122,11 @@ bool libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 bool libvfio_dev_pci_hot_reset(libvfio_dev *dev,
                                int *fds, int nfds,
                                Error **errp);
+bool libvfio_dev_write(libvfio_dev *dev,
+                       const void *buf, size_t size, off_t offset,
+                       Error **errp);
+bool libvfio_dev_read(libvfio_dev *dev,
+                      void *buf, size_t size, off_t offset,
+                      Error **errp);
 
 #endif /* LIBVFIO_H_ */

@@ -878,11 +878,11 @@ static const MemoryRegionOps vfio_rom_ops = {
 
 static void vfio_pci_size_rom(VFIOPCIDevice *vdev)
 {
+    Error *err = NULL;
     uint32_t orig, size = cpu_to_le32((uint32_t)PCI_ROM_ADDRESS_MASK);
     off_t offset = vdev->config_offset + PCI_ROM_ADDRESS;
     DeviceState *dev = DEVICE(vdev);
     char *name;
-    int fd = vdev->vbasedev.fd;
 
     if (vdev->pdev.romfile || !vdev->pdev.rom_bar) {
         /* Since pci handles romfile, just print a message and return */
@@ -897,11 +897,15 @@ static void vfio_pci_size_rom(VFIOPCIDevice *vdev)
      * Use the same size ROM BAR as the physical device.  The contents
      * will get filled in later when the guest tries to read it.
      */
-    if (pread(fd, &orig, 4, offset) != 4 ||
-        pwrite(fd, &size, 4, offset) != 4 ||
-        pread(fd, &size, 4, offset) != 4 ||
-        pwrite(fd, &orig, 4, offset) != 4) {
-        error_report("%s(%s) failed: %m", __func__, vdev->vbasedev.name);
+    if (!libvfio_dev_read(&vdev->vbasedev.libvfio_dev,
+                          &orig, 4, offset, &err) ||
+        !libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
+                           &size, 4, offset, &err) ||
+        !libvfio_dev_read(&vdev->vbasedev.libvfio_dev,
+                          &size, 4, offset, &err) ||
+        !libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
+                           &orig, 4, offset, &err)) {
+        error_report_err(err);
         return;
     }
 
@@ -1105,16 +1109,19 @@ uint32_t vfio_pci_read_config(PCIDevice *pdev, uint32_t addr, int len)
 void vfio_pci_write_config(PCIDevice *pdev,
                            uint32_t addr, uint32_t val, int len)
 {
+    Error *err = NULL;
     VFIOPCIDevice *vdev = DO_UPCAST(VFIOPCIDevice, pdev, pdev);
     uint32_t val_le = cpu_to_le32(val);
 
     trace_vfio_pci_write_config(vdev->vbasedev.name, addr, val, len);
 
     /* Write everything to VFIO, let it filter out what we can't write */
-    if (pwrite(vdev->vbasedev.fd, &val_le, len, vdev->config_offset + addr)
-                != len) {
-        error_report("%s(%s, 0x%x, 0x%x, 0x%x) failed: %m",
-                     __func__, vdev->vbasedev.name, addr, val, len);
+    if (!libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
+                           &val_le, len, vdev->config_offset + addr, &err)) {
+        error_report("%s(%s, 0x%x, 0x%x, 0x%x) failed: %s",
+                     __func__, vdev->vbasedev.name, addr, val, len,
+                     error_get_pretty(err));
+        error_free(err);
     }
 
     /* MSI/MSI-X Enabling/Disabling */
@@ -1983,13 +1990,16 @@ static void vfio_pci_post_reset(VFIOPCIDevice *vdev)
     }
 
     for (nr = 0; nr < PCI_NUM_REGIONS - 1; ++nr) {
+        Error *err = NULL;
         off_t addr = vdev->config_offset + PCI_BASE_ADDRESS_0 + (4 * nr);
         uint32_t val = 0;
         uint32_t len = sizeof(val);
 
-        if (pwrite(vdev->vbasedev.fd, &val, len, addr) != len) {
-            error_report("%s(%s) reset bar %d failed: %m", __func__,
-                         vdev->vbasedev.name, nr);
+        if (!libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
+                               &val, len, addr &err)) {
+            error_report("%s(%s) reset bar %d failed: %s", __func__,
+                         vdev->vbasedev.name, nr, error_get_pretty(err));
+            error_free(err);
         }
     }
 }

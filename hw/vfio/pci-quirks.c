@@ -1582,10 +1582,11 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
 
     cmd = cmd_orig | PCI_COMMAND_IO;
 
-    if (pwrite(vdev->vbasedev.fd, &cmd, sizeof(cmd),
-               vdev->config_offset + PCI_COMMAND) != sizeof(cmd)) {
-        error_report("IGD device %s - failed to write PCI command register",
-                     vdev->vbasedev.name);
+    if (!libvfio_dev_write(vdev->vbasedev.libvfio_dev, &cmd, sizeof(cmd),
+                           vdev->config_offset + PCI_COMMAND, &err)) {
+        error_report("IGD device %s - failed to write PCI command register: %s",
+                     vdev->vbasedev.name, error_get_pretty(err));
+        error_free(err);
     }
 
     for (i = 1; i < vfio_igd_gtt_max(vdev); i += 4) {
@@ -1593,10 +1594,12 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
         vfio_region_write(&vdev->bars[4].region, 4, 0, 4);
     }
 
-    if (pwrite(vdev->vbasedev.fd, &cmd_orig, sizeof(cmd_orig),
-               vdev->config_offset + PCI_COMMAND) != sizeof(cmd_orig)) {
-        error_report("IGD device %s - failed to restore PCI command register",
-                     vdev->vbasedev.name);
+    if (!libvfio_dev_write(vdev->vbasedev.libvfio_dev,
+                           &cmd_orig, sizeof(cmd_orig),
+                           vdev->config_offset + PCI_COMMAND, &err)) {
+        error_report("IGD device %s - failed to restore PCI command register: %s",
+                     vdev->vbasedev.name, error_get_pretty(err));
+        error_free(err);
     }
 
     trace_vfio_pci_igd_bdsm_enabled(vdev->vbasedev.name, ggms_mb + gms_mb);

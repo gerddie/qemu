@@ -577,3 +577,37 @@ libvfio_dev_pci_hot_reset(libvfio_dev *dev,
 
     return true;
 }
+
+bool
+libvfio_dev_write(libvfio_dev *dev,
+                  const void *buf, size_t size, off_t offset,
+                  Error **errp)
+{
+again:
+    if (pwrite(dev->fd, buf, size, offset) != size) {
+        if (errno == EAGAIN) {
+            goto again;
+        }
+        error_setg_errno(errp, errno, "pwrite() failed")
+        return false;
+    }
+
+    return true;
+}
+
+bool
+libvfio_dev_read(libvfio_dev *dev,
+                 void *buf, size_t size, off_t offset,
+                 Error **errp)
+{
+again:
+    if (pread(dev->fd, buf, size, offset) != size) {
+        if (errno == EAGAIN) {
+            goto again;
+        }
+        error_setg_errno(errp, errno, "pread() failed")
+            return false;
+    }
+
+    return true;
+}

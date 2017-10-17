@@ -120,7 +120,6 @@ typedef struct VFIODevice {
     char *sysfsdev;
     char *name;
     DeviceState *dev;
-    int fd;
     int type;
     bool reset_works;
     bool needs_reset;

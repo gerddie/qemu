@@ -47,7 +47,7 @@ typedef struct VFIOVGARegion {
 
 typedef struct VFIOVGA {
     off_t fd_offset;
-    int fd;
+    /* int fd; */
     VFIOVGARegion region[QEMU_PCI_VGA_NUM_REGIONS];
 } VFIOVGA;
 
