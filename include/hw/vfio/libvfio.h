@@ -75,15 +75,18 @@ bool libvfio_container_eeh_pe_op(libvfio_container *container,
 
 bool libvfio_init_group(libvfio *vfio, libvfio_group *group,
                         int groupid, Error **errp);
-
 bool libvfio_group_set_container(libvfio_group *group,
                                  libvfio_container *container,
                                  Error **errp);
+bool libvfio_group_unset_container(libvfio_group *group,
+                                   libvfio_container *container,
+                                   Error **errp);
+bool libvfio_group_get_device(libvfio_group *group,
+                              libvfio_dev *dev,
+                              Error **errp);
 
 bool libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
                       const char *path, Error **errp);
-
-
 const char *libvfio_dev_get_name(libvfio_dev *dev);
 int libvfio_dev_get_groupid(libvfio_dev *dev);
 bool libvfio_dev_reset(libvfio_dev *dev, Error **errp);
@@ -97,5 +100,8 @@ bool libvfio_dev_get_irq_info(libvfio_dev *dev,
                               uint32_t index,
                               struct vfio_irq_info *irq,
                               Error **errp);
+bool libvfio_dev_get_info(libvfio_dev *dev,
+                          struct vfio_device_info *info,
+                          Error **errp);
 
 #endif /* LIBVFIO_H_ */

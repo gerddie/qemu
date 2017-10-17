@@ -934,16 +934,13 @@ static int vfio_connect_container(VFIOGroup *group, AddressSpace *as,
     space = vfio_get_address_space(as);
 
     QLIST_FOREACH(container, &space->containers, next) {
-        /* if (libvfio_group_set_container(&group->libvfio_group, &container->libvfio_container)) { */
-        /*     group->container = container; */
-        /*     QLIST_INSERT_HEAD(&container->group_list, group, container_next); */
-        /*     return 0; */
-        /* } */
-        /* if (!ioctl(group->fd, VFIO_GROUP_SET_CONTAINER, &container->fd)) { */
-        /*     group->container = container; */
-        /*     QLIST_INSERT_HEAD(&container->group_list, group, container_next); */
-        /*     return 0; */
-        /* } */
+        if (libvfio_group_set_container(&group->libvfio_group,
+                                        &container->libvfio_container,
+                                        NULL)) {
+            group->container = container;
+            QLIST_INSERT_HEAD(&container->group_list, group, container_next);
+            return 0;
+        }
     }
 
     container = g_malloc0(sizeof(*container));
@@ -1099,11 +1096,12 @@ exit:
 
 static void vfio_disconnect_container(VFIOGroup *group)
 {
+    Error *err = NULL;
     VFIOContainer *container = group->container;
 
-    if (ioctl(group->fd, VFIO_GROUP_UNSET_CONTAINER, &container->fd)) {
-        error_report("vfio: error disconnecting group %d from container",
-                     group->libvfio_group.groupid);
+    if (!libvfio_group_unset_container(&group->libvfio_group,
+                                       &container->libvfio_container, &err)) {
+        error_report_err(err);
     }
 
     QLIST_REMOVE(group, container_next);
@@ -1203,28 +1201,18 @@ void vfio_put_group(VFIOGroup *group)
 int vfio_get_device(VFIOGroup *group, const char *name,
                     VFIODevice *vbasedev, Error **errp)
 {
-    struct vfio_device_info dev_info = { .argsz = sizeof(dev_info) };
-    int ret, fd;
+    struct vfio_device_info dev_info;
 
-    fd = ioctl(group->fd, VFIO_GROUP_GET_DEVICE_FD, name);
-    if (fd < 0) {
-        error_setg_errno(errp, errno, "error getting device from group %d",
-                         group->libvfio_group.groupid);
-        error_append_hint(errp,
-                      "Verify all devices in group %d are bound to vfio-<bus> "
-                      "or pci-stub and not already in use\n",
-                      group->libvfio_group.groupid);
-        return fd;
+    if (!libvfio_group_get_device(&group->libvfio_group,
+                                  &vbasedev->libvfio_dev, errp)) {
+        return -1;
     }
 
-    ret = ioctl(fd, VFIO_DEVICE_GET_INFO, &dev_info);
-    if (ret) {
-        error_setg_errno(errp, errno, "error getting device info");
-        close(fd);
-        return ret;
+    if (!libvfio_dev_get_info(&vbasedev->libvfio_dev, &dev_info, errp)) {
+        return -1;
     }
 
-    vbasedev->fd = fd;
+    vbasedev->fd = vbasedev->libvfio_dev.fd;
     vbasedev->group = group;
     QLIST_INSERT_HEAD(&group->device_list, vbasedev, next);
 

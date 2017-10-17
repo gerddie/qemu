@@ -357,11 +357,42 @@ close_fd_exit:
 }
 
 bool
+libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
+{
+    int fd = ioctl(group->fd, VFIO_GROUP_GET_DEVICE_FD, dev->name);
+
+    if (fd < 0) {
+        error_setg_errno(errp, errno, "error getting device from group %d",
+                         group->groupid);
+        error_append_hint(errp,
+                          "Verify all devices in group %d are bound to vfio-<bus> "
+                          "or pci-stub and not already in use\n",
+                          group->groupid);
+        return false;
+    }
+
+    dev->fd = fd;
+    return true;
+}
+
+bool
 libvfio_group_set_container(libvfio_group *group, libvfio_container *container,
                             Error **errp)
 {
     if (ioctl(group->fd, VFIO_GROUP_SET_CONTAINER, &container->fd)) {
         error_setg_errno(errp, errno, "failed to set group container");
+        return false;
+    }
+
+    return true;
+}
+
+bool
+libvfio_group_unset_container(libvfio_group *group, libvfio_container *container,
+                              Error **errp)
+{
+    if (ioctl(group->fd, VFIO_GROUP_UNSET_CONTAINER, &container->fd)) {
+        error_setg_errno(errp, errno, "failed to unset group container");
         return false;
     }
 
@@ -435,6 +466,20 @@ libvfio_dev_get_irq_info(libvfio_dev *dev,
     irq->index = index;
     if (ioctl(dev->fd, VFIO_DEVICE_GET_IRQ_INFO, irq)) {
         error_setg_errno(errp, errno, "failed to get device irq info");
+        return false;
+    }
+
+    return true;
+}
+
+bool
+libvfio_dev_get_info(libvfio_dev *dev,
+                     struct vfio_device_info *info, Error **errp)
+{
+    info->argsz = sizeof(*info);
+
+    if (ioctl(dev->fd, VFIO_DEVICE_GET_INFO, info)) {
+        error_setg_errno(errp, errno, "error getting device info");
         return false;
     }
 
