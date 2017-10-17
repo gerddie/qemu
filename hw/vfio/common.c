@@ -849,7 +849,7 @@ static void vfio_kvm_device_add_group(VFIOGroup *group)
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_ADD,
-        .addr = (uint64_t)(unsigned long)&group->fd,
+        .addr = (uint64_t)(unsigned long)&group->libvfio_group.fd,
     };
 
     if (!kvm_enabled()) {
@@ -882,7 +882,7 @@ static void vfio_kvm_device_del_group(VFIOGroup *group)
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_DEL,
-        .addr = (uint64_t)(unsigned long)&group->fd,
+        .addr = (uint64_t)(unsigned long)&group->libvfio_group.fd,
     };
 
     if (vfio_kvm_device_fd < 0) {
@@ -1154,7 +1154,6 @@ VFIOGroup *vfio_get_group(VFIODevice *dev, AddressSpace *as, Error **errp)
         goto free_group_exit;
     }
 
-    group->fd = group->libvfio_group.fd;
     QLIST_INIT(&group->device_list);
 
     if (vfio_connect_container(group, as, errp)) {
@@ -1172,7 +1171,7 @@ VFIOGroup *vfio_get_group(VFIODevice *dev, AddressSpace *as, Error **errp)
     return group;
 
 close_fd_exit:
-    close(group->fd);
+    libvfio_group_deinit(&group->libvfio_group);
 
 free_group_exit:
     g_free(group);
@@ -1189,8 +1188,8 @@ void vfio_put_group(VFIOGroup *group)
     vfio_kvm_device_del_group(group);
     vfio_disconnect_container(group);
     QLIST_REMOVE(group, next);
-    trace_vfio_put_group(group->fd);
-    close(group->fd);
+    trace_vfio_put_group(group->libvfio_group.fd);
+    libvfio_group_deinit(&group->libvfio_group);
     g_free(group);
 
     if (QLIST_EMPTY(&vfio_group_list)) {

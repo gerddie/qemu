@@ -75,6 +75,7 @@ bool libvfio_container_eeh_pe_op(libvfio_container *container,
 
 bool libvfio_init_group(libvfio *vfio, libvfio_group *group,
                         int groupid, Error **errp);
+void libvfio_group_deinit(libvfio_group *group);
 bool libvfio_group_set_container(libvfio_group *group,
                                  libvfio_container *container,
                                  Error **errp);

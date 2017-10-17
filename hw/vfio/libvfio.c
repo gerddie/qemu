@@ -356,6 +356,17 @@ close_fd_exit:
     return false;
 }
 
+void
+libvfio_group_deinit(libvfio_group *group)
+{
+    if (!group->vfio) {
+        return;
+    }
+
+    close(group->fd);
+    group->vfio = NULL;
+}
+
 bool
 libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
 {

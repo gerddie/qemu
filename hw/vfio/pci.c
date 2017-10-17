@@ -2125,7 +2125,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
             if (group->libvfio_group.groupid == devices[i].group_id) {
-                fds[nfd++] = group->fd;
+                fds[nfd++] = group->libvfio_group.fd;
                 break;
             }
         }

@@ -140,7 +140,6 @@ struct VFIODeviceOps {
 };
 
 typedef struct VFIOGroup {
-    int fd;
     libvfio_group libvfio_group;
     VFIOContainer *container;
     QLIST_HEAD(, VFIODevice) device_list;
