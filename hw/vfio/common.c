@@ -57,23 +57,23 @@ static int vfio_kvm_device_fd = -1;
  */
 void vfio_disable_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
-                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_TRIGGER,
-                         NULL);
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+                        VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_TRIGGER,
+                        NULL);
 }
 
 void vfio_unmask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
-                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_UNMASK,
-                         NULL);
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+                        VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_UNMASK,
+                        NULL);
 }
 
 void vfio_mask_single_irqindex(VFIODevice *vbasedev, int index)
 {
-    libvfio_dev_set_irqs(&vbasedev->libvfio_dev, index, NULL, 0,
-                         VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_MASK,
-                         NULL);
+    libvfio_dev_set_irq(&vbasedev->libvfio_dev, index, -1,
+                        VFIO_IRQ_SET_DATA_NONE | VFIO_IRQ_SET_ACTION_MASK,
+                        NULL);
 }
 
 /*

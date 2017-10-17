@@ -425,6 +425,7 @@ libvfio_dev_reset(libvfio_dev *dev, Error **errp)
 bool
 libvfio_dev_set_irqs(libvfio_dev *dev,
                      uint32_t index,
+                     uint32_t start,
                      int *fds,
                      size_t nfds,
                      uint32_t flags,
@@ -440,6 +441,7 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
         .argsz = argsz,
         .flags = flags,
         .index = index,
+        .start = start,
         .start = 0,
         .count = nfds,
     };
@@ -454,6 +456,17 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
     }
 
     return true;
+}
+
+bool
+libvfio_dev_set_irq(libvfio_dev *dev,
+                    uint32_t index,
+                    int fd,
+                    uint32_t flags,
+                    Error **errp)
+{
+    return libvfio_dev_set_irqs(dev, index, 0,
+                                &fd, fd != -1 ? 1 : 0, flags, errp);
 }
 
 bool

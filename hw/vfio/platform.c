@@ -108,8 +108,8 @@ static int vfio_set_trigger_eventfd(VFIOINTp *intp,
     int fd = event_notifier_get_fd(intp->interrupt);
 
     qemu_set_fd_handler(fd, (IOHandler *)handler, NULL, intp);
-    if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev,
-            intp->pin, &fd, 1,
+    if (!libvfio_dev_set_irq(&vbasedev->libvfio_dev,
+            intp->pin, fd,
             VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER,
             &err)) {
         error_report_err(err);
@@ -357,7 +357,7 @@ static int vfio_set_resample_eventfd(VFIOINTp *intp)
     int fd = event_notifier_get_fd(intp->unmask);
 
     qemu_set_fd_handler(fd, NULL, NULL, NULL);
-    if (!libvfio_dev_set_irqs(&vbasedev->libvfio_dev, intp->pin, &fd, 1,
+    if (!libvfio_dev_set_irq(&vbasedev->libvfio_dev, intp->pin, fd,
             VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_UNMASK, &err)) {
         error_report_err(err);
         return -1;

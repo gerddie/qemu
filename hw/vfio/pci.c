@@ -135,12 +135,12 @@ static void vfio_intx_enable_kvm(VFIOPCIDevice *vdev, Error **errp)
         goto fail_irqfd;
     }
 
-    if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
-                              VFIO_PCI_INTX_IRQ_INDEX,
-                              (int *)&irqfd.resamplefd, 1,
-                              VFIO_IRQ_SET_DATA_EVENTFD |
-                              VFIO_IRQ_SET_ACTION_UNMASK,
-                              errp)) {
+    if (!libvfio_dev_set_irq(&vdev->vbasedev.libvfio_dev,
+                             VFIO_PCI_INTX_IRQ_INDEX,
+                             irqfd.resamplefd,
+                             VFIO_IRQ_SET_DATA_EVENTFD |
+                             VFIO_IRQ_SET_ACTION_UNMASK,
+                             errp)) {
         goto fail_vfio;
     }
 
@@ -276,12 +276,11 @@ static int vfio_intx_enable(VFIOPCIDevice *vdev, Error **errp)
     fd = event_notifier_get_fd(&vdev->intx.interrupt);
     qemu_set_fd_handler(fd, vfio_intx_interrupt, NULL, vdev);
 
-    if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
-                              VFIO_PCI_INTX_IRQ_INDEX,
-                              &fd, 1,
-                              VFIO_IRQ_SET_DATA_EVENTFD |
-                              VFIO_IRQ_SET_ACTION_TRIGGER,
-                              errp)) {
+    if (!libvfio_dev_set_irq(&vdev->vbasedev.libvfio_dev,
+                             VFIO_PCI_INTX_IRQ_INDEX, fd,
+                             VFIO_IRQ_SET_DATA_EVENTFD |
+                             VFIO_IRQ_SET_ACTION_TRIGGER,
+                             errp)) {
         qemu_set_fd_handler(fd, NULL, NULL, vdev);
         event_notifier_cleanup(&vdev->intx.interrupt);
         return -1;
@@ -386,7 +385,7 @@ static int vfio_enable_vectors(VFIOPCIDevice *vdev, bool msix)
     if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
                               msix ? VFIO_PCI_MSIX_IRQ_INDEX :
                                      VFIO_PCI_MSI_IRQ_INDEX,
-                              fds, vdev->nr_vectors,
+                              0, fds, vdev->nr_vectors,
                               VFIO_IRQ_SET_DATA_EVENTFD |
                               VFIO_IRQ_SET_ACTION_TRIGGER,
                               NULL)) {
@@ -494,31 +493,21 @@ static int vfio_msix_vector_do_use(PCIDevice *pdev, unsigned int nr,
             error_report("vfio: failed to enable vectors, %d", ret);
         }
     } else {
-        int argsz;
-        struct vfio_irq_set *irq_set;
-        int32_t *pfd;
-
-        argsz = sizeof(*irq_set) + sizeof(*pfd);
-
-        irq_set = g_malloc0(argsz);
-        irq_set->argsz = argsz;
-        irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
-                         VFIO_IRQ_SET_ACTION_TRIGGER;
-        irq_set->index = VFIO_PCI_MSIX_IRQ_INDEX;
-        irq_set->start = nr;
-        irq_set->count = 1;
-        pfd = (int32_t *)&irq_set->data;
+        Error *err = NULL;
+        int fd;
 
         if (vector->virq >= 0) {
-            *pfd = event_notifier_get_fd(&vector->kvm_interrupt);
+            fd = event_notifier_get_fd(&vector->kvm_interrupt);
         } else {
-            *pfd = event_notifier_get_fd(&vector->interrupt);
+            fd = event_notifier_get_fd(&vector->interrupt);
         }
 
-        ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
-        g_free(irq_set);
-        if (ret) {
-            error_report("vfio: failed to modify vector, %d", ret);
+        if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
+                                  VFIO_PCI_MSIX_IRQ_INDEX, nr, &fd, 1,
+                                  VFIO_IRQ_SET_DATA_EVENTFD |
+                                  VFIO_IRQ_SET_ACTION_TRIGGER,
+                                  &err)) {
+            error_report_err(err);
         }
     }
 
