@@ -107,7 +107,7 @@ void vfio_region_write(void *opaque, hwaddr addr,
         break;
     default:
         hw_error("vfio: unsupported write size, %d bytes", size);
-        axbreaker;
+        break;
     }
 
     if (!libvfio_dev_write(&vbasedev->libvfio_dev,
@@ -137,6 +137,7 @@ void vfio_region_write(void *opaque, hwaddr addr,
 uint64_t vfio_region_read(void *opaque,
                           hwaddr addr, unsigned size)
 {
+    Error *err = NULL;
     VFIORegion *region = opaque;
     VFIODevice *vbasedev = region->vbasedev;
     union {
@@ -147,10 +148,12 @@ uint64_t vfio_region_read(void *opaque,
     } buf;
     uint64_t data = 0;
 
-    if (pread(vbasedev->fd, &buf, size, region->fd_offset + addr) != size) {
-        error_report("%s(%s:region%d+0x%"HWADDR_PRIx", %d) failed: %m",
+    if (libvfio_dev_read(&vbasedev->libvfio_dev,
+                         &buf, size, region->fd_offset + addr, &err) != size) {
+        error_report("%s(%s:region%d+0x%"HWADDR_PRIx", %d) failed: %s",
                      __func__, vbasedev->name, region->nr,
-                     addr, size);
+                     addr, size, error_get_pretty(err));
+        error_free(err);
         return (uint64_t)-1;
     }
     switch (size) {
@@ -723,10 +726,10 @@ int vfio_region_mmap(VFIORegion *region)
     prot |= region->flags & VFIO_REGION_INFO_FLAG_WRITE ? PROT_WRITE : 0;
 
     for (i = 0; i < region->nr_mmaps; i++) {
-        region->mmaps[i].mmap = mmap(NULL, region->mmaps[i].size, prot,
-                                     MAP_SHARED, region->vbasedev->fd,
-                                     region->fd_offset +
-                                     region->mmaps[i].offset);
+        region->mmaps[i].mmap =
+            libvfio_dev_mmap(&region->vbasedev->libvfio_dev,
+                             region->mmaps[i].size, prot, MAP_SHARED,
+                             region->fd_offset + region->mmaps[i].offset, NULL);
         if (region->mmaps[i].mmap == MAP_FAILED) {
             int ret = -errno;
 
@@ -1215,7 +1218,6 @@ int vfio_get_device(VFIOGroup *group, const char *name,
         return -1;
     }
 
-    vbasedev->fd = vbasedev->libvfio_dev.fd;
     vbasedev->group = group;
     QLIST_INSERT_HEAD(&group->device_list, vbasedev, next);
 
@@ -1237,8 +1239,8 @@ void vfio_put_base_device(VFIODevice *vbasedev)
     }
     QLIST_REMOVE(vbasedev, next);
     vbasedev->group = NULL;
-    trace_vfio_put_base_device(vbasedev->fd);
-    close(vbasedev->fd);
+    trace_vfio_put_base_device(vbasedev->libvfio_dev.fd);
+    libvfio_dev_deinit(&vbasedev->libvfio_dev);
 }
 
 int vfio_get_region_info(VFIODevice *vbasedev, int index,

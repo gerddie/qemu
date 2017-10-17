@@ -49,7 +49,10 @@ libvfio_container_deinit(libvfio_container *container)
         return;
     }
 
-    close(container->fd);
+    if (container->fd >= 0) {
+        close(container->fd);
+        container->fd = -1;
+    }
     container->vfio = NULL;
 }
 
@@ -320,6 +323,21 @@ libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
     return true;
 }
 
+void
+libvfio_dev_deinit(libvfio_dev *dev)
+{
+    if (!dev->vfio) {
+        return;
+    }
+
+    if (dev->fd >= 0) {
+        close(dev->fd);
+        dev->fd = -1;
+    }
+    g_free(dev->name);
+    dev->name = NULL;
+}
+
 bool
 libvfio_init_group(libvfio *vfio, libvfio_group *group,
                    int groupid, Error **errp)
@@ -363,7 +381,11 @@ libvfio_group_deinit(libvfio_group *group)
         return;
     }
 
-    close(group->fd);
+    if (group->fd >= 0) {
+        close(group->fd);
+        group->fd = -1;
+    }
+
     group->vfio = NULL;
 }
 
@@ -578,35 +600,93 @@ libvfio_dev_pci_hot_reset(libvfio_dev *dev,
     return true;
 }
 
-bool
+ssize_t
 libvfio_dev_write(libvfio_dev *dev,
                   const void *buf, size_t size, off_t offset,
                   Error **errp)
 {
+    ssize_t ret;
+
 again:
-    if (pwrite(dev->fd, buf, size, offset) != size) {
-        if (errno == EAGAIN) {
+    ret = pwrite(dev->fd, buf, size, offset);
+    if (ret < 0) {
+        if (errno == EINTR) {
             goto again;
         }
-        error_setg_errno(errp, errno, "pwrite() failed")
-        return false;
+        error_setg_errno(errp, errno, "pwrite() failed");
+        return -1;
+    }
+
+    return ret;
+}
+
+ssize_t
+libvfio_dev_read(libvfio_dev *dev,
+                 void *buf, size_t size, off_t offset,
+                 Error **errp)
+{
+    ssize_t ret;
+
+again:
+    ret = pread(dev->fd, buf, size, offset);
+    if (ret < 0) {
+        if (errno == EINTR) {
+            goto again;
+        }
+        error_setg_errno(errp, errno, "pread() failed");
+        return -1;
+    }
+
+    return ret;
+}
+
+bool
+libvfio_dev_read_all(libvfio_dev *dev,
+                     void *buf, size_t size, off_t offset,
+                     size_t *bytes_read, Error **errp)
+{
+    size_t count = 0;
+
+    while (size) {
+        ssize_t ret = libvfio_dev_read(dev, buf, size, offset, errp);
+        if (ret < 0) {
+            return false;
+        } else if (ret == 0) {
+            break;
+        }
+
+        size -= ret;
+        buf += ret;
+        offset += ret;
+        count += ret;
+    }
+
+    if (bytes_read) {
+        *bytes_read = count;
     }
 
     return true;
 }
 
-bool
-libvfio_dev_read(libvfio_dev *dev,
-                 void *buf, size_t size, off_t offset,
+void *
+libvfio_dev_mmap(libvfio_dev *dev,
+                 size_t length, int prot, int flags, off_t offset,
                  Error **errp)
 {
-again:
-    if (pread(dev->fd, buf, size, offset) != size) {
-        if (errno == EAGAIN) {
-            goto again;
-        }
-        error_setg_errno(errp, errno, "pread() failed")
-            return false;
+    void *ret = mmap(NULL, length, prot, flags, dev->fd, offset);
+    if (ret == MAP_FAILED) {
+        error_setg_errno(errp, errno, "mmap() failed");
+    }
+
+    return ret;
+}
+
+bool
+libvfio_dev_unmmap(libvfio_dev *dev, void *addr, size_t length, Error **errp)
+{
+    if (munmap(addr, length) < 0) {
+        error_setg_errno(errp, errno, "munmap() failed");
+        return false;
     }
 
     return true;

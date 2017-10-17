@@ -745,10 +745,9 @@ static void vfio_update_msi(VFIOPCIDevice *vdev)
 
 static void vfio_pci_load_rom(VFIOPCIDevice *vdev)
 {
+    Error *err = NULL;
     struct vfio_region_info *reg_info;
     uint64_t size;
-    off_t off = 0;
-    ssize_t bytes;
 
     if (vfio_get_region_info(&vdev->vbasedev,
                              VFIO_PCI_ROM_REGION_INDEX, &reg_info)) {
@@ -778,21 +777,12 @@ static void vfio_pci_load_rom(VFIOPCIDevice *vdev)
     vdev->rom = g_malloc(size);
     memset(vdev->rom, 0xff, size);
 
-    while (size) {
-        bytes = pread(vdev->vbasedev.fd, vdev->rom + off,
-                      size, vdev->rom_offset + off);
-        if (bytes == 0) {
-            break;
-        } else if (bytes > 0) {
-            off += bytes;
-            size -= bytes;
-        } else {
-            if (errno == EINTR || errno == EAGAIN) {
-                continue;
-            }
-            error_report("vfio: Error reading device ROM: %m");
-            break;
-        }
+    if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                              vdev->rom, size, vdev->rom_offset, NULL,
+                              &err)) {
+        error_report("vfio: Error reading device ROM: %s",
+                     error_get_pretty(err));
+        error_free(err);
     }
 
     /*
@@ -969,7 +959,8 @@ void vfio_vga_write(void *opaque, hwaddr addr,
         break;
     }
 
-    if (pwrite(vga->fd, &buf, size, offset) != size) {
+    if (libvfio_dev_write(vga->libvfio_dev,
+                          &buf, size, offset, NULL) != size) {
         error_report("%s(,0x%"HWADDR_PRIx", 0x%"PRIx64", %d) failed: %m",
                      __func__, region->offset + addr, data, size);
     }
@@ -989,8 +980,11 @@ uint64_t vfio_vga_read(void *opaque, hwaddr addr, unsigned size)
     } buf;
     uint64_t data = 0;
     off_t offset = vga->fd_offset + region->offset + addr;
+    size_t bytes_read;
 
-    if (pread(vga->fd, &buf, size, offset) != size) {
+    if (!libvfio_dev_read_all(vga->libvfio_dev,
+                              &buf, size, offset, &bytes_read, NULL) ||
+        bytes_read != size) {
         error_report("%s(,0x%"HWADDR_PRIx", %d) failed: %m",
                      __func__, region->offset + addr, size);
         return (uint64_t)-1;
@@ -1087,14 +1081,17 @@ uint32_t vfio_pci_read_config(PCIDevice *pdev, uint32_t addr, int len)
     }
 
     if (~emu_bits & (0xffffffffU >> (32 - len * 8))) {
-        ssize_t ret;
+        Error *err = NULL;
+        size_t bytes_read;
 
-        ret = pread(vdev->vbasedev.fd, &phys_val, len,
-                    vdev->config_offset + addr);
-        if (ret != len) {
-            error_report("%s(%s, 0x%x, 0x%x) failed: %m",
-                         __func__, vdev->vbasedev.name, addr, len);
-            return -errno;
+        if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                                  &phys_val, len, vdev->config_offset + addr,
+                                  &bytes_read, &err) || bytes_read != len) {
+            error_report("%s(%s, 0x%x, 0x%x) failed: %s",
+                         __func__, vdev->vbasedev.name, addr, len,
+                         err ? error_get_pretty(err) : "eof");
+            error_free(err);
+            return -1;
         }
         phys_val = le32_to_cpu(phys_val);
     }
@@ -1207,13 +1204,18 @@ static int vfio_msi_setup(VFIOPCIDevice *vdev, int pos, Error **errp)
     uint16_t ctrl;
     bool msi_64bit, msi_maskbit;
     int ret, entries;
+    size_t bytes_read;
     Error *err = NULL;
 
-    if (pread(vdev->vbasedev.fd, &ctrl, sizeof(ctrl),
-              vdev->config_offset + pos + PCI_CAP_FLAGS) != sizeof(ctrl)) {
-        error_setg_errno(errp, errno, "failed reading MSI PCI_CAP_FLAGS");
-        return -errno;
+    if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                              &ctrl, sizeof(ctrl),
+                              vdev->config_offset + pos + PCI_CAP_FLAGS,
+                              &bytes_read, errp) ||
+        bytes_read != sizeof(ctrl)) {
+        error_prepend(errp, "failed reading MSI PCI_CAP_FLAGS:");
+        return -1;
     }
+
     ctrl = le16_to_cpu(ctrl);
 
     msi_64bit = !!(ctrl & PCI_MSI_FLAGS_64BIT);
@@ -1317,7 +1319,8 @@ static void vfio_msix_early_setup(VFIOPCIDevice *vdev, Error **errp)
     uint8_t pos;
     uint16_t ctrl;
     uint32_t table, pba;
-    int fd = vdev->vbasedev.fd;
+    size_t bytes_read;
+    libvfio_dev *dev = &vdev->vbasedev.libvfio_dev;
     VFIOMSIXInfo *msix;
 
     pos = pci_find_capability(&vdev->pdev, PCI_CAP_ID_MSIX);
@@ -1325,21 +1328,27 @@ static void vfio_msix_early_setup(VFIOPCIDevice *vdev, Error **errp)
         return;
     }
 
-    if (pread(fd, &ctrl, sizeof(ctrl),
-              vdev->config_offset + pos + PCI_MSIX_FLAGS) != sizeof(ctrl)) {
-        error_setg_errno(errp, errno, "failed to read PCI MSIX FLAGS");
+    if (!libvfio_dev_read_all(dev, &ctrl, sizeof(ctrl),
+                              vdev->config_offset + pos + PCI_MSIX_FLAGS,
+                              &bytes_read, errp) ||
+        bytes_read != sizeof(ctrl)) {
+        error_prepend(errp, "failed to read PCI MSIX FLAGS");
         return;
     }
 
-    if (pread(fd, &table, sizeof(table),
-              vdev->config_offset + pos + PCI_MSIX_TABLE) != sizeof(table)) {
-        error_setg_errno(errp, errno, "failed to read PCI MSIX TABLE");
+    if (!libvfio_dev_read_all(dev, &table, sizeof(table),
+                              vdev->config_offset + pos + PCI_MSIX_TABLE,
+                              &bytes_read, errp) ||
+        bytes_read != sizeof(table)) {
+        error_prepend(errp, "failed to read PCI MSIX TABLE");
         return;
     }
 
-    if (pread(fd, &pba, sizeof(pba),
-              vdev->config_offset + pos + PCI_MSIX_PBA) != sizeof(pba)) {
-        error_setg_errno(errp, errno, "failed to read PCI MSIX PBA");
+    if (!libvfio_dev_read_all(dev, &pba, sizeof(pba),
+                              vdev->config_offset + pos + PCI_MSIX_PBA,
+                              &bytes_read, errp) ||
+        bytes_read != sizeof(pba)) {
+        error_prepend(errp, "failed to read PCI MSIX PBA");
         return;
     }
 
@@ -1455,10 +1464,10 @@ static void vfio_mmap_set_enabled(VFIOPCIDevice *vdev, bool enabled)
 static void vfio_bar_setup(VFIOPCIDevice *vdev, int nr)
 {
     VFIOBAR *bar = &vdev->bars[nr];
-
+    Error *err = NULL;
     uint32_t pci_bar;
     uint8_t type;
-    int ret;
+    size_t bytes_read;
 
     /* Skip both unimplemented BARs and the upper half of 64bit BARS. */
     if (!bar->region.size) {
@@ -1466,10 +1475,14 @@ static void vfio_bar_setup(VFIOPCIDevice *vdev, int nr)
     }
 
     /* Determine what type of BAR this is for registration */
-    ret = pread(vdev->vbasedev.fd, &pci_bar, sizeof(pci_bar),
-                vdev->config_offset + PCI_BASE_ADDRESS_0 + (4 * nr));
-    if (ret != sizeof(pci_bar)) {
-        error_report("vfio: Failed to read BAR %d (%m)", nr);
+    if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+            &pci_bar, sizeof(pci_bar),
+            vdev->config_offset + PCI_BASE_ADDRESS_0 + (4 * nr),
+            &bytes_read, &err) ||
+        bytes_read != sizeof(pci_bar)) {
+        error_report("vfio: Failed to read BAR %d (%s)", nr,
+                     err ? error_get_pretty(err) : "eof");
+        error_free(err);
         return;
     }
 
@@ -1995,10 +2008,11 @@ static void vfio_pci_post_reset(VFIOPCIDevice *vdev)
         uint32_t val = 0;
         uint32_t len = sizeof(val);
 
-        if (!libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
-                               &val, len, addr &err)) {
+        if (libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
+                              &val, len, addr, &err) != len) {
             error_report("%s(%s) reset bar %d failed: %s", __func__,
-                         vdev->vbasedev.name, nr, error_get_pretty(err));
+                         vdev->vbasedev.name, nr,
+                         err ? error_get_pretty(err) : "eof");
             error_free(err);
         }
     }
@@ -2263,7 +2277,7 @@ int vfio_populate_vga(VFIOPCIDevice *vdev, Error **errp)
     vdev->vga = g_new0(VFIOVGA, 1);
 
     vdev->vga->fd_offset = reg_info->offset;
-    vdev->vga->fd = vdev->vbasedev.fd;
+    vdev->vga->libvfio_dev = &vdev->vbasedev.libvfio_dev;
 
     g_free(reg_info);
 
@@ -2555,6 +2569,7 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     VFIODevice *vbasedev_iter;
     VFIOGroup *group;
     Error *err = NULL;
+    size_t size, bytes_read;
     int i, ret;
 
     if (vdev->vbasedev.test) {
@@ -2625,12 +2640,11 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     }
 
     /* Get a copy of config space */
-    ret = pread(vdev->vbasedev.fd, vdev->pdev.config,
-                MIN(pci_config_size(&vdev->pdev), vdev->config_size),
-                vdev->config_offset);
-    if (ret < (int)MIN(pci_config_size(&vdev->pdev), vdev->config_size)) {
-        ret = ret < 0 ? -errno : -EFAULT;
-        error_setg_errno(errp, -ret, "failed to read device config space");
+    size = MIN(pci_config_size(&vdev->pdev), vdev->config_size);
+    if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                              vdev->pdev.config, size, vdev->config_offset,
+                              &bytes_read, errp) || bytes_read < size) {
+        error_prepend(errp, "failed to read device config space:");
         goto error;
     }
 

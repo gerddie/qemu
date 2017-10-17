@@ -88,6 +88,7 @@ bool libvfio_group_get_device(libvfio_group *group,
 
 bool libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
                       const char *path, Error **errp);
+void libvfio_dev_deinit(libvfio_dev *dev);
 const char *libvfio_dev_get_name(libvfio_dev *dev);
 int libvfio_dev_get_groupid(libvfio_dev *dev);
 bool libvfio_dev_reset(libvfio_dev *dev, Error **errp);
@@ -122,11 +123,19 @@ bool libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 bool libvfio_dev_pci_hot_reset(libvfio_dev *dev,
                                int *fds, int nfds,
                                Error **errp);
-bool libvfio_dev_write(libvfio_dev *dev,
-                       const void *buf, size_t size, off_t offset,
+ssize_t libvfio_dev_write(libvfio_dev *dev,
+                          const void *buf, size_t size, off_t offset,
+                          Error **errp);
+ssize_t libvfio_dev_read(libvfio_dev *dev,
+                         void *buf, size_t size, off_t offset,
+                         Error **errp);
+bool libvfio_dev_read_all(libvfio_dev *dev,
+                          void *buf, size_t size, off_t offset,
+                          size_t *bytes_read, Error **errp);
+void *libvfio_dev_mmap(libvfio_dev *dev,
+                       size_t length, int prot, int flags, off_t offset,
                        Error **errp);
-bool libvfio_dev_read(libvfio_dev *dev,
-                      void *buf, size_t size, off_t offset,
-                      Error **errp);
+bool libvfio_dev_unmmap(libvfio_dev *dev, void *addr, size_t length,
+                        Error **errp);
 
 #endif /* LIBVFIO_H_ */

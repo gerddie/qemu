@@ -1060,11 +1060,12 @@ typedef struct VFIOIGDQuirk {
 int vfio_pci_igd_opregion_init(VFIOPCIDevice *vdev,
                                struct vfio_region_info *info, Error **errp)
 {
-    int ret;
+    ssize_t ret;
 
     vdev->igd_opregion = g_malloc0(info->size);
-    ret = pread(vdev->vbasedev.fd, vdev->igd_opregion,
-                info->size, info->offset);
+    ret = libvfio_dev_read(&vdev->vbasedev.libvfio_dev,
+                           vdev->igd_opregion, info->size, info->offset,
+                           NULL);
     if (ret != info->size) {
         error_setg(errp, "failed to read IGD OpRegion");
         g_free(vdev->igd_opregion);
@@ -1128,14 +1129,21 @@ static int vfio_pci_igd_copy(VFIOPCIDevice *vdev, PCIDevice *pdev,
                              struct vfio_region_info *info,
                              const IGDHostInfo *list, int len)
 {
-    int i, ret;
+    int i;
 
     for (i = 0; i < len; i++) {
-        ret = pread(vdev->vbasedev.fd, pdev->config + list[i].offset,
-                    list[i].len, info->offset + list[i].offset);
-        if (ret != list[i].len) {
-            error_report("IGD copy failed: %m");
-            return -errno;
+        Error *err = NULL;
+        size_t bytes_read;
+
+        if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                                  pdev->config + list[i].offset,
+                                  list[i].len, info->offset + list[i].offset,
+                                  &bytes_read,
+                                  &err) || bytes_read != list[i].len) {
+            error_report("IGD copy failed: %s",
+                         err ? error_get_pretty(err) : "eof");
+            error_free(err);
+            return -1;
         }
     }
 
@@ -1367,6 +1375,7 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
     uint32_t gmch;
     uint16_t cmd_orig, cmd;
     Error *err = NULL;
+    size_t bytes_read;
 
     /*
      * This must be an Intel VGA device at address 00:02.0 for us to even
@@ -1574,15 +1583,18 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
      * entries to avoid spurious DMA faults.  Be sure I/O access is enabled
      * before talking to the device.
      */
-    if (pread(vdev->vbasedev.fd, &cmd_orig, sizeof(cmd_orig),
-              vdev->config_offset + PCI_COMMAND) != sizeof(cmd_orig)) {
+    if (!libvfio_dev_read_all(&vdev->vbasedev.libvfio_dev,
+                              &cmd_orig, sizeof(cmd_orig),
+                              vdev->config_offset + PCI_COMMAND,
+                              &bytes_read, NULL) ||
+        bytes_read != sizeof(cmd_orig)) {
         error_report("IGD device %s - failed to read PCI command register",
                      vdev->vbasedev.name);
     }
 
     cmd = cmd_orig | PCI_COMMAND_IO;
 
-    if (!libvfio_dev_write(vdev->vbasedev.libvfio_dev, &cmd, sizeof(cmd),
+    if (!libvfio_dev_write(&vdev->vbasedev.libvfio_dev, &cmd, sizeof(cmd),
                            vdev->config_offset + PCI_COMMAND, &err)) {
         error_report("IGD device %s - failed to write PCI command register: %s",
                      vdev->vbasedev.name, error_get_pretty(err));
@@ -1594,7 +1606,7 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
         vfio_region_write(&vdev->bars[4].region, 4, 0, 4);
     }
 
-    if (!libvfio_dev_write(vdev->vbasedev.libvfio_dev,
+    if (!libvfio_dev_write(&vdev->vbasedev.libvfio_dev,
                            &cmd_orig, sizeof(cmd_orig),
                            vdev->config_offset + PCI_COMMAND, &err)) {
         error_report("IGD device %s - failed to restore PCI command register: %s",

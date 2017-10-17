@@ -99,9 +99,10 @@ static void vfio_ccw_io_notifier_handler(void *opaque)
         return;
     }
 
-    size = pread(vcdev->vdev.fd, region, vcdev->io_region_size,
-                 vcdev->io_region_offset);
-    if (size == -1) {
+    if (!libvfio_dev_read(&vcdev->vdev.libvfio_dev,
+                          region, vcdev->io_region_size,
+                          vcdev->io_region_offset,
+                          &err)) {
         switch (errno) {
         case ENODEV:
             /* Generate a deferred cc 3 condition. */
