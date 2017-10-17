@@ -359,19 +359,8 @@ static void vfio_msi_interrupt(void *opaque)
 
 static int vfio_enable_vectors(VFIOPCIDevice *vdev, bool msix)
 {
-    struct vfio_irq_set *irq_set;
-    int ret = 0, i, argsz;
-    int32_t *fds;
-
-    argsz = sizeof(*irq_set) + (vdev->nr_vectors * sizeof(*fds));
-
-    irq_set = g_malloc0(argsz);
-    irq_set->argsz = argsz;
-    irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;
-    irq_set->index = msix ? VFIO_PCI_MSIX_IRQ_INDEX : VFIO_PCI_MSI_IRQ_INDEX;
-    irq_set->start = 0;
-    irq_set->count = vdev->nr_vectors;
-    fds = (int32_t *)&irq_set->data;
+    int i;
+    int32_t *fds = g_newa(int32_t, vdev->nr_vectors);
 
     for (i = 0; i < vdev->nr_vectors; i++) {
         int fd = -1;
@@ -394,11 +383,17 @@ static int vfio_enable_vectors(VFIOPCIDevice *vdev, bool msix)
         fds[i] = fd;
     }
 
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_SET_IRQS, irq_set);
+    if (!libvfio_dev_set_irqs(&vdev->vbasedev.libvfio_dev,
+                              msix ? VFIO_PCI_MSIX_IRQ_INDEX :
+                                     VFIO_PCI_MSI_IRQ_INDEX,
+                              fds, vdev->nr_vectors,
+                              VFIO_IRQ_SET_DATA_EVENTFD |
+                              VFIO_IRQ_SET_ACTION_TRIGGER,
+                              NULL)) {
+        return -1;
+    }
 
-    g_free(irq_set);
-
-    return ret;
+    return 0;
 }
 
 static void vfio_add_kvm_msi_virq(VFIOPCIDevice *vdev, VFIOMSIVector *vector,
