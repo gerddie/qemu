@@ -2006,6 +2006,7 @@ static bool vfio_pci_host_match(PCIHostDeviceAddress *addr, const char *name)
 
 static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
 {
+    Error *err = NULL;
     VFIOGroup *group;
     struct vfio_pci_hot_reset_info *info;
     struct vfio_pci_dependent_device *devices;
@@ -2024,9 +2025,10 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     info = g_malloc0(sizeof(*info));
     info->argsz = sizeof(*info);
 
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
-    if (ret && errno != ENOSPC) {
-        ret = -errno;
+    if (!libvfio_dev_get_pci_hot_reset_info(&vdev->vbasedev.libvfio_dev,
+                                            info,
+                                            NULL)) {
+        ret = -1;
         if (!vdev->has_pm_reset) {
             error_report("vfio: Cannot reset device %s, "
                          "no available reset mechanism.", vdev->vbasedev.name);
@@ -2039,10 +2041,11 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     info->argsz = sizeof(*info) + (count * sizeof(*devices));
     devices = &info->devices[0];
 
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
-    if (ret) {
-        ret = -errno;
-        error_report("vfio: hot reset info failed: %m");
+    if (!libvfio_dev_get_pci_hot_reset_info(&vdev->vbasedev.libvfio_dev,
+                                            info,
+                                            &err)) {
+        ret = -1;
+        error_report_err(err);
         goto out_single;
     }
 
@@ -2298,7 +2301,7 @@ static void vfio_populate_device(VFIOPCIDevice *vdev, Error **errp)
 {
     VFIODevice *vbasedev = &vdev->vbasedev;
     struct vfio_region_info *reg_info;
-    struct vfio_irq_info irq_info = { .argsz = sizeof(irq_info) };
+    struct vfio_irq_info irq_info;
     int i, ret = -1;
 
     /* Sanity check device */
@@ -2362,10 +2365,10 @@ static void vfio_populate_device(VFIOPCIDevice *vdev, Error **errp)
         }
     }
 
-    irq_info.index = VFIO_PCI_ERR_IRQ_INDEX;
-
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_GET_IRQ_INFO, &irq_info);
-    if (ret) {
+    if (!libvfio_dev_get_irq_info(&vdev->vbasedev.libvfio_dev,
+                                  VFIO_PCI_ERR_IRQ_INDEX,
+                                  &irq_info,
+                                  NULL)) {
         /* This can fail for an old kernel or legacy PCI dev */
         trace_vfio_populate_device_get_irq_info_failure();
     } else if (irq_info.count == 1) {
@@ -2483,15 +2486,16 @@ static void vfio_register_req_notifier(VFIOPCIDevice *vdev)
 {
     Error *err = NULL;
     int fd;
-    struct vfio_irq_info irq_info = { .argsz = sizeof(irq_info),
-                                      .index = VFIO_PCI_REQ_IRQ_INDEX };
+    struct vfio_irq_info irq_info;
 
     if (!(vdev->features & VFIO_FEATURE_ENABLE_REQ)) {
         return;
     }
 
-    if (ioctl(vdev->vbasedev.fd,
-              VFIO_DEVICE_GET_IRQ_INFO, &irq_info) < 0 || irq_info.count < 1) {
+    if (!libvfio_dev_get_irq_info(&vdev->vbasedev.libvfio_dev,
+                                  VFIO_PCI_REQ_IRQ_INDEX,
+                                  &irq_info,
+                                  NULL) || irq_info.count < 1) {
         return;
     }
 

@@ -115,5 +115,8 @@ bool libvfio_dev_get_info(libvfio_dev *dev,
                           Error **errp);
 bool libvfio_dev_get_region_info(libvfio_dev *dev, int index,
                                  struct vfio_region_info *info, Error **errp);
+bool libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+                                        struct vfio_pci_hot_reset_info *info,
+                                        Error **errp);
 
 #endif /* LIBVFIO_H_ */

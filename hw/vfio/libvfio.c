@@ -515,8 +515,25 @@ libvfio_dev_get_region_info(libvfio_dev *dev, int index,
 {
     assert(info->argsz >= sizeof(*info));
 
-    if (ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info)) {
+    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info);
+    if (ret && errno != ENOSPC) {
         error_setg_errno(errp, errno, "error getting region info");
+        return false;
+    }
+
+    return true;
+}
+
+bool
+libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+                                   struct vfio_pci_hot_reset_info *info,
+                                   Error **errp)
+{
+    assert(info->argsz >= sizeof(*info));
+
+    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
+    if (ret && errno != ENOSPC) {
+        error_setg_errno(errp, errno, "error getting PCI hot reset info");
         return false;
     }
 
