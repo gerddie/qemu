@@ -1241,6 +1241,7 @@ void vfio_put_base_device(VFIODevice *vbasedev)
 int vfio_get_region_info(VFIODevice *vbasedev, int index,
                          struct vfio_region_info **info)
 {
+    Error *err = NULL;
     size_t argsz = sizeof(struct vfio_region_info);
 
     *info = g_malloc0(argsz);
@@ -1249,10 +1250,12 @@ int vfio_get_region_info(VFIODevice *vbasedev, int index,
 retry:
     (*info)->argsz = argsz;
 
-    if (ioctl(vbasedev->fd, VFIO_DEVICE_GET_REGION_INFO, *info)) {
+    if (!libvfio_dev_get_region_info(&vbasedev->libvfio_dev,
+                                     index, *info, &err)) {
+        error_report_err(err);
         g_free(*info);
         *info = NULL;
-        return -errno;
+        return -1;
     }
 
     if ((*info)->argsz > argsz) {

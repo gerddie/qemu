@@ -103,5 +103,7 @@ bool libvfio_dev_get_irq_info(libvfio_dev *dev,
 bool libvfio_dev_get_info(libvfio_dev *dev,
                           struct vfio_device_info *info,
                           Error **errp);
+bool libvfio_dev_get_region_info(libvfio_dev *dev, int index,
+                                 struct vfio_region_info *info, Error **errp);
 
 #endif /* LIBVFIO_H_ */

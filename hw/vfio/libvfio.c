@@ -485,3 +485,17 @@ libvfio_dev_get_info(libvfio_dev *dev,
 
     return true;
 }
+
+bool
+libvfio_dev_get_region_info(libvfio_dev *dev, int index,
+                            struct vfio_region_info *info, Error **errp)
+{
+    assert(info->argsz >= sizeof(*info));
+
+    if (ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info)) {
+        error_setg_errno(errp, errno, "error getting region info");
+        return false;
+    }
+
+    return true;
+}
