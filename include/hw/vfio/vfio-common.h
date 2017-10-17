@@ -77,8 +77,8 @@ typedef struct VFIOAddressSpace {
 struct VFIOGroup;
 
 typedef struct VFIOContainer {
+    libvfio_container libvfio_container;
     VFIOAddressSpace *space;
-    int fd;
     MemoryListener listener;
     MemoryListener prereg_listener;
     unsigned iommu_type;
@@ -93,7 +93,6 @@ typedef struct VFIOContainer {
     QLIST_HEAD(, VFIOHostDMAWindow) hostwin_list;
     QLIST_HEAD(, VFIOGroup) group_list;
     QLIST_ENTRY(VFIOContainer) next;
-    libvfio_container libvfio_container;
 } VFIOContainer;
 
 typedef struct VFIOGuestIOMMU {

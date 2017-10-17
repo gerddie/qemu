@@ -948,7 +948,6 @@ static int vfio_connect_container(VFIOGroup *group, AddressSpace *as,
                                 &container->libvfio_container, errp)) {
         goto exit;
     }
-    container->fd = container->libvfio_container.fd;
     container->space = space;
     if (libvfio_container_check_extension(&container->libvfio_container,
                                           VFIO_TYPE1_IOMMU) ||
@@ -1121,8 +1120,8 @@ static void vfio_disconnect_container(VFIOGroup *group)
             g_free(giommu);
         }
 
-        trace_vfio_disconnect_container(container->fd);
-        close(container->fd);
+        trace_vfio_disconnect_container(container->libvfio_container.fd);
+        libvfio_container_deinit(&container->libvfio_container);
         g_free(container);
 
         vfio_put_address_space(space);
