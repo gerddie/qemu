@@ -2010,9 +2010,8 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     VFIOGroup *group;
     struct vfio_pci_hot_reset_info *info;
     struct vfio_pci_dependent_device *devices;
-    struct vfio_pci_hot_reset *reset;
     int32_t *fds;
-    int ret, i, count;
+    int ret, i, count, nfd = 0;
     bool multi = false;
 
     trace_vfio_pci_hot_reset(vdev->vbasedev.name, single ? "one" : "multi");
@@ -2121,26 +2120,24 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         }
     }
 
-    reset = g_malloc0(sizeof(*reset) + (count * sizeof(*fds)));
-    reset->argsz = sizeof(*reset) + (count * sizeof(*fds));
-    fds = &reset->group_fds[0];
-
+    fds = g_newa(int, info->count);
     /* Fill in group fds */
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
             if (group->libvfio_group.groupid == devices[i].group_id) {
-                fds[reset->count++] = group->fd;
+                fds[nfd++] = group->fd;
                 break;
             }
         }
     }
 
     /* Bus reset! */
-    ret = ioctl(vdev->vbasedev.fd, VFIO_DEVICE_PCI_HOT_RESET, reset);
-    g_free(reset);
+    libvfio_dev_pci_hot_reset(&vdev->vbasedev.libvfio_dev,
+                              fds, nfd, &err);
 
     trace_vfio_pci_hot_reset_result(vdev->vbasedev.name,
-                                    ret ? "%m" : "Success");
+                                    err ? error_get_pretty(err) : "Success");
+    error_free(err);
 
 out:
     /* Re-enable INTx on affected devices */

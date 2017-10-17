@@ -118,5 +118,8 @@ bool libvfio_dev_get_region_info(libvfio_dev *dev, int index,
 bool libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
                                         struct vfio_pci_hot_reset_info *info,
                                         Error **errp);
+bool libvfio_dev_pci_hot_reset(libvfio_dev *dev,
+                               int *fds, int nfds,
+                               Error **errp);
 
 #endif /* LIBVFIO_H_ */

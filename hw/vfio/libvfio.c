@@ -539,3 +539,30 @@ libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 
     return true;
 }
+
+bool
+libvfio_dev_pci_hot_reset(libvfio_dev *dev,
+                          int *fds, int nfds,
+                          Error **errp)
+{
+    int argsz, i;
+    struct vfio_pci_hot_reset *reset;
+    int32_t *pfd;
+
+    argsz = sizeof(*reset) + sizeof(*pfd) * nfds;
+    reset = g_alloca(argsz);
+    *reset = (struct vfio_pci_hot_reset) {
+        .argsz = argsz,
+    };
+    pfd = &reset->group_fds[0];
+    for (i = 0; i < nfds; i++) {
+        pfd[i] = fds[i];
+    }
+
+    if (ioctl(dev->fd, VFIO_DEVICE_PCI_HOT_RESET, reset)) {
+        error_setg_errno(errp, errno, "error hot reseting PCI");
+        return false;
+    }
+
+    return true;
+}
