@@ -958,12 +958,12 @@ static int vfio_connect_container(VFIOGroup *group, AddressSpace *as,
     }
     container->space = space;
     if (libvfio_container_check_extension(&container->libvfio_container,
-                                          VFIO_TYPE1_IOMMU) ||
+                                          VFIO_TYPE1_IOMMU, NULL) ||
         libvfio_container_check_extension(&container->libvfio_container,
-                                          VFIO_TYPE1v2_IOMMU)) {
+                                          VFIO_TYPE1v2_IOMMU, NULL)) {
         struct vfio_iommu_type1_info info;
         bool v2 = libvfio_container_check_extension(&container->libvfio_container,
-                                                    VFIO_TYPE1v2_IOMMU);
+                                                    VFIO_TYPE1v2_IOMMU, NULL);
 
         if (!libvfio_group_set_container(&group->libvfio_group,
                                          &container->libvfio_container, errp)) {
@@ -992,12 +992,12 @@ static int vfio_connect_container(VFIOGroup *group, AddressSpace *as,
         }
         vfio_host_win_add(container, 0, (hwaddr)-1, info.iova_pgsizes);
     } else if (libvfio_container_check_extension(&container->libvfio_container,
-                                                 VFIO_SPAPR_TCE_IOMMU) ||
+                                                 VFIO_SPAPR_TCE_IOMMU, NULL) ||
                libvfio_container_check_extension(&container->libvfio_container,
-                                                 VFIO_SPAPR_TCE_v2_IOMMU)) {
+                                                 VFIO_SPAPR_TCE_v2_IOMMU, NULL)) {
         struct vfio_iommu_spapr_tce_info info;
         bool v2 = libvfio_container_check_extension(&container->libvfio_container,
-                                                    VFIO_SPAPR_TCE_v2_IOMMU);
+                                                    VFIO_SPAPR_TCE_v2_IOMMU, NULL);
 
         if (!libvfio_group_set_container(&group->libvfio_group,
                                          &container->libvfio_container, errp)) {

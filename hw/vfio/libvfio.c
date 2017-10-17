@@ -1,39 +1,61 @@
+/*
+ * libvfio library
+ *
+ * Copyright (c) 2017 Red Hat, Inc.
+ *
+ * Authors:
+ *  Marc-André Lureau <mlureau@redhat.com>
+ *
+ * This work is licensed under the terms of the GNU GPL, version 2 or
+ * later.  See the COPYING file in the top-level directory.
+ */
 #include "hw/vfio/libvfio.h"
 #include "qapi/error.h"
 #include <sys/ioctl.h>
 
-#define ERR_PREFIX "libvfio error: %s: "
+#define ERR_PREFIX "libvfio error: "
 
-bool
-libvfio_init_host(libvfio *vfio, Error **errp)
-{
-    vfio->fd = -1;
-    return true;
-}
+struct libvfio_ops {
+    bool (*init_container)(libvfio *vfio, libvfio_container *container, Error **errp);
+    void (*container_deinit)(libvfio_container *container);
+    bool (*container_check_extension)(libvfio_container *container, int ext, Error **errp);
+};
 
-bool
-libvfio_init_user(libvfio *vfio, int fd, Error **errp)
-{
-    vfio->fd = fd;
-    return true;
-}
+#define LIBVFIO_CALL(vfio, miss, op, ...) ({                        \
+    typeof(miss) _ret = (miss);                                     \
+    assert(vfio->ops);                                              \
+    if (!vfio->ops->op) {                                           \
+        error_setg(errp, ERR_PREFIX "'%s' op not implemented",  \
+                   G_STRINGIFY(op));                                \
+    } else {                                                        \
+        _ret = (vfio)->ops->op(__VA_ARGS__);                        \
+    }                                                               \
+    _ret;                                                           \
+})
 
-bool
-libvfio_init_container(libvfio *vfio, libvfio_container *container,
-                       Error **errp)
+#define LIBVFIO_VOID_CALL(vfio, op, ...) ({     \
+    assert(vfio->ops);                          \
+    assert(vfio->ops->op);                      \
+    (vfio)->ops->op(__VA_ARGS__);               \
+})
+
+static bool
+libvfio_host_init_container(libvfio *vfio, libvfio_container *container,
+                            Error **errp)
 {
     int ret, fd = qemu_open("/dev/vfio/vfio", O_RDWR);
 
     if (fd < 0) {
-        error_setg_errno(errp, errno, "failed to open /dev/vfio/vfio");
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to open /dev/vfio/vfio");
         return false;
     }
 
     ret = ioctl(fd, VFIO_GET_API_VERSION);
     if (ret != VFIO_API_VERSION) {
-        error_setg(errp, "supported vfio version: %d, "
+        error_setg(errp, ERR_PREFIX "supported vfio version: %d, "
                    "reported version: %d", VFIO_API_VERSION, ret);
-        close(fd);
+        qemu_close(fd);
         return false;
     }
 
@@ -42,25 +64,83 @@ libvfio_init_container(libvfio *vfio, libvfio_container *container,
     return true;
 }
 
+static bool
+libvfio_user_init_container(libvfio *vfio, libvfio_container *container,
+                            Error **errp)
+{
+    return false;
+}
+
+bool
+libvfio_init_container(libvfio *vfio, libvfio_container *container,
+                       Error **errp)
+{
+    assert(vfio);
+    assert(container);
+
+    return LIBVFIO_CALL(vfio, false,
+                        init_container, vfio, container, errp);
+}
+
+static void
+libvfio_host_container_deinit(libvfio_container *container)
+{
+    if (container->fd >= 0) {
+        qemu_close(container->fd);
+        container->fd = -1;
+    }
+}
+
+static void
+libvfio_user_container_deinit(libvfio_container *container)
+{
+}
+
 void
 libvfio_container_deinit(libvfio_container *container)
 {
+    assert(container);
+
     if (!container->vfio) {
         return;
     }
 
-    if (container->fd >= 0) {
-        close(container->fd);
-        container->fd = -1;
-    }
+    LIBVFIO_VOID_CALL(container->vfio,
+                      container_deinit, container);
     container->vfio = NULL;
+}
+
+static bool
+libvfio_host_container_check_extension(libvfio_container *container,
+                                       int ext, Error **errp)
+{
+    int ret = ioctl(container->fd, VFIO_CHECK_EXTENSION, ext);
+
+    if (ret < 0) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "ioctl(CHECK_EXTENSION) failed");
+        return false;
+    } else if (ret > 0) {
+        return true;
+    }
+    return false;
+}
+
+static bool
+libvfio_user_container_check_extension(libvfio_container *container,
+                                       int ext, Error **errp)
+{
+    return false;
 }
 
 bool
 libvfio_container_check_extension(libvfio_container *container,
-                                  int ext)
+                                  int ext, Error **errp)
 {
-    return ioctl(container->fd, VFIO_CHECK_EXTENSION, ext) > 0;
+    assert(container);
+
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_check_extension, container, ext, errp);
 }
 
 bool
@@ -294,8 +374,7 @@ libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
     int groupid;
 
     if (stat(path, &st) < 0) {
-        error_setg_errno(errp, errno, "no such host device");
-        error_prepend(errp, ERR_PREFIX, path);
+        error_setg_errno(errp, errno, ERR_PREFIX "no such host device");
         return false;
     }
 
@@ -331,7 +410,7 @@ libvfio_dev_deinit(libvfio_dev *dev)
     }
 
     if (dev->fd >= 0) {
-        close(dev->fd);
+        qemu_close(dev->fd);
         dev->fd = -1;
     }
     g_free(dev->name);
@@ -370,7 +449,7 @@ libvfio_init_group(libvfio *vfio, libvfio_group *group,
     return true;
 
 close_fd_exit:
-    close(group->fd);
+    qemu_close(group->fd);
     return false;
 }
 
@@ -382,7 +461,7 @@ libvfio_group_deinit(libvfio_group *group)
     }
 
     if (group->fd >= 0) {
-        close(group->fd);
+        qemu_close(group->fd);
         group->fd = -1;
     }
 
@@ -689,5 +768,44 @@ libvfio_dev_unmmap(libvfio_dev *dev, void *addr, size_t length, Error **errp)
         return false;
     }
 
+    return true;
+}
+
+static libvfio_ops libvfio_host_ops = {
+    .init_container = libvfio_host_init_container,
+    .container_deinit = libvfio_host_container_deinit,
+    .container_check_extension = libvfio_host_container_check_extension,
+};
+
+static libvfio_ops libvfio_user_ops = {
+    .init_container = libvfio_user_init_container,
+    .container_deinit = libvfio_user_container_deinit,
+    .container_check_extension = libvfio_user_container_check_extension,
+};
+
+bool
+libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
+{
+    assert(vfio);
+
+    if (VFIO_API_VERSION != api_version) {
+        error_setg(errp, ERR_PREFIX "supported vfio version: %d, "
+                   "client version: %d", VFIO_API_VERSION, api_version);
+        return false;
+    }
+
+    vfio->fd = -1;
+    vfio->ops = &libvfio_host_ops;
+    return true;
+}
+
+bool
+libvfio_init_user(libvfio *vfio, int fd, Error **errp)
+{
+    assert(vfio);
+    assert(fd >= 0);
+
+    vfio->fd = fd;
+    vfio->ops = &libvfio_user_ops;
     return true;
 }

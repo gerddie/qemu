@@ -2595,7 +2595,8 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
                                 vdev->host.slot, vdev->host.function);
         }
 
-        if (!libvfio_init_host(&vdev->vbasedev.libvfio, errp)) {
+        if (!libvfio_init_host(&vdev->vbasedev.libvfio,
+                               VFIO_API_VERSION, errp)) {
             return;
         }
         if (!libvfio_init_dev(&vdev->vbasedev.libvfio,
