@@ -381,6 +381,56 @@ libvfio_host_group_unset_container(libvfio_group *group,
     return true;
 }
 
+static bool
+libvfio_host_init_dev(libvfio *vfio, libvfio_dev *dev,
+                      const char *path, Error **errp)
+{
+    char *tmp, group_path[PATH_MAX], *group_name;
+    struct stat st;
+    ssize_t len;
+    int groupid;
+
+    if (stat(path, &st) < 0) {
+        error_setg_errno(errp, errno, ERR_PREFIX "no such host device");
+        return false;
+    }
+
+    tmp = g_strdup_printf("%s/iommu_group", path);
+    len = readlink(tmp, group_path, sizeof(group_path));
+    g_free(tmp);
+
+    if (len <= 0 || len >= sizeof(group_path)) {
+        error_setg_errno(errp, len < 0 ? errno : ENAMETOOLONG,
+                         ERR_PREFIX "no iommu_group found");
+        return false;
+    }
+
+    group_path[len] = 0;
+
+    group_name = basename(group_path);
+    if (sscanf(group_name, "%d", &groupid) != 1) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to read %s", group_path);
+        return false;
+    }
+
+    dev->vfio = vfio;
+    dev->groupid = groupid;
+    dev->name = g_strdup(basename(path));
+    return true;
+}
+
+static void
+libvfio_host_dev_deinit(libvfio_dev *dev)
+{
+    if (dev->fd >= 0) {
+        qemu_close(dev->fd);
+        dev->fd = -1;
+    }
+    g_free(dev->name);
+    dev->name = NULL;
+}
+
 static libvfio_ops libvfio_host_ops = {
     .init_container = libvfio_host_init_container,
     .container_deinit = libvfio_host_container_deinit,
@@ -401,6 +451,8 @@ static libvfio_ops libvfio_host_ops = {
     .group_set_container = libvfio_host_group_set_container,
     .group_unset_container = libvfio_host_group_unset_container,
     .group_get_device = libvfio_host_group_get_device,
+    .init_dev = libvfio_host_init_dev,
+    .dev_deinit = libvfio_host_dev_deinit,
 };
 
 bool

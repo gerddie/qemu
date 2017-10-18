@@ -85,6 +85,11 @@ struct libvfio_ops {
     bool (*group_unset_container)                      (libvfio_group *group,
                                                         libvfio_container *container,
                                                         Error **errp);
+    bool (*init_dev)                                   (libvfio *vfio,
+                                                        libvfio_dev *dev,
+                                                        const char *path,
+                                                        Error **errp);
+    void (*dev_deinit)                                 (libvfio_dev *dev);
 };
 
 G_END_DECLS

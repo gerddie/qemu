@@ -265,38 +265,12 @@ bool
 libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
                  const char *path, Error **errp)
 {
-    char *tmp, group_path[PATH_MAX], *group_name;
-    struct stat st;
-    ssize_t len;
-    int groupid;
+    assert(vfio);
+    assert(dev);
+    assert(path);
 
-    if (stat(path, &st) < 0) {
-        error_setg_errno(errp, errno, ERR_PREFIX "no such host device");
-        return false;
-    }
-
-    tmp = g_strdup_printf("%s/iommu_group", path);
-    len = readlink(tmp, group_path, sizeof(group_path));
-    g_free(tmp);
-
-    if (len <= 0 || len >= sizeof(group_path)) {
-        error_setg_errno(errp, len < 0 ? errno : ENAMETOOLONG,
-                         "no iommu_group found");
-        return false;
-    }
-
-    group_path[len] = 0;
-
-    group_name = basename(group_path);
-    if (sscanf(group_name, "%d", &groupid) != 1) {
-        error_setg_errno(errp, errno, "failed to read %s", group_path);
-        return false;
-    }
-
-    dev->vfio = vfio;
-    dev->groupid = groupid;
-    dev->name = g_strdup(basename(path));
-    return true;
+    return LIBVFIO_CALL(vfio, false,
+                        init_dev, vfio, dev, path, errp);
 }
 
 void
@@ -306,12 +280,8 @@ libvfio_dev_deinit(libvfio_dev *dev)
         return;
     }
 
-    if (dev->fd >= 0) {
-        qemu_close(dev->fd);
-        dev->fd = -1;
-    }
-    g_free(dev->name);
-    dev->name = NULL;
+    LIBVFIO_VOID_CALL(dev->vfio, dev_deinit, dev);
+    dev->vfio = NULL;
 }
 
 const char *
