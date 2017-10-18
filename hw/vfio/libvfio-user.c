@@ -12,6 +12,90 @@
 #include "libvfio-priv.h"
 #include "vfio-user.h"
 
+typedef struct VuDev {
+} VuDev;
+
+typedef struct VuSerialDev {
+    VuDev parent;
+
+    /* struct mdev_region_info region_info[VFIO_PCI_NUM_REGIONS]; */
+    
+} VuSerialDev;
+
+static VuSerialDev serial;
+static VuDev *vdev = &serial.parent;
+
+#define MTTY_CONFIG_SPACE_SIZE  0xff
+#define MTTY_IO_BAR_SIZE        0x8
+#define MTTY_MMIO_BAR_SIZE      0x100000
+
+#define MTTY_VFIO_PCI_OFFSET_SHIFT   40
+
+#define MTTY_VFIO_PCI_OFFSET_TO_INDEX(off)   (off >> MTTY_VFIO_PCI_OFFSET_SHIFT)
+#define MTTY_VFIO_PCI_INDEX_TO_OFFSET(index) \
+                                ((uint64_t)(index) << MTTY_VFIO_PCI_OFFSET_SHIFT)
+#define MTTY_VFIO_PCI_OFFSET_MASK    \
+                                (((uint64_t)(1) << MTTY_VFIO_PCI_OFFSET_SHIFT) - 1)
+
+static int
+vfio_user_serial_get_device_info(VuDev *dev,
+                                 struct vfio_device_info *info)
+{
+    info->num_regions = VFIO_PCI_NUM_REGIONS;
+    info->num_irqs = VFIO_PCI_NUM_IRQS;
+    info->flags = VFIO_DEVICE_FLAGS_PCI;
+
+    return 0;
+}
+
+static int
+vfio_user_serial_get_region_info(VuDev *dev,
+                                 struct vfio_region_info *info)
+{
+    /* VuSerialDev *serial = container_of(dev, VuSerialDev, parent); */
+
+    switch (info->index) {
+    case VFIO_PCI_CONFIG_REGION_INDEX:
+        info->size = MTTY_CONFIG_SPACE_SIZE;
+        break;
+    case VFIO_PCI_BAR0_REGION_INDEX:
+        info->size = MTTY_IO_BAR_SIZE;
+        break;
+    default:
+        info->size = 0;
+        break;
+    }
+
+    info->offset = MTTY_VFIO_PCI_INDEX_TO_OFFSET(info->index);
+    info->flags = VFIO_REGION_INFO_FLAG_READ | VFIO_REGION_INFO_FLAG_WRITE;
+    return 0;
+}
+
+static int
+vfio_user_serial_get_irq_info(VuDev *dev, struct vfio_irq_info *info)
+{
+    switch (info->index) {
+    case VFIO_PCI_INTX_IRQ_INDEX:
+    case VFIO_PCI_MSI_IRQ_INDEX:
+    case VFIO_PCI_REQ_IRQ_INDEX:
+        break;
+
+    default:
+        return -EINVAL;
+    }
+
+    info->flags = VFIO_IRQ_INFO_EVENTFD;
+    info->count = 1;
+
+    if (info->index == VFIO_PCI_INTX_IRQ_INDEX) {
+        info->flags |= (VFIO_IRQ_INFO_MASKABLE | VFIO_IRQ_INFO_AUTOMASKED);
+    } else {
+        info->flags |= VFIO_IRQ_INFO_NORESIZE;
+    }
+
+    return 0;
+}
+
 static bool
 libvfio_user_init_container(libvfio *vfio, libvfio_container *container,
                             Error **errp)
@@ -173,6 +257,7 @@ libvfio_user_dev_get_irq_info(libvfio_dev *dev,
                               struct vfio_irq_info *irq,
                               Error **errp)
 {
+    vfio_user_serial_get_irq_info(vdev, index, irq);
     return false;
 }
 
@@ -222,6 +307,7 @@ static bool
 libvfio_user_dev_get_info(libvfio_dev *dev,
                           struct vfio_device_info *info, Error **errp)
 {
+#if 0
     vfio_user_msg msg = {
         .req = VFIO_USER_REQ_DEV_GET_INFO,
         .size = sizeof(msg.u64),
@@ -241,6 +327,8 @@ libvfio_user_dev_get_info(libvfio_dev *dev,
     if (!libvfio_user_read_payload(dev->vfio, info, sizeof(*info), errp)) {
         return false;
     }
+#endif
+    vfio_user_serial_get_device_info(vdev, info);
 
     return true;
 }
@@ -249,7 +337,9 @@ static bool
 libvfio_user_dev_get_region_info(libvfio_dev *dev, int index,
                                  struct vfio_region_info *info, Error **errp)
 {
-    return false;
+    vfio_user_serial_get_region_info(vdev, info);
+
+    return true;
 }
 
 static bool
@@ -317,13 +407,13 @@ static libvfio_ops libvfio_user_ops = {
     .dev_deinit = libvfio_user_dev_deinit,
     /* .dev_reset = libvfio_user_dev_reset, */
     /* .dev_set_irqs = libvfio_user_dev_set_irqs, */
-    /* .dev_get_irq_info = libvfio_user_dev_get_irq_info, */
+    .dev_get_irq_info = libvfio_user_dev_get_irq_info,
     .dev_get_info = libvfio_user_dev_get_info,
-    /* .dev_get_region_info = libvfio_user_dev_get_region_info, */
+    .dev_get_region_info = libvfio_user_dev_get_region_info,
     /* .dev_get_pci_hot_reset_info = libvfio_user_dev_get_pci_hot_reset_info, */
     /* .dev_pci_hot_reset = libvfio_user_dev_pci_hot_reset, */
     /* .dev_write = libvfio_user_dev_write, */
-    /* .dev_read = libvfio_user_dev_read, */
+    .dev_read = libvfio_user_dev_read,
     /* .dev_mmap = libvfio_user_dev_mmap, */
     /* .dev_unmmap = libvfio_user_dev_unmmap, */
 };
