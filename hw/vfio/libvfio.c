@@ -220,6 +220,22 @@ libvfio_init_group(libvfio *vfio, libvfio_group *group,
                         init_group, vfio, group, groupid, errp);
 }
 
+bool
+libvfio_group_get_host_fd(libvfio_group *group,
+                          int *fd)
+{
+    assert(group);
+    assert(group->vfio);
+    assert(fd);
+
+    if (group->vfio->chr) {
+        return false;
+    }
+
+    *fd = group->fd;
+    return true;
+}
+
 void
 libvfio_group_deinit(libvfio_group *group)
 {

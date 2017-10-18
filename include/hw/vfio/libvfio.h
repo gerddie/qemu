@@ -107,6 +107,8 @@ bool            libvfio_init_group                  (libvfio *vfio,
                                                      libvfio_group *group,
                                                      int groupid,
                                                      Error **errp);
+bool            libvfio_group_get_host_fd           (libvfio_group *group,
+                                                     int *fd);
 void            libvfio_group_deinit                (libvfio_group *group);
 bool            libvfio_group_set_container         (libvfio_group *group,
                                                      libvfio_container *container,

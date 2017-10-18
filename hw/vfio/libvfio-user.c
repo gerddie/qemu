@@ -270,7 +270,7 @@ libvfio_user_dev_unmmap(libvfio_dev *dev,
 static libvfio_ops libvfio_user_ops = {
     .init_container = libvfio_user_init_container,
     .container_deinit = libvfio_user_container_deinit,
-    /* .container_check_extension = libvfio_user_container_check_extension, */
+    .container_check_extension = libvfio_user_container_check_extension,
     /* .container_set_iommu = libvfio_user_container_set_iommu, */
     /* .container_iommu_get_info = libvfio_user_container_iommu_get_info, */
     /* .container_iommu_enable = libvfio_user_container_iommu_enable, */

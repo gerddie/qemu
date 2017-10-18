@@ -854,13 +854,15 @@ void vfio_reset_handler(void *opaque)
 static void vfio_kvm_device_add_group(VFIOGroup *group)
 {
 #ifdef CONFIG_KVM
+    int fd;
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_ADD,
-        .addr = (uint64_t)(unsigned long)&group->libvfio_group.fd,
+        .addr = (uint64_t)(unsigned long)&fd,
     };
 
-    if (!kvm_enabled()) {
+    if (!kvm_enabled() ||
+        !libvfio_group_get_host_fd(&group->libvfio_group, &fd)) {
         return;
     }
 
@@ -887,13 +889,15 @@ static void vfio_kvm_device_add_group(VFIOGroup *group)
 static void vfio_kvm_device_del_group(VFIOGroup *group)
 {
 #ifdef CONFIG_KVM
+    int fd;
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_DEL,
-        .addr = (uint64_t)(unsigned long)&group->libvfio_group.fd,
+        .addr = (uint64_t)(unsigned long)&fd,
     };
 
-    if (vfio_kvm_device_fd < 0) {
+    if (vfio_kvm_device_fd < 0 ||
+        !libvfio_group_get_host_fd(&group->libvfio_group, &fd)) {
         return;
     }
 
@@ -1128,7 +1132,7 @@ static void vfio_disconnect_container(VFIOGroup *group)
             g_free(giommu);
         }
 
-        trace_vfio_disconnect_container(container->libvfio_container.fd);
+        trace_vfio_disconnect_container(&container->libvfio_container);
         libvfio_container_deinit(&container->libvfio_container);
         g_free(container);
 
@@ -1195,7 +1199,7 @@ void vfio_put_group(VFIOGroup *group)
     vfio_kvm_device_del_group(group);
     vfio_disconnect_container(group);
     QLIST_REMOVE(group, next);
-    trace_vfio_put_group(group->libvfio_group.fd);
+    trace_vfio_put_group(&group->libvfio_group);
     libvfio_group_deinit(&group->libvfio_group);
     g_free(group);
 
@@ -1239,7 +1243,7 @@ void vfio_put_base_device(VFIODevice *vbasedev)
     }
     QLIST_REMOVE(vbasedev, next);
     vbasedev->group = NULL;
-    trace_vfio_put_base_device(vbasedev->libvfio_dev.fd);
+    trace_vfio_put_base_device(&vbasedev->libvfio_dev);
     libvfio_dev_deinit(&vbasedev->libvfio_dev);
 }
 
