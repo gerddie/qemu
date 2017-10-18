@@ -205,6 +205,63 @@ libvfio_container_eeh_pe_op(libvfio_container *container,
 }
 
 bool
+libvfio_init_group(libvfio *vfio, libvfio_group *group,
+                   int groupid, Error **errp)
+{
+    assert(vfio);
+    assert(group);
+
+    return LIBVFIO_CALL(vfio, false,
+                        init_group, vfio, group, groupid, errp);
+}
+
+void
+libvfio_group_deinit(libvfio_group *group)
+{
+    assert(group);
+
+    if (!group->vfio) {
+        return;
+    }
+
+    LIBVFIO_VOID_CALL(group->vfio, group_deinit, group);
+
+    group->vfio = NULL;
+}
+
+bool
+libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
+{
+    assert(group);
+    assert(dev);
+
+    return LIBVFIO_CALL(group->vfio, false,
+                        group_get_device, group, dev, errp);
+}
+
+bool
+libvfio_group_set_container(libvfio_group *group, libvfio_container *container,
+                            Error **errp)
+{
+    assert(group);
+    assert(container);
+
+    return LIBVFIO_CALL(group->vfio, false,
+                        group_set_container, group, container, errp);
+}
+
+bool
+libvfio_group_unset_container(libvfio_group *group, libvfio_container *container,
+                              Error **errp)
+{
+    assert(group);
+    assert(container);
+
+    return LIBVFIO_CALL(group->vfio, false,
+                        group_unset_container, group, container, errp);
+}
+
+bool
 libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
                  const char *path, Error **errp)
 {
@@ -255,100 +312,6 @@ libvfio_dev_deinit(libvfio_dev *dev)
     }
     g_free(dev->name);
     dev->name = NULL;
-}
-
-bool
-libvfio_init_group(libvfio *vfio, libvfio_group *group,
-                   int groupid, Error **errp)
-{
-    char path[32];
-    struct vfio_group_status status = { .argsz = sizeof(status) };
-
-    snprintf(path, sizeof(path), "/dev/vfio/%d", groupid);
-    group->fd = qemu_open(path, O_RDWR);
-    if (group->fd < 0) {
-        error_setg_errno(errp, errno, "failed to open %s", path);
-        return false;
-    }
-
-    if (ioctl(group->fd, VFIO_GROUP_GET_STATUS, &status)) {
-        error_setg_errno(errp, errno, "failed to get group %d status", groupid);
-        goto close_fd_exit;
-    }
-
-    if (!(status.flags & VFIO_GROUP_FLAGS_VIABLE)) {
-        error_setg(errp, "group %d is not viable", groupid);
-        error_append_hint(errp,
-                          "Please ensure all devices within the iommu_group "
-                          "are bound to their vfio bus driver.\n");
-        goto close_fd_exit;
-    }
-
-    group->vfio = vfio;
-    group->groupid = groupid;
-    return true;
-
-close_fd_exit:
-    qemu_close(group->fd);
-    return false;
-}
-
-void
-libvfio_group_deinit(libvfio_group *group)
-{
-    if (!group->vfio) {
-        return;
-    }
-
-    if (group->fd >= 0) {
-        qemu_close(group->fd);
-        group->fd = -1;
-    }
-
-    group->vfio = NULL;
-}
-
-bool
-libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
-{
-    int fd = ioctl(group->fd, VFIO_GROUP_GET_DEVICE_FD, dev->name);
-
-    if (fd < 0) {
-        error_setg_errno(errp, errno, "error getting device from group %d",
-                         group->groupid);
-        error_append_hint(errp,
-                          "Verify all devices in group %d are bound to vfio-<bus> "
-                          "or pci-stub and not already in use\n",
-                          group->groupid);
-        return false;
-    }
-
-    dev->fd = fd;
-    return true;
-}
-
-bool
-libvfio_group_set_container(libvfio_group *group, libvfio_container *container,
-                            Error **errp)
-{
-    if (ioctl(group->fd, VFIO_GROUP_SET_CONTAINER, &container->fd)) {
-        error_setg_errno(errp, errno, "failed to set group container");
-        return false;
-    }
-
-    return true;
-}
-
-bool
-libvfio_group_unset_container(libvfio_group *group, libvfio_container *container,
-                              Error **errp)
-{
-    if (ioctl(group->fd, VFIO_GROUP_UNSET_CONTAINER, &container->fd)) {
-        error_setg_errno(errp, errno, "failed to unset group container");
-        return false;
-    }
-
-    return true;
 }
 
 const char *

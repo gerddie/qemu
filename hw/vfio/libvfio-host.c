@@ -285,6 +285,102 @@ libvfio_host_container_eeh_pe_op(libvfio_container *container,
     return true;
 }
 
+static bool
+libvfio_host_init_group(libvfio *vfio, libvfio_group *group,
+                        int groupid, Error **errp)
+{
+    char path[32];
+    struct vfio_group_status status = { .argsz = sizeof(status) };
+
+    snprintf(path, sizeof(path), "/dev/vfio/%d", groupid);
+    group->fd = qemu_open(path, O_RDWR);
+    if (group->fd < 0) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to open %s", path);
+        return false;
+    }
+
+    if (ioctl(group->fd, VFIO_GROUP_GET_STATUS, &status)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to get group %d status", groupid);
+        goto close_fd_exit;
+    }
+
+    if (!(status.flags & VFIO_GROUP_FLAGS_VIABLE)) {
+        error_setg(errp, ERR_PREFIX "group %d is not viable", groupid);
+        error_append_hint(errp,
+                          "Please ensure all devices within the iommu_group "
+                          "are bound to their vfio bus driver.\n");
+        goto close_fd_exit;
+    }
+
+    group->vfio = vfio;
+    group->groupid = groupid;
+    return true;
+
+close_fd_exit:
+    qemu_close(group->fd);
+    return false;
+}
+
+static void
+libvfio_host_group_deinit(libvfio_group *group)
+{
+    if (group->fd >= 0) {
+        qemu_close(group->fd);
+        group->fd = -1;
+    }
+}
+
+static bool
+libvfio_host_group_get_device(libvfio_group *group,
+                              libvfio_dev *dev, Error **errp)
+{
+    int fd = ioctl(group->fd, VFIO_GROUP_GET_DEVICE_FD, dev->name);
+
+    if (fd < 0) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "error getting device from group %d",
+                         group->groupid);
+        error_append_hint(errp,
+                          "Verify all devices in group %d are bound to vfio-<bus> "
+                          "or pci-stub and not already in use\n",
+                          group->groupid);
+        return false;
+    }
+
+    dev->fd = fd;
+    return true;
+}
+
+static bool
+libvfio_host_group_set_container(libvfio_group *group,
+                                 libvfio_container *container,
+                                 Error **errp)
+{
+    if (ioctl(group->fd, VFIO_GROUP_SET_CONTAINER, &container->fd)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to set group container");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_group_unset_container(libvfio_group *group,
+                                   libvfio_container *container,
+                                   Error **errp)
+{
+    if (ioctl(group->fd, VFIO_GROUP_UNSET_CONTAINER, &container->fd)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to unset group container");
+        return false;
+    }
+
+    return true;
+}
+
 static libvfio_ops libvfio_host_ops = {
     .init_container = libvfio_host_init_container,
     .container_deinit = libvfio_host_container_deinit,
@@ -300,6 +396,11 @@ static libvfio_ops libvfio_host_ops = {
     .container_iommu_spapr_tce_create = libvfio_host_container_iommu_spapr_tce_create,
     .container_iommu_spapr_tce_remove = libvfio_host_container_iommu_spapr_tce_remove,
     .container_eeh_pe_op = libvfio_host_container_eeh_pe_op,
+    .init_group = libvfio_host_init_group,
+    .group_deinit = libvfio_host_group_deinit,
+    .group_set_container = libvfio_host_group_set_container,
+    .group_unset_container = libvfio_host_group_unset_container,
+    .group_get_device = libvfio_host_group_get_device,
 };
 
 bool

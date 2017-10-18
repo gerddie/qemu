@@ -71,6 +71,20 @@ struct libvfio_ops {
     bool (*container_eeh_pe_op)                        (libvfio_container *container,
                                                         uint32_t op,
                                                         Error **errp);
+    bool (*init_group)                                 (libvfio *vfio,
+                                                        libvfio_group *group,
+                                                        int groupid,
+                                                        Error **errp);
+    void (*group_deinit)                               (libvfio_group *group);
+    bool (*group_get_device)                           (libvfio_group *group,
+                                                        libvfio_dev *dev,
+                                                        Error **errp);
+    bool (*group_set_container)                        (libvfio_group *group,
+                                                        libvfio_container *container,
+                                                        Error **errp);
+    bool (*group_unset_container)                      (libvfio_group *group,
+                                                        libvfio_container *container,
+                                                        Error **errp);
 };
 
 G_END_DECLS
