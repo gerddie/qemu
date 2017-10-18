@@ -2572,8 +2572,9 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     size_t size, bytes_read;
     int i, ret;
 
-    if (vdev->vbasedev.test) {
-        if (!libvfio_init_user(&vdev->vbasedev.libvfio, -1, errp)) {
+    if (qemu_chr_fe_backend_connected(&vdev->vbasedev.chr)) {
+        if (!libvfio_init_user(&vdev->vbasedev.libvfio,
+                               &vdev->vbasedev.chr, errp)) {
             return;
         }
         if (!libvfio_init_dev(&vdev->vbasedev.libvfio,
@@ -2896,7 +2897,7 @@ static void vfio_instance_init(Object *obj)
 
 static Property vfio_pci_dev_properties[] = {
     DEFINE_PROP_PCI_HOST_DEVADDR("host", VFIOPCIDevice, host),
-    DEFINE_PROP_BOOL("test", VFIOPCIDevice, vbasedev.test, false),
+    DEFINE_PROP_CHR("chardev", VFIOPCIDevice, vbasedev.chr),
 
     DEFINE_PROP_STRING("sysfsdev", VFIOPCIDevice, vbasedev.sysfsdev),
     DEFINE_PROP_UINT32("x-intx-mmap-timeout-ms", VFIOPCIDevice,

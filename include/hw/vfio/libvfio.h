@@ -13,6 +13,8 @@
 #define LIBVFIO_H_
 
 #include "qemu/osdep.h"
+#include "chardev/char-fe.h"
+
 #include <linux/vfio.h>
 
 G_BEGIN_DECLS
@@ -21,7 +23,7 @@ typedef struct libvfio_ops libvfio_ops;
 
 typedef struct libvfio {
     const libvfio_ops *ops;
-    int fd; /* user-fd */
+    CharBackend *chr;
 } libvfio;
 
 typedef struct libvfio_container {
@@ -46,7 +48,7 @@ bool            libvfio_init_host                   (libvfio *vfio,
                                                      int api_version,
                                                      Error **errp);
 bool            libvfio_init_user                   (libvfio *vfio,
-                                                     int fd,
+                                                     CharBackend *chr,
                                                      Error **errp);
 
 bool            libvfio_init_container              (libvfio *vfio,

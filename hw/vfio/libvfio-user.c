@@ -37,12 +37,15 @@ static libvfio_ops libvfio_user_ops = {
 };
 
 bool
-libvfio_init_user(libvfio *vfio, int fd, Error **errp)
+libvfio_init_user(libvfio *vfio, CharBackend *chr, Error **errp)
 {
     assert(vfio);
-    assert(fd >= 0);
+    assert(chr);
 
-    vfio->fd = fd;
-    vfio->ops = &libvfio_user_ops;
+    *vfio = (struct libvfio) {
+        .chr = chr,
+        .ops = &libvfio_user_ops,
+    };
+
     return true;
 }

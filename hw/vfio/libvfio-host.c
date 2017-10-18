@@ -682,8 +682,9 @@ libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
         return false;
     }
 
-    vfio->fd = -1;
-    vfio->ops = &libvfio_host_ops;
+    *vfio = (struct libvfio) {
+        .ops = &libvfio_host_ops,
+    };
 
     /* check kernel version */
     success = libvfio_init_container(vfio, &container, errp);

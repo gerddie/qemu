@@ -16,6 +16,7 @@
     typeof(miss) _ret = (miss);                                     \
     assert(vfio);                                                   \
     assert(vfio->ops);                                              \
+    g_debug(G_STRINGIFY(op)); \
     if (!vfio->ops->op) {                                           \
         error_setg(errp, ERR_PREFIX "'%s' op not implemented",  \
                    G_STRINGIFY(op));                                \
