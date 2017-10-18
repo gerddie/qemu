@@ -12,30 +12,253 @@
 #include "libvfio-priv.h"
 #include "vfio-user.h"
 
+#include <linux/pci.h>
+
 typedef struct VuDev {
 } VuDev;
-
-typedef struct VuSerialDev {
-    VuDev parent;
-
-    /* struct mdev_region_info region_info[VFIO_PCI_NUM_REGIONS]; */
-    
-} VuSerialDev;
-
-static VuSerialDev serial;
-static VuDev *vdev = &serial.parent;
 
 #define MTTY_CONFIG_SPACE_SIZE  0xff
 #define MTTY_IO_BAR_SIZE        0x8
 #define MTTY_MMIO_BAR_SIZE      0x100000
 
+#define STORE_LE16(addr, val)   (*(uint16_t *)addr = val)
+#define STORE_LE32(addr, val)   (*(uint32_t *)addr = val)
+
+#define MAX_FIFO_SIZE   16
+
+#define CIRCULAR_BUF_INC_IDX(idx)    (idx = (idx + 1) & (MAX_FIFO_SIZE - 1))
+
 #define MTTY_VFIO_PCI_OFFSET_SHIFT   40
 
 #define MTTY_VFIO_PCI_OFFSET_TO_INDEX(off)   (off >> MTTY_VFIO_PCI_OFFSET_SHIFT)
-#define MTTY_VFIO_PCI_INDEX_TO_OFFSET(index) \
-                                ((uint64_t)(index) << MTTY_VFIO_PCI_OFFSET_SHIFT)
-#define MTTY_VFIO_PCI_OFFSET_MASK    \
-                                (((uint64_t)(1) << MTTY_VFIO_PCI_OFFSET_SHIFT) - 1)
+#define MTTY_VFIO_PCI_INDEX_TO_OFFSET(index)            \
+    ((uint64_t)(index) << MTTY_VFIO_PCI_OFFSET_SHIFT)
+#define MTTY_VFIO_PCI_OFFSET_MASK                       \
+    (((uint64_t)(1) << MTTY_VFIO_PCI_OFFSET_SHIFT) - 1)
+
+struct region_info {
+    uint64_t start;
+    uint64_t phys_start;
+    uint32_t size;
+    uint64_t vfio_offset;
+};
+
+const char *wr_reg[] = {
+    "TX",
+    "IER",
+    "FCR",
+    "LCR",
+    "MCR",
+    "LSR",
+    "MSR",
+    "SCR"
+};
+
+const char *rd_reg[] = {
+    "RX",
+    "IER",
+    "IIR",
+    "LCR",
+    "MCR",
+    "LSR",
+    "MSR",
+    "SCR"
+};
+
+/* loop back buffer */
+struct rxtx {
+        uint8_t fifo[MAX_FIFO_SIZE];
+        uint8_t head, tail;
+        uint8_t count;
+};
+
+struct serial_port {
+        uint8_t uart_reg[8];         /* 8 registers */
+        struct rxtx rxtx;       /* loop back buffer */
+        bool dlab;
+        bool overrun;
+        uint16_t divisor;
+        uint8_t fcr;                 /* FIFO control register */
+        uint8_t max_fifo_size;
+        uint8_t intr_trigger_level;  /* interrupt trigger level */
+};
+
+typedef struct VuSerialDev {
+    VuDev parent;
+
+    struct region_info region_info[VFIO_PCI_NUM_REGIONS];
+    uint32_t bar_mask[VFIO_PCI_NUM_REGIONS];
+    struct vfio_device_info dev_info;
+    char vconfig[MTTY_CONFIG_SPACE_SIZE];
+    struct serial_port s;
+} VuSerialDev;
+
+static VuSerialDev serial;
+static VuDev *vdev = &serial.parent;
+
+static void
+vfio_user_serial_read_base(VuDev *dev)
+{
+    VuSerialDev *serial = container_of(dev, VuSerialDev, parent);
+    int index, pos;
+    uint32_t start_lo, start_hi;
+    uint32_t mem_type;
+
+    pos = PCI_BASE_ADDRESS_0;
+
+    for (index = 0; index <= VFIO_PCI_BAR5_REGION_INDEX; index++) {
+
+        if (!serial->region_info[index].size)
+            continue;
+
+        start_lo = (*(uint32_t *)(serial->vconfig + pos)) &
+            PCI_BASE_ADDRESS_MEM_MASK;
+        mem_type = (*(uint32_t *)(serial->vconfig + pos)) &
+            PCI_BASE_ADDRESS_MEM_TYPE_MASK;
+
+        switch (mem_type) {
+        case PCI_BASE_ADDRESS_MEM_TYPE_64:
+            start_hi = (*(uint32_t *)(serial->vconfig + pos + 4));
+            pos += 4;
+            break;
+        case PCI_BASE_ADDRESS_MEM_TYPE_32:
+        case PCI_BASE_ADDRESS_MEM_TYPE_1M:
+            /* 1M mem BAR treated as 32-bit BAR */
+        default:
+            /* mem unknown type treated as 32-bit BAR */
+            start_hi = 0;
+            break;
+        }
+        pos += 4;
+        serial->region_info[index].start =
+            ((uint64_t)start_hi << 32) | start_lo;
+    }
+}
+
+static ssize_t
+vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
+                        off_t pos, bool is_write)
+{
+    VuSerialDev *serial = container_of(dev, VuSerialDev, parent);
+    unsigned int index;
+    off_t offset;
+    int ret = 0;
+
+    index = MTTY_VFIO_PCI_OFFSET_TO_INDEX(pos);
+    offset = pos & MTTY_VFIO_PCI_OFFSET_MASK;
+    switch (index) {
+    case VFIO_PCI_CONFIG_REGION_INDEX:
+        g_debug("%s: PCI config space %s at offset 0x%lx\n",
+                __func__, is_write ? "write" : "read", offset);
+        break;
+    case VFIO_PCI_BAR0_REGION_INDEX ... VFIO_PCI_BAR5_REGION_INDEX:
+        if (!serial->region_info[index].start)
+            vfio_user_serial_read_base(dev);
+
+        if (is_write) {
+            g_debug("%s: BAR%d  WR @0x%lx %s val:0x%02x dlab:%d\n",
+                    __func__, index, offset, wr_reg[offset],
+                    (uint8_t)*buf, serial->s.dlab);
+            /* handle_bar_write(index, serial, offset, buf, count); */
+        } else {
+            /* handle_bar_read(index, serial, offset, buf, count); */
+            g_debug("%s: BAR%d  RD @0x%lx %s val:0x%02x dlab:%d\n",
+                    __func__, index, offset, rd_reg[offset],
+                    (uint8_t)*buf, serial->s.dlab);
+        }
+        break;
+    default:
+        ret = -1;
+        goto accessfailed;
+    }
+
+    ret = count;
+
+accessfailed:
+    return ret;
+}
+
+static ssize_t
+vfio_user_serial_read(VuDev *dev, char *buf, size_t count, off_t *ppos)
+{
+    unsigned int done = 0;
+    int ret;
+
+    while (count) {
+        size_t filled;
+
+        if (count >= 4 && !(*ppos % 4)) {
+            ret = vfio_user_serial_access(dev, buf, 4, *ppos, false);
+            if (ret <= 0)
+                goto read_err;
+
+            filled = 4;
+        } else if (count >= 2 && !(*ppos % 2)) {
+            ret = vfio_user_serial_access(dev, buf, 2, *ppos, false);
+            if (ret <= 0)
+                goto read_err;
+
+            filled = 2;
+        } else {
+            ret = vfio_user_serial_access(dev, buf, 1, *ppos, false);
+            if (ret <= 0)
+                goto read_err;
+
+            filled = 1;
+        }
+
+        count -= filled;
+        done += filled;
+        *ppos += filled;
+        buf += filled;
+    }
+
+    return done;
+
+read_err:
+        return -EFAULT;
+}
+
+static ssize_t
+vfio_user_serial_write(VuDev *dev, const char *buf, size_t count, off_t *ppos)
+{
+    unsigned int done = 0;
+    int ret;
+
+    while (count) {
+        size_t filled;
+
+        if (count >= 4 && !(*ppos % 4)) {
+            ret = vfio_user_serial_access(dev, (void *)buf, 4, *ppos, true);
+            if (ret <= 0)
+                goto write_err;
+
+            filled = 4;
+        } else if (count >= 2 && !(*ppos % 2)) {
+            ret = vfio_user_serial_access(dev, (void *)buf, 2, *ppos, true);
+            if (ret <= 0)
+                goto write_err;
+
+            filled = 2;
+        } else {
+            ret = vfio_user_serial_access(dev, (void *)buf, 1, *ppos, true);
+            if (ret <= 0)
+                goto write_err;
+
+            filled = 1;
+        }
+
+        count -= filled;
+        done += filled;
+        *ppos += filled;
+        buf += filled;
+    }
+
+    return done;
+
+write_err:
+    return -EFAULT;
+}
 
 static int
 vfio_user_serial_get_device_info(VuDev *dev,
@@ -52,7 +275,7 @@ static int
 vfio_user_serial_get_region_info(VuDev *dev,
                                  struct vfio_region_info *info)
 {
-    /* VuSerialDev *serial = container_of(dev, VuSerialDev, parent); */
+    VuSerialDev *serial = container_of(dev, VuSerialDev, parent);
 
     switch (info->index) {
     case VFIO_PCI_CONFIG_REGION_INDEX:
@@ -68,13 +291,18 @@ vfio_user_serial_get_region_info(VuDev *dev,
 
     info->offset = MTTY_VFIO_PCI_INDEX_TO_OFFSET(info->index);
     info->flags = VFIO_REGION_INFO_FLAG_READ | VFIO_REGION_INFO_FLAG_WRITE;
+
+    serial->region_info[info->index].size = info->size;
+    serial->region_info[info->index].vfio_offset = info->offset;
+
     return 0;
 }
 
 static int
-vfio_user_serial_get_irq_info(VuDev *dev, struct vfio_irq_info *info)
+vfio_user_serial_get_irq_info(VuDev *dev, uint32_t index,
+                              struct vfio_irq_info *info)
 {
-    switch (info->index) {
+    switch (index) {
     case VFIO_PCI_INTX_IRQ_INDEX:
     case VFIO_PCI_MSI_IRQ_INDEX:
     case VFIO_PCI_REQ_IRQ_INDEX:
@@ -87,8 +315,9 @@ vfio_user_serial_get_irq_info(VuDev *dev, struct vfio_irq_info *info)
     info->flags = VFIO_IRQ_INFO_EVENTFD;
     info->count = 1;
 
-    if (info->index == VFIO_PCI_INTX_IRQ_INDEX) {
-        info->flags |= (VFIO_IRQ_INFO_MASKABLE | VFIO_IRQ_INFO_AUTOMASKED);
+    if (index == VFIO_PCI_INTX_IRQ_INDEX) {
+        info->flags |= (VFIO_IRQ_INFO_MASKABLE |
+                        VFIO_IRQ_INFO_AUTOMASKED);
     } else {
         info->flags |= VFIO_IRQ_INFO_NORESIZE;
     }
@@ -364,7 +593,13 @@ libvfio_user_dev_write(libvfio_dev *dev,
                        const void *buf, size_t size, off_t offset,
                        Error **errp)
 {
-    return -1;
+    ssize_t ret = vfio_user_serial_write(vdev, buf, size, &offset);
+
+    if (ret < 0) {
+        error_setg_errno(errp, -ret, "failed during dev_write");
+    }
+
+    return ret;
 }
 
 static ssize_t
@@ -372,7 +607,13 @@ libvfio_user_dev_read(libvfio_dev *dev,
                       void *buf, size_t size, off_t offset,
                       Error **errp)
 {
-    return -1;
+    ssize_t ret = vfio_user_serial_read(vdev, buf, size, &offset);
+
+    if (ret < 0) {
+        error_setg_errno(errp, -ret, "failed during dev_read");
+    }
+
+    return ret;
 }
 
 static void *
@@ -412,7 +653,7 @@ static libvfio_ops libvfio_user_ops = {
     .dev_get_region_info = libvfio_user_dev_get_region_info,
     /* .dev_get_pci_hot_reset_info = libvfio_user_dev_get_pci_hot_reset_info, */
     /* .dev_pci_hot_reset = libvfio_user_dev_pci_hot_reset, */
-    /* .dev_write = libvfio_user_dev_write, */
+    .dev_write = libvfio_user_dev_write,
     .dev_read = libvfio_user_dev_read,
     /* .dev_mmap = libvfio_user_dev_mmap, */
     /* .dev_unmmap = libvfio_user_dev_unmmap, */
