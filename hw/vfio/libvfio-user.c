@@ -89,6 +89,7 @@ typedef struct VuSerialDev {
     struct region_info region_info[VFIO_PCI_NUM_REGIONS];
     uint32_t bar_mask[VFIO_PCI_NUM_REGIONS];
     struct vfio_device_info dev_info;
+    int irq_index;
     char vconfig[MTTY_CONFIG_SPACE_SIZE];
     struct serial_port s;
 } VuSerialDev;
@@ -135,6 +136,60 @@ vfio_user_serial_read_base(VuDev *dev)
     }
 }
 
+static void handle_pci_cfg_write(VuSerialDev *serial, uint16_t offset,
+                                 char *buf, uint32_t count)
+{
+    uint32_t cfg_addr, bar_mask, bar_index = 0;
+
+    switch (offset) {
+    case 0x04: /* device control */
+    case 0x06: /* device status */
+        /* do nothing */
+        break;
+    case 0x3c:  /* interrupt line */
+        serial->vconfig[0x3c] = buf[0];
+        break;
+    case 0x3d:
+        /*
+         * Interrupt Pin is hardwired to INTA.
+         * This field is write protected by hardware
+         */
+        break;
+    case 0x10:  /* BAR0 */
+    case 0x14:  /* BAR1 */
+        if (offset == 0x10)
+            bar_index = 0;
+        else if (offset == 0x14)
+            bar_index = 1;
+
+        if (bar_index == 1) {
+            STORE_LE32(&serial->vconfig[offset], 0);
+            break;
+        }
+
+        cfg_addr = *(uint32_t *)buf;
+        g_debug("BAR%d addr 0x%x", bar_index, cfg_addr);
+
+        if (cfg_addr == 0xffffffff) {
+            bar_mask = serial->bar_mask[bar_index];
+            cfg_addr = (cfg_addr & bar_mask);
+        }
+
+        cfg_addr |= (serial->vconfig[offset] & 0x3ul);
+        STORE_LE32(&serial->vconfig[offset], cfg_addr);
+        break;
+    case 0x18:  /* BAR2 */
+    case 0x1c:  /* BAR3 */
+    case 0x20:  /* BAR4 */
+        STORE_LE32(&serial->vconfig[offset], 0);
+        break;
+    default:
+        g_debug("PCI config write @0x%x of %d bytes not handled",
+                offset, count);
+        break;
+    }
+}
+
 static ssize_t
 vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
                         off_t pos, bool is_write)
@@ -148,21 +203,26 @@ vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
     offset = pos & MTTY_VFIO_PCI_OFFSET_MASK;
     switch (index) {
     case VFIO_PCI_CONFIG_REGION_INDEX:
-        g_debug("%s: PCI config space %s at offset 0x%lx\n",
+        g_debug("%s: PCI config space %s at offset 0x%lx",
                 __func__, is_write ? "write" : "read", offset);
+        if (is_write) {
+            handle_pci_cfg_write(serial, offset, buf, count);
+        } else {
+            memcpy(buf, serial->vconfig + offset, count);
+        }
         break;
     case VFIO_PCI_BAR0_REGION_INDEX ... VFIO_PCI_BAR5_REGION_INDEX:
         if (!serial->region_info[index].start)
             vfio_user_serial_read_base(dev);
 
         if (is_write) {
-            g_debug("%s: BAR%d  WR @0x%lx %s val:0x%02x dlab:%d\n",
+            g_debug("%s: BAR%d  WR @0x%lx %s val:0x%02x dlab:%d",
                     __func__, index, offset, wr_reg[offset],
                     (uint8_t)*buf, serial->s.dlab);
             /* handle_bar_write(index, serial, offset, buf, count); */
         } else {
             /* handle_bar_read(index, serial, offset, buf, count); */
-            g_debug("%s: BAR%d  RD @0x%lx %s val:0x%02x dlab:%d\n",
+            g_debug("%s: BAR%d  RD @0x%lx %s val:0x%02x dlab:%d",
                     __func__, index, offset, rd_reg[offset],
                     (uint8_t)*buf, serial->s.dlab);
         }
@@ -325,6 +385,163 @@ vfio_user_serial_get_irq_info(VuDev *dev, uint32_t index,
     return 0;
 }
 
+static int
+vfio_user_serial_set_irqs(VuDev *dev, uint32_t index, uint32_t start,
+                          int *fds, size_t nfds, uint32_t flags)
+{
+    int ret = 0;
+    VuSerialDev *serial = container_of(dev, VuSerialDev, parent);
+
+    switch (index) {
+    case VFIO_PCI_INTX_IRQ_INDEX:
+        switch (flags & VFIO_IRQ_SET_ACTION_TYPE_MASK) {
+        case VFIO_IRQ_SET_ACTION_MASK:
+        case VFIO_IRQ_SET_ACTION_UNMASK:
+            break;
+        case VFIO_IRQ_SET_ACTION_TRIGGER: {
+            if (flags & VFIO_IRQ_SET_DATA_NONE) {
+                g_debug("%s: disable INTx", __func__);
+                /* if (serial->intx_evtfd) */
+                /*     eventfd_ctx_put(serial->intx_evtfd); */
+                break;
+            }
+
+            if (flags & VFIO_IRQ_SET_DATA_EVENTFD) {
+                /* int fd = *(int *)data; */
+
+                /* if (fd > 0) { */
+                /*     struct eventfd_ctx *evt; */
+
+                /*     evt = eventfd_ctx_fdget(fd); */
+                /*     if (IS_ERR(evt)) { */
+                /*         ret = PTR_ERR(evt); */
+                /*         break; */
+                /*     } */
+                /*     serial->intx_evtfd = evt; */
+                /*     serial->irq_fd = fd; */
+                /*     serial->irq_index = index; */
+                /*     break; */
+                /* } */
+            }
+            break;
+        }
+        }
+        break;
+    case VFIO_PCI_MSI_IRQ_INDEX:
+        switch (flags & VFIO_IRQ_SET_ACTION_TYPE_MASK) {
+        case VFIO_IRQ_SET_ACTION_MASK:
+        case VFIO_IRQ_SET_ACTION_UNMASK:
+            break;
+        case VFIO_IRQ_SET_ACTION_TRIGGER:
+            if (flags & VFIO_IRQ_SET_DATA_NONE) {
+                /* if (serial->msi_evtfd) */
+                /*     eventfd_ctx_put(serial->msi_evtfd); */
+                g_debug("%s: disable MSI", __func__);
+                serial->irq_index = VFIO_PCI_INTX_IRQ_INDEX;
+                break;
+            }
+            if (flags & VFIO_IRQ_SET_DATA_EVENTFD) {
+                /* int fd = *(int *)data; */
+                /* struct eventfd_ctx *evt; */
+
+                /* if (fd <= 0) */
+                /*     break; */
+
+                /* if (serial->msi_evtfd) */
+                /*     break; */
+
+                /* evt = eventfd_ctx_fdget(fd); */
+                /* if (IS_ERR(evt)) { */
+                /*     ret = PTR_ERR(evt); */
+                /*     break; */
+                /* } */
+                /* serial->msi_evtfd = evt; */
+                /* serial->irq_fd = fd; */
+                /* serial->irq_index = index; */
+            }
+            break;
+    }
+    break;
+    case VFIO_PCI_MSIX_IRQ_INDEX:
+        g_debug("%s: MSIX_IRQ", __func__);
+        break;
+    case VFIO_PCI_ERR_IRQ_INDEX:
+        g_debug("%s: ERR_IRQ", __func__);
+        break;
+    case VFIO_PCI_REQ_IRQ_INDEX:
+        g_debug("%s: REQ_IRQ", __func__);
+        break;
+    }
+
+    return ret;
+}
+
+static int
+vfio_user_serial_reset(VuDev *dev)
+{
+    g_debug("%s: called", __func__);
+    return 0;
+}
+
+static void
+vfio_user_serial_create_config_space(VuSerialDev *serial)
+{
+    /* PCI dev ID */
+    STORE_LE32((uint32_t *) &serial->vconfig[0x0], 0x32534348);
+
+    /* Control: I/O+, Mem-, BusMaster- */
+    STORE_LE16((uint16_t *) &serial->vconfig[0x4], 0x0001);
+
+    /* Status: capabilities list absent */
+    STORE_LE16((uint16_t *) &serial->vconfig[0x6], 0x0200);
+
+    /* Rev ID */
+    serial->vconfig[0x8] =  0x10;
+
+    /* programming interface class : 16550-compatible serial controller */
+    serial->vconfig[0x9] =  0x02;
+
+    /* Sub class : 00 */
+    serial->vconfig[0xa] =  0x00;
+
+    /* Base class : Simple Communication controllers */
+    serial->vconfig[0xb] =  0x07;
+
+    /* base address registers */
+    /* BAR0: IO space */
+    STORE_LE32((uint32_t *) &serial->vconfig[0x10], 0x000001);
+    serial->bar_mask[0] = ~(MTTY_IO_BAR_SIZE) + 1;
+
+    /* Subsystem ID */
+    STORE_LE32((uint32_t *) &serial->vconfig[0x2c], 0x32534348);
+
+    serial->vconfig[0x34] =  0x00;   /* Cap Ptr */
+    serial->vconfig[0x3d] =  0x01;   /* interrupt pin (INTA#) */
+
+    /* Vendor specific data */
+    serial->vconfig[0x40] =  0x23;
+    serial->vconfig[0x43] =  0x80;
+    serial->vconfig[0x44] =  0x23;
+    serial->vconfig[0x48] =  0x23;
+    serial->vconfig[0x4c] =  0x23;
+
+    serial->vconfig[0x60] =  0x50;
+    serial->vconfig[0x61] =  0x43;
+    serial->vconfig[0x62] =  0x49;
+    serial->vconfig[0x63] =  0x20;
+    serial->vconfig[0x64] =  0x53;
+    serial->vconfig[0x65] =  0x65;
+    serial->vconfig[0x66] =  0x72;
+    serial->vconfig[0x67] =  0x69;
+    serial->vconfig[0x68] =  0x61;
+    serial->vconfig[0x69] =  0x6c;
+    serial->vconfig[0x6a] =  0x2f;
+    serial->vconfig[0x6b] =  0x55;
+    serial->vconfig[0x6c] =  0x41;
+    serial->vconfig[0x6d] =  0x52;
+    serial->vconfig[0x6e] =  0x54;
+}
+
 static bool
 libvfio_user_init_container(libvfio *vfio, libvfio_container *container,
                             Error **errp)
@@ -454,6 +671,11 @@ libvfio_user_init_dev(libvfio *vfio, libvfio_dev *dev,
         .vfio = vfio,
     };
 
+    serial = (struct VuSerialDev) {
+        .s.max_fifo_size = MAX_FIFO_SIZE,
+    };
+    vfio_user_serial_create_config_space(&serial);
+
     return true;
 }
 
@@ -465,7 +687,14 @@ libvfio_user_dev_deinit(libvfio_dev *dev)
 static bool
 libvfio_user_dev_reset(libvfio_dev *dev, Error **errp)
 {
-    return false;
+    int ret = vfio_user_serial_reset(vdev);
+
+    if (ret < 0) {
+        error_setg_errno(errp, errno, "failed to rest");
+        return false;
+    }
+
+    return true;
 }
 
 static bool
@@ -477,7 +706,14 @@ libvfio_user_dev_set_irqs(libvfio_dev *dev,
                           uint32_t flags,
                           Error **errp)
 {
-    return false;
+    int ret = vfio_user_serial_set_irqs(vdev, index, start, fds, nfds, flags);
+
+    if (ret < 0) {
+        error_setg_errno(errp, -ret, "failed to set irqs");
+        return false;
+    }
+
+    return true;
 }
 
 static bool
@@ -486,8 +722,14 @@ libvfio_user_dev_get_irq_info(libvfio_dev *dev,
                               struct vfio_irq_info *irq,
                               Error **errp)
 {
-    vfio_user_serial_get_irq_info(vdev, index, irq);
-    return false;
+    int ret = vfio_user_serial_get_irq_info(vdev, index, irq);
+
+    if (ret < 0) {
+        error_setg_errno(errp, -ret, "failed to get irq info");
+        return false;
+    }
+
+    return true;
 }
 
 static bool
@@ -646,8 +888,8 @@ static libvfio_ops libvfio_user_ops = {
     .group_get_device = libvfio_user_group_get_device,
     .init_dev = libvfio_user_init_dev,
     .dev_deinit = libvfio_user_dev_deinit,
-    /* .dev_reset = libvfio_user_dev_reset, */
-    /* .dev_set_irqs = libvfio_user_dev_set_irqs, */
+    .dev_reset = libvfio_user_dev_reset,
+    .dev_set_irqs = libvfio_user_dev_set_irqs,
     .dev_get_irq_info = libvfio_user_dev_get_irq_info,
     .dev_get_info = libvfio_user_dev_get_info,
     .dev_get_region_info = libvfio_user_dev_get_region_info,
@@ -655,8 +897,8 @@ static libvfio_ops libvfio_user_ops = {
     /* .dev_pci_hot_reset = libvfio_user_dev_pci_hot_reset, */
     .dev_write = libvfio_user_dev_write,
     .dev_read = libvfio_user_dev_read,
-    /* .dev_mmap = libvfio_user_dev_mmap, */
-    /* .dev_unmmap = libvfio_user_dev_unmmap, */
+    .dev_mmap = libvfio_user_dev_mmap,
+    .dev_unmmap = libvfio_user_dev_unmmap,
 };
 
 bool

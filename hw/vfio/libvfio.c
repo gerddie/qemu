@@ -12,18 +12,18 @@
 #include "libvfio-priv.h"
 #include <sys/ioctl.h>
 
-#define LIBVFIO_CALL(vfio, miss, op, ...) ({                        \
-    typeof(miss) _ret = (miss);                                     \
-    assert(vfio);                                                   \
-    assert(vfio->ops);                                              \
-    g_debug(G_STRINGIFY(op)); \
-    if (!vfio->ops->op) {                                           \
+#define LIBVFIO_CALL(vfio, miss, op, ...) ({                    \
+    typeof(miss) _ret = (miss);                                 \
+    assert(vfio);                                               \
+    assert(vfio->ops);                                          \
+    g_debug(G_STRINGIFY(op));                                   \
+    if (!vfio->ops->op) {                                       \
         error_setg(errp, ERR_PREFIX "'%s' op not implemented",  \
-                   G_STRINGIFY(op));                                \
-    } else {                                                        \
-        _ret = (vfio)->ops->op(__VA_ARGS__);                        \
-    }                                                               \
-    _ret;                                                           \
+                   G_STRINGIFY(op));                            \
+    } else {                                                    \
+        _ret = (vfio)->ops->op(__VA_ARGS__);                    \
+    }                                                           \
+    _ret;                                                       \
 })
 
 #define LIBVFIO_VOID_CALL(vfio, op, ...) ({     \
