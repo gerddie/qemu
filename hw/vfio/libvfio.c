@@ -287,24 +287,26 @@ libvfio_dev_deinit(libvfio_dev *dev)
 const char *
 libvfio_dev_get_name(libvfio_dev *dev)
 {
+    assert(dev);
+
     return dev->name;
 }
 
 int
 libvfio_dev_get_groupid(libvfio_dev *dev)
 {
+    assert(dev);
+
     return dev->groupid;
 }
 
 bool
 libvfio_dev_reset(libvfio_dev *dev, Error **errp)
 {
-    if (ioctl(dev->fd, VFIO_DEVICE_RESET)) {
-        error_setg_errno(errp, errno, "vfio: Failed to reset device");
-        return false;
-    }
+    assert(dev);
 
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_reset, dev, errp);
 }
 
 bool
@@ -316,31 +318,11 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
                      uint32_t flags,
                      Error **errp)
 {
-    struct vfio_irq_set *irq_set;
-    int argsz, i;
-    int32_t *pfd;
+    assert(dev);
 
-    argsz = sizeof(*irq_set) + sizeof(*pfd) * nfds;
-    irq_set = g_alloca(argsz);
-    *irq_set = (struct vfio_irq_set) {
-        .argsz = argsz,
-        .flags = flags,
-        .index = index,
-        .start = start,
-        .start = 0,
-        .count = nfds,
-    };
-    pfd = (int32_t *)&irq_set->data;
-    for (i = 0; i < nfds; i++) {
-        pfd[i] = fds[i];
-    }
-
-    if (ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
-        error_setg_errno(errp, errno, "vfio: Failed to set trigger eventfd");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_set_irqs,
+                        dev, index, start, fds, nfds, flags, errp);
 }
 
 bool
@@ -370,43 +352,34 @@ libvfio_dev_get_irq_info(libvfio_dev *dev,
                          struct vfio_irq_info *irq,
                          Error **errp)
 {
-    irq->argsz = sizeof(*irq);
-    irq->index = index;
-    if (ioctl(dev->fd, VFIO_DEVICE_GET_IRQ_INFO, irq)) {
-        error_setg_errno(errp, errno, "failed to get device irq info");
-        return false;
-    }
+    assert(dev);
+    assert(irq);
 
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_irq_info, dev, index, irq, errp);
 }
 
 bool
 libvfio_dev_get_info(libvfio_dev *dev,
                      struct vfio_device_info *info, Error **errp)
 {
-    info->argsz = sizeof(*info);
+    assert(dev);
+    assert(info);
 
-    if (ioctl(dev->fd, VFIO_DEVICE_GET_INFO, info)) {
-        error_setg_errno(errp, errno, "error getting device info");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_info, dev, info, errp);
 }
 
 bool
 libvfio_dev_get_region_info(libvfio_dev *dev, int index,
                             struct vfio_region_info *info, Error **errp)
 {
+    assert(dev);
+    assert(info);
     assert(info->argsz >= sizeof(*info));
 
-    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info);
-    if (ret && errno != ENOSPC) {
-        error_setg_errno(errp, errno, "error getting region info");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_region_info, dev, index, info, errp);
 }
 
 bool
@@ -414,15 +387,12 @@ libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
                                    struct vfio_pci_hot_reset_info *info,
                                    Error **errp)
 {
+    assert(dev);
+    assert(info);
     assert(info->argsz >= sizeof(*info));
 
-    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
-    if (ret && errno != ENOSPC) {
-        error_setg_errno(errp, errno, "error getting PCI hot reset info");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_pci_hot_reset_info, dev, info, errp);
 }
 
 bool
@@ -430,26 +400,11 @@ libvfio_dev_pci_hot_reset(libvfio_dev *dev,
                           int *fds, int nfds,
                           Error **errp)
 {
-    int argsz, i;
-    struct vfio_pci_hot_reset *reset;
-    int32_t *pfd;
+    assert(dev);
+    assert(nfds == 0 || fds);
 
-    argsz = sizeof(*reset) + sizeof(*pfd) * nfds;
-    reset = g_alloca(argsz);
-    *reset = (struct vfio_pci_hot_reset) {
-        .argsz = argsz,
-    };
-    pfd = &reset->group_fds[0];
-    for (i = 0; i < nfds; i++) {
-        pfd[i] = fds[i];
-    }
-
-    if (ioctl(dev->fd, VFIO_DEVICE_PCI_HOT_RESET, reset)) {
-        error_setg_errno(errp, errno, "error hot reseting PCI");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_pci_hot_reset, dev, fds, nfds, errp);
 }
 
 ssize_t
@@ -457,19 +412,11 @@ libvfio_dev_write(libvfio_dev *dev,
                   const void *buf, size_t size, off_t offset,
                   Error **errp)
 {
-    ssize_t ret;
+    assert(dev);
+    assert(size == 0 || buf);
 
-again:
-    ret = pwrite(dev->fd, buf, size, offset);
-    if (ret < 0) {
-        if (errno == EINTR) {
-            goto again;
-        }
-        error_setg_errno(errp, errno, "pwrite() failed");
-        return -1;
-    }
-
-    return ret;
+    return LIBVFIO_CALL(dev->vfio, -1,
+                        dev_write, dev, buf, size, offset, errp);
 }
 
 ssize_t
@@ -477,19 +424,11 @@ libvfio_dev_read(libvfio_dev *dev,
                  void *buf, size_t size, off_t offset,
                  Error **errp)
 {
-    ssize_t ret;
+    assert(dev);
+    assert(size == 0 || buf);
 
-again:
-    ret = pread(dev->fd, buf, size, offset);
-    if (ret < 0) {
-        if (errno == EINTR) {
-            goto again;
-        }
-        error_setg_errno(errp, errno, "pread() failed");
-        return -1;
-    }
-
-    return ret;
+    return LIBVFIO_CALL(dev->vfio, -1,
+                        dev_read, dev, buf, size, offset, errp);
 }
 
 bool
@@ -525,21 +464,17 @@ libvfio_dev_mmap(libvfio_dev *dev,
                  size_t length, int prot, int flags, off_t offset,
                  Error **errp)
 {
-    void *ret = mmap(NULL, length, prot, flags, dev->fd, offset);
-    if (ret == MAP_FAILED) {
-        error_setg_errno(errp, errno, "mmap() failed");
-    }
+    assert(dev);
 
-    return ret;
+    return LIBVFIO_CALL(dev->vfio, MAP_FAILED,
+                        dev_mmap, dev, length, prot, flags, offset, errp);
 }
 
 bool
 libvfio_dev_unmmap(libvfio_dev *dev, void *addr, size_t length, Error **errp)
 {
-    if (munmap(addr, length) < 0) {
-        error_setg_errno(errp, errno, "munmap() failed");
-        return false;
-    }
+    assert(dev);
 
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_unmmap, dev, addr, length, errp);
 }

@@ -18,6 +18,7 @@ libvfio_host_init_container(libvfio *vfio, libvfio_container *container,
 {
     int ret, fd = qemu_open("/dev/vfio/vfio", O_RDWR);
 
+    container->fd = -1;
     if (fd < 0) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "failed to open /dev/vfio/vfio");
@@ -431,6 +432,208 @@ libvfio_host_dev_deinit(libvfio_dev *dev)
     dev->name = NULL;
 }
 
+static bool
+libvfio_host_dev_reset(libvfio_dev *dev, Error **errp)
+{
+    if (ioctl(dev->fd, VFIO_DEVICE_RESET)) {
+        error_setg_errno(errp, errno, ERR_PREFIX "Failed to reset device");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_set_irqs(libvfio_dev *dev,
+                          uint32_t index,
+                          uint32_t start,
+                          int *fds,
+                          size_t nfds,
+                          uint32_t flags,
+                          Error **errp)
+{
+    struct vfio_irq_set *irq_set;
+    int argsz, i;
+    int32_t *pfd;
+
+    argsz = sizeof(*irq_set) + sizeof(*pfd) * nfds;
+    irq_set = g_alloca(argsz);
+    *irq_set = (struct vfio_irq_set) {
+        .argsz = argsz,
+        .flags = flags,
+        .index = index,
+        .start = start,
+        .start = 0,
+        .count = nfds,
+    };
+    pfd = (int32_t *)&irq_set->data;
+    for (i = 0; i < nfds; i++) {
+        pfd[i] = fds[i];
+    }
+
+    if (ioctl(dev->fd, VFIO_DEVICE_SET_IRQS, irq_set)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "Failed to set trigger eventfd");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_get_irq_info(libvfio_dev *dev,
+                              uint32_t index,
+                              struct vfio_irq_info *irq,
+                              Error **errp)
+{
+    irq->argsz = sizeof(*irq);
+    irq->index = index;
+    if (ioctl(dev->fd, VFIO_DEVICE_GET_IRQ_INFO, irq)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "failed to get device irq info");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_get_info(libvfio_dev *dev,
+                          struct vfio_device_info *info, Error **errp)
+{
+    info->argsz = sizeof(*info);
+
+    if (ioctl(dev->fd, VFIO_DEVICE_GET_INFO, info)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "error getting device info");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_get_region_info(libvfio_dev *dev, int index,
+                                 struct vfio_region_info *info, Error **errp)
+{
+    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info);
+    if (ret && errno != ENOSPC) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "error getting region info");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+                                        struct vfio_pci_hot_reset_info *info,
+                                        Error **errp)
+{
+    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
+    if (ret && errno != ENOSPC) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "error getting PCI hot reset info");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_host_dev_pci_hot_reset(libvfio_dev *dev,
+                               int *fds, int nfds,
+                               Error **errp)
+{
+    int argsz, i;
+    struct vfio_pci_hot_reset *reset;
+    int32_t *pfd;
+
+    argsz = sizeof(*reset) + sizeof(*pfd) * nfds;
+    reset = g_alloca(argsz);
+    *reset = (struct vfio_pci_hot_reset) {
+        .argsz = argsz,
+    };
+    pfd = &reset->group_fds[0];
+    for (i = 0; i < nfds; i++) {
+        pfd[i] = fds[i];
+    }
+
+    if (ioctl(dev->fd, VFIO_DEVICE_PCI_HOT_RESET, reset)) {
+        error_setg_errno(errp, errno,
+                         ERR_PREFIX "error hot reseting PCI");
+        return false;
+    }
+
+    return true;
+}
+
+static ssize_t
+libvfio_host_dev_write(libvfio_dev *dev,
+                       const void *buf, size_t size, off_t offset,
+                       Error **errp)
+{
+    ssize_t ret;
+
+again:
+    ret = pwrite(dev->fd, buf, size, offset);
+    if (ret < 0) {
+        if (errno == EINTR) {
+            goto again;
+        }
+        error_setg_errno(errp, errno, ERR_PREFIX "pwrite() failed");
+        return -1;
+    }
+
+    return ret;
+}
+
+static ssize_t
+libvfio_host_dev_read(libvfio_dev *dev,
+                      void *buf, size_t size, off_t offset,
+                      Error **errp)
+{
+    ssize_t ret;
+
+again:
+    ret = pread(dev->fd, buf, size, offset);
+    if (ret < 0) {
+        if (errno == EINTR) {
+            goto again;
+        }
+        error_setg_errno(errp, errno, ERR_PREFIX "pread() failed");
+        return -1;
+    }
+
+    return ret;
+}
+
+static void *
+libvfio_host_dev_mmap(libvfio_dev *dev,
+                      size_t length, int prot, int flags, off_t offset,
+                      Error **errp)
+{
+    void *ret = mmap(NULL, length, prot, flags, dev->fd, offset);
+    if (ret == MAP_FAILED) {
+        error_setg_errno(errp, errno, ERR_PREFIX "mmap() failed");
+    }
+
+    return ret;
+}
+
+static bool
+libvfio_host_dev_unmmap(libvfio_dev *dev,
+                        void *addr, size_t length, Error **errp)
+{
+    if (munmap(addr, length) < 0) {
+        error_setg_errno(errp, errno, ERR_PREFIX "munmap() failed");
+        return false;
+    }
+
+    return true;
+}
+
 static libvfio_ops libvfio_host_ops = {
     .init_container = libvfio_host_init_container,
     .container_deinit = libvfio_host_container_deinit,
@@ -453,11 +656,24 @@ static libvfio_ops libvfio_host_ops = {
     .group_get_device = libvfio_host_group_get_device,
     .init_dev = libvfio_host_init_dev,
     .dev_deinit = libvfio_host_dev_deinit,
+    .dev_reset = libvfio_host_dev_reset,
+    .dev_set_irqs = libvfio_host_dev_set_irqs,
+    .dev_get_irq_info = libvfio_host_dev_get_irq_info,
+    .dev_get_info = libvfio_host_dev_get_info,
+    .dev_get_region_info = libvfio_host_dev_get_region_info,
+    .dev_get_pci_hot_reset_info = libvfio_host_dev_get_pci_hot_reset_info,
+    .dev_pci_hot_reset = libvfio_host_dev_pci_hot_reset,
+    .dev_write = libvfio_host_dev_write,
+    .dev_read = libvfio_host_dev_read,
+    .dev_mmap = libvfio_host_dev_mmap,
+    .dev_unmmap = libvfio_host_dev_unmmap,
 };
 
 bool
 libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
 {
+    bool success;
+    libvfio_container container;
     assert(vfio);
 
     if (VFIO_API_VERSION != api_version) {
@@ -468,5 +684,10 @@ libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
 
     vfio->fd = -1;
     vfio->ops = &libvfio_host_ops;
-    return true;
+
+    /* check kernel version */
+    success = libvfio_init_container(vfio, &container, errp);
+    libvfio_container_deinit(&container);
+
+    return success;
 }
