@@ -14,6 +14,7 @@
 
 #define LIBVFIO_CALL(vfio, miss, op, ...) ({                        \
     typeof(miss) _ret = (miss);                                     \
+    assert(vfio);                                                   \
     assert(vfio->ops);                                              \
     if (!vfio->ops->op) {                                           \
         error_setg(errp, ERR_PREFIX "'%s' op not implemented",  \
@@ -25,6 +26,7 @@
 })
 
 #define LIBVFIO_VOID_CALL(vfio, op, ...) ({     \
+    assert(vfio);                               \
     assert(vfio->ops);                          \
     assert(vfio->ops->op);                      \
     (vfio)->ops->op(__VA_ARGS__);               \
@@ -69,12 +71,10 @@ bool
 libvfio_container_set_iommu(libvfio_container *container, int iommu_type,
                             Error **errp)
 {
-    if (ioctl(container->fd, VFIO_SET_IOMMU, iommu_type)) {
-        error_setg_errno(errp, errno, "failed to set iommu for container");
-        return false;
-    }
+    assert(container);
 
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_set_iommu, container, iommu_type, errp);
 }
 
 bool
@@ -82,24 +82,20 @@ libvfio_container_iommu_get_info(libvfio_container *container,
                                  struct vfio_iommu_type1_info *info,
                                  Error **errp)
 {
-    info->argsz = sizeof(*info);
-    if (ioctl(container->fd, VFIO_IOMMU_GET_INFO, info)) {
-        error_setg_errno(errp, errno, "failed to get iommu info");
-        return false;
-    }
+    assert(container);
+    assert(info);
 
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_get_info, container, info, errp);
 }
 
 bool
 libvfio_container_iommu_enable(libvfio_container *container, Error **errp)
 {
-    if (ioctl(container->fd, VFIO_IOMMU_ENABLE)) {
-        error_setg_errno(errp, errno, "failed to enable container");
-        return false;
-    }
+    assert(container);
 
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_enable, container, errp);
 }
 
 bool
@@ -108,38 +104,11 @@ libvfio_container_iommu_map_dma(libvfio_container *container,
                                 uint64_t size, uint32_t flags,
                                 Error **errp)
 {
-    struct vfio_iommu_type1_dma_map map = {
-        .argsz = sizeof(map),
-        .flags = flags,
-        .vaddr = vaddr,
-        .iova = iova,
-        .size = size,
-    };
+    assert(container);
 
-    /*
-     * Try the mapping, if it fails with EBUSY, unmap the region and try
-     * again.  This shouldn't be necessary, but we sometimes see it in
-     * the VGA ROM space.
-     */
-    if (ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0) {
-        return true;
-    }
-
-    if (errno != EBUSY) {
-        goto error;
-    }
-
-    if (!libvfio_container_iommu_unmap_dma(container, iova, size, 0, NULL)) {
-        goto error;
-    }
-
-    if (ioctl(container->fd, VFIO_IOMMU_MAP_DMA, &map) == 0) {
-        return true;
-    }
-
-error:
-    error_setg_errno(errp, errno, "VFIO_MAP_DMA failed");
-    return false;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_map_dma, container,
+                        vaddr, iova, size, flags, errp);
 }
 
 bool
@@ -147,19 +116,11 @@ libvfio_container_iommu_unmap_dma(libvfio_container *container,
                                   uint64_t iova, uint64_t size,
                                   uint32_t flags, Error **errp)
 {
-    struct vfio_iommu_type1_dma_unmap unmap = {
-        .argsz = sizeof(unmap),
-        .flags = 0,
-        .iova = iova,
-        .size = size,
-    };
+    assert(container);
 
-    if (ioctl(container->fd, VFIO_IOMMU_UNMAP_DMA, &unmap)) {
-        error_setg_errno(errp, errno, "VFIO_UNMAP_DMA failed");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_unmap_dma, container,
+                        iova, size, flags, errp);
 }
 
 bool
@@ -167,14 +128,12 @@ libvfio_container_iommu_spapr_tce_get_info(libvfio_container *container,
                                          struct vfio_iommu_spapr_tce_info *info,
                                          Error **errp)
 {
-    info->argsz = sizeof(*info);
-    if (ioctl(container->fd, VFIO_IOMMU_SPAPR_TCE_GET_INFO, info)) {
-        error_setg_errno(errp, errno,
-                         "VFIO_IOMMU_SPAPR_TCE_GET_INFO failed");
-        return false;
-    }
+    assert(container);
+    assert(info);
 
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_spapr_tce_get_info,
+                        container, info, errp);
 }
 
 bool
@@ -184,20 +143,11 @@ libvfio_container_iommu_spapr_register_memory(libvfio_container *container,
                                               uint32_t flags,
                                               Error **errp)
 {
-    struct vfio_iommu_spapr_register_memory reg = {
-        .argsz = sizeof(reg),
-        .vaddr = vaddr,
-        .size = size,
-        .flags = flags,
-    };
+    assert(container);
 
-    if (ioctl(container->fd, VFIO_IOMMU_SPAPR_REGISTER_MEMORY, &reg)) {
-        error_setg_errno(errp, errno,
-                         "VFIO_IOMMU_SPAPR_REGISTER_MEMORY failed");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_spapr_register_memory,
+                        container, vaddr, size, flags, errp);
 }
 
 bool
@@ -207,20 +157,11 @@ libvfio_container_iommu_spapr_unregister_memory(libvfio_container *container,
                                                 uint32_t flags,
                                                 Error **errp)
 {
-    struct vfio_iommu_spapr_register_memory reg = {
-        .argsz = sizeof(reg),
-        .vaddr = vaddr,
-        .size = size,
-        .flags = flags,
-    };
+    assert(container);
 
-    if (ioctl(container->fd, VFIO_IOMMU_SPAPR_UNREGISTER_MEMORY, &reg)) {
-        error_setg_errno(errp, errno,
-                         "VFIO_IOMMU_SPAPR_UNREGISTER_MEMORY failed");
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_spapr_unregister_memory,
+                        container, vaddr, size, flags, errp);
 }
 
 bool
@@ -232,22 +173,13 @@ libvfio_container_iommu_spapr_tce_create(libvfio_container *container,
                                          uint64_t *start_addr,
                                          Error **errp)
 {
-    struct vfio_iommu_spapr_tce_create create = {
-        .argsz = sizeof(create),
-        .page_shift = page_shift,
-        .window_size = window_size,
-        .levels = levels,
-        .flags = flags
-    };
+    assert(container);
+    assert(start_addr);
 
-    if (!ioctl(container->fd, VFIO_IOMMU_SPAPR_TCE_CREATE, &create)) {
-        error_setg_errno(errp, errno,
-                         "VFIO_IOMMU_SPAPR_TCE_CREATE failed");
-        return false;
-    }
-
-    *start_addr = create.start_addr;
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_spapr_tce_create,
+                        container, page_shift, window_size, levels, flags,
+                        start_addr, errp);
 }
 
 bool
@@ -255,35 +187,21 @@ libvfio_container_iommu_spapr_tce_remove(libvfio_container *container,
                                          uint64_t start_addr,
                                          Error **errp)
 {
-    struct vfio_iommu_spapr_tce_remove remove = {
-        .argsz = sizeof(remove),
-        .start_addr = start_addr,
-    };
+    assert(container);
 
-    if (ioctl(container->fd, VFIO_IOMMU_SPAPR_TCE_REMOVE, &remove)) {
-        error_setg(errp, "Failed to remove window at %"PRIx64,
-                   (uint64_t)remove.start_addr);
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_iommu_spapr_tce_remove,
+                        container, start_addr, errp);
 }
 
 bool
 libvfio_container_eeh_pe_op(libvfio_container *container,
                             uint32_t op, Error **errp)
 {
-    struct vfio_eeh_pe_op pe_op = {
-        .argsz = sizeof(pe_op),
-        .op = op,
-    };
+    assert(container);
 
-    if (ioctl(container->fd, VFIO_EEH_PE_OP, &pe_op)) {
-        error_setg_errno(errp, errno, "vfio/eeh: EEH_PE_OP 0x%x failed", op);
-        return false;
-    }
-
-    return true;
+    return LIBVFIO_CALL(container->vfio, false,
+                        container_eeh_pe_op, container, op, errp);
 }
 
 bool
