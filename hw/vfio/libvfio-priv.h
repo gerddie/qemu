@@ -114,8 +114,8 @@ struct libvfio_ops {
                                                         struct vfio_pci_hot_reset_info *info,
                                                         Error **errp);
     bool (*dev_pci_hot_reset)                          (libvfio_dev *dev,
-                                                        int *fds,
-                                                        int nfds,
+                                                        libvfio_group **groups,
+                                                        size_t ngroups,
                                                         Error **errp);
     ssize_t (*dev_write)                               (libvfio_dev *dev,
                                                         const void *buf,

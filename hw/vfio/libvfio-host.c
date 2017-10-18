@@ -555,21 +555,22 @@ libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 
 static bool
 libvfio_host_dev_pci_hot_reset(libvfio_dev *dev,
-                               int *fds, int nfds,
+                               libvfio_group **groups,
+                               size_t ngroups,
                                Error **errp)
 {
     int argsz, i;
     struct vfio_pci_hot_reset *reset;
     int32_t *pfd;
 
-    argsz = sizeof(*reset) + sizeof(*pfd) * nfds;
+    argsz = sizeof(*reset) + sizeof(*pfd) * ngroups;
     reset = g_alloca(argsz);
     *reset = (struct vfio_pci_hot_reset) {
         .argsz = argsz,
     };
     pfd = &reset->group_fds[0];
-    for (i = 0; i < nfds; i++) {
-        pfd[i] = fds[i];
+    for (i = 0; i < ngroups; i++) {
+        pfd[i] = groups[i]->fd;
     }
 
     if (ioctl(dev->fd, VFIO_DEVICE_PCI_HOT_RESET, reset)) {

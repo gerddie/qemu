@@ -403,14 +403,15 @@ libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 
 bool
 libvfio_dev_pci_hot_reset(libvfio_dev *dev,
-                          int *fds, int nfds,
+                          libvfio_group **groups,
+                          size_t ngroups,
                           Error **errp)
 {
     assert(dev);
-    assert(nfds == 0 || fds);
+    assert(ngroups == 0 || groups);
 
     return LIBVFIO_CALL(dev->vfio, false,
-                        dev_pci_hot_reset, dev, fds, nfds, errp);
+                        dev_pci_hot_reset, dev, groups, ngroups, errp);
 }
 
 ssize_t

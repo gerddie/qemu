@@ -2034,8 +2034,8 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     VFIOGroup *group;
     struct vfio_pci_hot_reset_info *info;
     struct vfio_pci_dependent_device *devices;
-    int32_t *fds;
-    int ret, i, count, nfd = 0;
+    libvfio_group **groups;
+    int ret, i, count, ngroup = 0;
     bool multi = false;
 
     trace_vfio_pci_hot_reset(vdev->vbasedev.name, single ? "one" : "multi");
@@ -2133,7 +2133,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         goto out_single;
     }
 
-    /* Determine how many group fds need to be passed */
+    /* Determine how many group need to be passed */
     count = 0;
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
@@ -2144,12 +2144,12 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         }
     }
 
-    fds = g_newa(int, info->count);
+    groups = g_newa(libvfio_group *, info->count);
     /* Fill in group fds */
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {
             if (group->libvfio_group.groupid == devices[i].group_id) {
-                fds[nfd++] = group->libvfio_group.fd;
+                groups[ngroup++] = &group->libvfio_group;
                 break;
             }
         }
@@ -2157,7 +2157,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
 
     /* Bus reset! */
     libvfio_dev_pci_hot_reset(&vdev->vbasedev.libvfio_dev,
-                              fds, nfd, &err);
+                              groups, ngroup, &err);
 
     trace_vfio_pci_hot_reset_result(vdev->vbasedev.name,
                                     err ? error_get_pretty(err) : "Success");

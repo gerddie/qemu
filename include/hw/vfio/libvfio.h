@@ -158,8 +158,8 @@ bool            libvfio_dev_get_pci_hot_reset_info  (libvfio_dev *dev,
                                                      struct vfio_pci_hot_reset_info *info,
                                                      Error **errp);
 bool            libvfio_dev_pci_hot_reset           (libvfio_dev *dev,
-                                                     int *fds,
-                                                     int nfds,
+                                                     libvfio_group **groups,
+                                                     size_t ngroups,
                                                      Error **errp);
 ssize_t         libvfio_dev_write                   (libvfio_dev *dev,
                                                      const void *buf,
