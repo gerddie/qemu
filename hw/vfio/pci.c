@@ -2563,6 +2563,24 @@ static void vfio_unregister_req_notifier(VFIOPCIDevice *vdev)
     vdev->req_enabled = false;
 }
 
+static bool vfio_get_mem_fd(void *ptr,
+                            uint64_t *offset, int *fd,
+                            Error **errp)
+{
+    MemoryRegion *mr;
+    ram_addr_t off;
+
+    mr = memory_region_from_host(ptr, &off);
+    if (!mr) {
+        error_setg(errp, "failed to get memory region");
+        return false;
+    }
+
+    *offset = off;
+    *fd = memory_region_get_fd(mr);
+    return true;
+}
+
 static void vfio_realize(PCIDevice *pdev, Error **errp)
 {
     VFIOPCIDevice *vdev = DO_UPCAST(VFIOPCIDevice, pdev, pdev);
@@ -2574,7 +2592,9 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
 
     if (qemu_chr_fe_backend_connected(&vdev->vbasedev.chr)) {
         if (!libvfio_init_user(&vdev->vbasedev.libvfio,
-                               &vdev->vbasedev.chr, errp)) {
+                               &vdev->vbasedev.chr,
+                               vfio_get_mem_fd,
+                               errp)) {
             return;
         }
         if (!libvfio_init_dev(&vdev->vbasedev.libvfio,

@@ -1,0 +1,2 @@
+libvfio-user-obj-y += libvfio-user.o libvfio-user-glib.o
+vfio-user-serial-obj-y += vfio-user-serial.c

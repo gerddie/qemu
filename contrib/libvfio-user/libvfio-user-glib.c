@@ -1,12 +1,10 @@
 /*
- * Vhost User library
+ * vfio-user library
  *
- * Copyright (c) 2016 Nutanix Inc. All rights reserved.
  * Copyright (c) 2017 Red Hat, Inc.
  *
  * Authors:
  *  Marc-André Lureau <mlureau@redhat.com>
- *  Felipe Franciosi <felipe@nutanix.com>
  *
  * This work is licensed under the terms of the GNU GPL, version 2 or
  * later.  See the COPYING file in the top-level directory.
@@ -14,9 +12,9 @@
 
 #include "qemu/osdep.h"
 
-#include "libvhost-user-glib.h"
+#include "libvfio-user-glib.h"
 
-/* glib event loop integration for libvhost-user and misc callbacks */
+/* glib event loop integration for libvfio-user and misc callbacks */
 
 G_STATIC_ASSERT((int)G_IO_IN == (int)VU_WATCH_IN);
 G_STATIC_ASSERT((int)G_IO_OUT == (int)VU_WATCH_OUT);
@@ -126,7 +124,7 @@ remove_watch(VuDev *vu_dev, int fd)
 static void vug_watch(VuDev *dev, int condition, void *data)
 {
     if (!vu_dispatch(dev) != 0) {
-        dev->panic(dev, "Error processing vhost message");
+        dev->panic(dev, "Error processing vfio-user message");
     }
 }
 

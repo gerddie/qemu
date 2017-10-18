@@ -270,6 +270,8 @@ dummy := $(call unnest-vars,, \
                 ivshmem-client-obj-y \
                 ivshmem-server-obj-y \
                 libvhost-user-obj-y \
+                libvfio-user-obj-y \
+                vfio-user-serial-obj-y \
                 vhost-user-scsi-obj-y \
                 qga-vss-dll-obj-y \
                 block-obj-y \
@@ -358,6 +360,7 @@ Makefile: $(version-obj-y)
 
 libqemuutil.a: $(util-obj-y) $(trace-obj-y) $(stub-obj-y)
 libvhost-user.a: $(libvhost-user-obj-y)
+libvfio-user.a: $(libvfio-user-obj-y)
 
 ######################################################################
 
@@ -481,6 +484,8 @@ ivshmem-server$(EXESUF): $(ivshmem-server-obj-y) $(COMMON_LDADDS)
 	$(call LINK, $^)
 endif
 vhost-user-scsi$(EXESUF): $(vhost-user-scsi-obj-y) libvhost-user.a
+	$(call LINK, $^)
+vfio-user-serial$(EXESUF): $(vfio-user-serial-obj-y) libvfio-user.a
 	$(call LINK, $^)
 
 module_block.h: $(SRC_PATH)/scripts/modules/module_block.py config-host.mak

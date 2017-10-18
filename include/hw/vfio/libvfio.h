@@ -17,13 +17,20 @@
 
 #include <linux/vfio.h>
 
-G_BEGIN_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct libvfio_ops libvfio_ops;
+
+typedef bool libvfio_get_mem_fd(void *ptr,
+                                uint64_t *offset, int *fd,
+                                Error **errp);
 
 typedef struct libvfio {
     const libvfio_ops *ops;
     CharBackend *chr;
+    libvfio_get_mem_fd *get_mem_fd;
 } libvfio;
 
 typedef struct libvfio_container {
@@ -49,6 +56,7 @@ bool            libvfio_init_host                   (libvfio *vfio,
                                                      Error **errp);
 bool            libvfio_init_user                   (libvfio *vfio,
                                                      CharBackend *chr,
+                                                     libvfio_get_mem_fd *get_mem_fd,
                                                      Error **errp);
 
 bool            libvfio_init_container              (libvfio *vfio,
@@ -190,6 +198,8 @@ bool            libvfio_dev_unmmap                  (libvfio_dev *dev,
                                                      size_t length,
                                                      Error **errp);
 
-G_END_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LIBVFIO_H_ */
