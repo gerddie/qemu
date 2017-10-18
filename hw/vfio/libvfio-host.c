@@ -18,7 +18,6 @@ libvfio_host_init_container(libvfio *vfio, libvfio_container *container,
 {
     int ret, fd = qemu_open("/dev/vfio/vfio", O_RDWR);
 
-    container->fd = -1;
     if (fd < 0) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "failed to open /dev/vfio/vfio");
@@ -33,8 +32,11 @@ libvfio_host_init_container(libvfio *vfio, libvfio_container *container,
         return false;
     }
 
-    container->vfio = vfio;
-    container->fd = fd;
+    *container = (struct libvfio_container) {
+        .vfio = vfio,
+        .fd = fd,
+    };
+
     return true;
 }
 
@@ -290,18 +292,19 @@ static bool
 libvfio_host_init_group(libvfio *vfio, libvfio_group *group,
                         int groupid, Error **errp)
 {
+    int fd;
     char path[32];
     struct vfio_group_status status = { .argsz = sizeof(status) };
 
     snprintf(path, sizeof(path), "/dev/vfio/%d", groupid);
-    group->fd = qemu_open(path, O_RDWR);
-    if (group->fd < 0) {
+    fd = qemu_open(path, O_RDWR);
+    if (fd < 0) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "failed to open %s", path);
         return false;
     }
 
-    if (ioctl(group->fd, VFIO_GROUP_GET_STATUS, &status)) {
+    if (ioctl(fd, VFIO_GROUP_GET_STATUS, &status)) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "failed to get group %d status", groupid);
         goto close_fd_exit;
@@ -315,12 +318,16 @@ libvfio_host_init_group(libvfio *vfio, libvfio_group *group,
         goto close_fd_exit;
     }
 
-    group->vfio = vfio;
-    group->groupid = groupid;
+    *group = (struct libvfio_group) {
+        .vfio = vfio,
+        .groupid = groupid,
+        .fd = fd,
+    };
+
     return true;
 
 close_fd_exit:
-    qemu_close(group->fd);
+    qemu_close(fd);
     return false;
 }
 
@@ -391,6 +398,7 @@ libvfio_host_init_dev(libvfio *vfio, libvfio_dev *dev,
     ssize_t len;
     int groupid;
 
+    assert(path);
     if (stat(path, &st) < 0) {
         error_setg_errno(errp, errno, ERR_PREFIX "no such host device");
         return false;
@@ -415,9 +423,13 @@ libvfio_host_init_dev(libvfio *vfio, libvfio_dev *dev,
         return false;
     }
 
-    dev->vfio = vfio;
-    dev->groupid = groupid;
-    dev->name = g_strdup(basename(path));
+    *dev = (struct libvfio_dev) {
+        .vfio = vfio,
+        .groupid = groupid,
+        .name = g_strdup(basename(path)),
+        .fd = -1,
+    };
+
     return true;
 }
 

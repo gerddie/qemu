@@ -40,6 +40,8 @@ libvfio_init_container(libvfio *vfio, libvfio_container *container,
     assert(vfio);
     assert(container);
 
+    *container = (struct libvfio_container) { .fd = -1 };
+
     return LIBVFIO_CALL(vfio, false,
                         init_container, vfio, container, errp);
 }
@@ -212,6 +214,8 @@ libvfio_init_group(libvfio *vfio, libvfio_group *group,
     assert(vfio);
     assert(group);
 
+    *group = (struct libvfio_group) { .fd = -1 };
+
     return LIBVFIO_CALL(vfio, false,
                         init_group, vfio, group, groupid, errp);
 }
@@ -268,7 +272,8 @@ libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
 {
     assert(vfio);
     assert(dev);
-    assert(path);
+
+    *dev = (struct libvfio_dev) { .fd = -1 };
 
     return LIBVFIO_CALL(vfio, false,
                         init_dev, vfio, dev, path, errp);
