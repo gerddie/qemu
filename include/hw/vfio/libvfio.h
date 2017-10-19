@@ -21,14 +21,14 @@
 extern "C" {
 #endif
 
-typedef struct libvfio_ops libvfio_ops_t;
-
-typedef bool libvfio_get_mem_fd_t                   (void *ptr,
+typedef bool    libvfio_get_mem_fd_t                (void *ptr,
                                                      uint64_t *offset,
                                                      int *fd,
                                                      Error **errp);
 
-typedef void * libvfio_realloc_t                    (void *mem, size_t n_bytes);
+typedef void *  libvfio_realloc_t                   (void *mem, size_t n_bytes);
+
+typedef struct libvfio_ops libvfio_ops_t;
 
 typedef struct libvfio {
     const libvfio_ops_t *ops;
