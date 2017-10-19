@@ -16,7 +16,7 @@ static bool
 libvfio_user_write(libvfio *vfio, vfio_user_msg *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE + msg->size;
-    int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t*)msg, size);
+    int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t *)msg, size);
 
     if (ret != size) {
         error_setg(errp, "failed to write %d bytes, wrote %d", size, ret);
@@ -30,7 +30,7 @@ static bool
 libvfio_user_read_hdr(libvfio *vfio, vfio_user_msg *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE;
-    int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t*)msg, size);
+    int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t *)msg, size);
 
     if (ret != size) {
         error_setg(errp, "failed to read %d bytes, read %d", size, ret);
