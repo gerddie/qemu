@@ -13,6 +13,8 @@
 #include "vfio-user.h"
 
 #include <linux/pci.h>
+#include <linux/serial_reg.h>
+#include <sys/eventfd.h>
 
 typedef struct VuDev {
 } VuDev;
@@ -86,16 +88,47 @@ struct serial_port {
 typedef struct VuSerialDev {
     VuDev parent;
 
-    struct region_info region_info[VFIO_PCI_NUM_REGIONS];
-    uint32_t bar_mask[VFIO_PCI_NUM_REGIONS];
-    struct vfio_device_info dev_info;
+    int intx_evtfd;
+    int msi_evtfd;
     int irq_index;
     char vconfig[MTTY_CONFIG_SPACE_SIZE];
+    struct region_info region_info[VFIO_PCI_NUM_REGIONS];
+    uint32_t bar_mask[VFIO_PCI_NUM_REGIONS];
     struct serial_port s;
+    struct vfio_device_info dev_info;
 } VuSerialDev;
 
 static VuSerialDev serial;
 static VuDev *vdev = &serial.parent;
+
+
+static int
+vfio_user_serial_trigger_interrupt(VuSerialDev *serial)
+{
+    int ret = -1;
+
+    if ((serial->irq_index == VFIO_PCI_MSI_IRQ_INDEX) &&
+        (!serial->msi_evtfd)) {
+        return -EINVAL;
+    } else if ((serial->irq_index == VFIO_PCI_INTX_IRQ_INDEX) &&
+         (!serial->intx_evtfd)) {
+        g_debug("%s: Intr eventfd not found\n", __func__);
+        return -EINVAL;
+    }
+
+    if (serial->irq_index == VFIO_PCI_MSI_IRQ_INDEX) {
+        ret = eventfd_write(serial->msi_evtfd, 1);
+    } else {
+        ret = eventfd_write(serial->intx_evtfd, 1);
+    }
+
+    g_debug("Intx triggered\n");
+    if (ret != 1) {
+        g_critical("%s: eventfd signal failed (%d)\n", __func__, ret);
+    }
+
+    return ret;
+}
 
 static void
 vfio_user_serial_read_base(VuDev *dev)
@@ -190,6 +223,42 @@ static void handle_pci_cfg_write(VuSerialDev *serial, uint16_t offset,
     }
 }
 
+static void
+handle_bar_read(VuSerialDev *serial, unsigned int index,
+                uint16_t offset, char *buf, uint32_t count)
+{
+    /* Handle read requests by guest */
+    switch (offset) {
+    case UART_RX:
+        break;
+    case UART_SCR:
+        *buf = serial->s.uart_reg[offset];
+        break;
+
+    default:
+        break;
+    }
+}
+
+static void
+handle_bar_write(VuSerialDev *serial, unsigned int index,
+                 uint16_t offset, char *buf, uint32_t count)
+{
+    uint8_t data = *buf;
+
+    /* Handle data written by guest */
+    switch (offset) {
+    case UART_TX:
+        break;
+    case UART_SCR:
+        serial->s.uart_reg[offset] = data;
+        break;
+
+    default:
+        break;
+    }
+}
+
 static ssize_t
 vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
                         off_t pos, bool is_write)
@@ -219,9 +288,9 @@ vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
             g_debug("%s: BAR%d  WR @0x%lx %s val:0x%02x dlab:%d",
                     __func__, index, offset, wr_reg[offset],
                     (uint8_t)*buf, serial->s.dlab);
-            /* handle_bar_write(index, serial, offset, buf, count); */
+            handle_bar_write(serial, index, offset, buf, count);
         } else {
-            /* handle_bar_read(index, serial, offset, buf, count); */
+            handle_bar_read(serial, index, offset, buf, count);
             g_debug("%s: BAR%d  RD @0x%lx %s val:0x%02x dlab:%d",
                     __func__, index, offset, rd_reg[offset],
                     (uint8_t)*buf, serial->s.dlab);
@@ -332,12 +401,15 @@ vfio_user_serial_get_device_info(VuDev *dev,
 }
 
 static int
-vfio_user_serial_get_region_info(VuDev *dev,
+vfio_user_serial_get_region_info(VuDev *dev, int index,
                                  struct vfio_region_info *info)
 {
     VuSerialDev *serial = container_of(dev, VuSerialDev, parent);
 
-    switch (info->index) {
+    if (index >= VFIO_PCI_NUM_REGIONS)
+        return -EINVAL;
+
+    switch (index) {
     case VFIO_PCI_CONFIG_REGION_INDEX:
         info->size = MTTY_CONFIG_SPACE_SIZE;
         break;
@@ -349,11 +421,11 @@ vfio_user_serial_get_region_info(VuDev *dev,
         break;
     }
 
-    info->offset = MTTY_VFIO_PCI_INDEX_TO_OFFSET(info->index);
+    info->offset = MTTY_VFIO_PCI_INDEX_TO_OFFSET(index);
     info->flags = VFIO_REGION_INFO_FLAG_READ | VFIO_REGION_INFO_FLAG_WRITE;
 
-    serial->region_info[info->index].size = info->size;
-    serial->region_info[info->index].vfio_offset = info->offset;
+    serial->region_info[index].size = info->size;
+    serial->region_info[index].vfio_offset = info->offset;
 
     return 0;
 }
@@ -401,27 +473,20 @@ vfio_user_serial_set_irqs(VuDev *dev, uint32_t index, uint32_t start,
         case VFIO_IRQ_SET_ACTION_TRIGGER: {
             if (flags & VFIO_IRQ_SET_DATA_NONE) {
                 g_debug("%s: disable INTx", __func__);
-                /* if (serial->intx_evtfd) */
-                /*     eventfd_ctx_put(serial->intx_evtfd); */
+                if (serial->intx_evtfd >= 0) {
+                    close(serial->intx_evtfd);
+                    serial->intx_evtfd = -1;
+                }
                 break;
             }
 
             if (flags & VFIO_IRQ_SET_DATA_EVENTFD) {
-                /* int fd = *(int *)data; */
+                if (nfds != 1 || serial->intx_evtfd >= 0) {
+                    return -EINVAL;
+                }
 
-                /* if (fd > 0) { */
-                /*     struct eventfd_ctx *evt; */
-
-                /*     evt = eventfd_ctx_fdget(fd); */
-                /*     if (IS_ERR(evt)) { */
-                /*         ret = PTR_ERR(evt); */
-                /*         break; */
-                /*     } */
-                /*     serial->intx_evtfd = evt; */
-                /*     serial->irq_fd = fd; */
-                /*     serial->irq_index = index; */
-                /*     break; */
-                /* } */
+                serial->intx_evtfd = *fds;
+                serial->irq_index = index;
             }
             break;
         }
@@ -434,30 +499,21 @@ vfio_user_serial_set_irqs(VuDev *dev, uint32_t index, uint32_t start,
             break;
         case VFIO_IRQ_SET_ACTION_TRIGGER:
             if (flags & VFIO_IRQ_SET_DATA_NONE) {
-                /* if (serial->msi_evtfd) */
-                /*     eventfd_ctx_put(serial->msi_evtfd); */
+                if (serial->msi_evtfd >= 0) {
+                    close(serial->msi_evtfd);
+                    serial->msi_evtfd = -1;
+                }
                 g_debug("%s: disable MSI", __func__);
                 serial->irq_index = VFIO_PCI_INTX_IRQ_INDEX;
                 break;
             }
             if (flags & VFIO_IRQ_SET_DATA_EVENTFD) {
-                /* int fd = *(int *)data; */
-                /* struct eventfd_ctx *evt; */
+                if (nfds != 1 || serial->msi_evtfd >= 0) {
+                    return -EINVAL;
+                }
 
-                /* if (fd <= 0) */
-                /*     break; */
-
-                /* if (serial->msi_evtfd) */
-                /*     break; */
-
-                /* evt = eventfd_ctx_fdget(fd); */
-                /* if (IS_ERR(evt)) { */
-                /*     ret = PTR_ERR(evt); */
-                /*     break; */
-                /* } */
-                /* serial->msi_evtfd = evt; */
-                /* serial->irq_fd = fd; */
-                /* serial->irq_index = index; */
+                serial->msi_evtfd = *fds;
+                serial->irq_index = index;
             }
             break;
     }
@@ -673,6 +729,8 @@ libvfio_user_init_dev(libvfio *vfio, libvfio_dev *dev,
 
     serial = (struct VuSerialDev) {
         .s.max_fifo_size = MAX_FIFO_SIZE,
+        .intx_evtfd = -1,
+        .msi_evtfd = -1,
     };
     vfio_user_serial_create_config_space(&serial);
 
@@ -808,7 +866,7 @@ static bool
 libvfio_user_dev_get_region_info(libvfio_dev *dev, int index,
                                  struct vfio_region_info *info, Error **errp)
 {
-    vfio_user_serial_get_region_info(vdev, info);
+    vfio_user_serial_get_region_info(vdev, index, info);
 
     return true;
 }
