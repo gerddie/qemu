@@ -156,7 +156,7 @@ libvfio_user_container_iommu_unmap_dma(libvfio_container_t *container,
 }
 
 static bool
-libvfio_user_init_group(libvfio_t *vfio, libvfio_group *group,
+libvfio_user_init_group(libvfio_t *vfio, libvfio_group_t *group,
                         int groupid, Error **errp)
 {
     *group = (struct libvfio_group) {
@@ -167,20 +167,20 @@ libvfio_user_init_group(libvfio_t *vfio, libvfio_group *group,
 }
 
 static void
-libvfio_user_group_deinit(libvfio_group *group)
+libvfio_user_group_deinit(libvfio_group_t *group)
 {
 }
 
 static bool
-libvfio_user_group_get_device(libvfio_group *group,
-                              libvfio_dev *dev, Error **errp)
+libvfio_user_group_get_device(libvfio_group_t *group,
+                              libvfio_dev_t *dev, Error **errp)
 {
     /* XXX: could learn to lookup a specific device */
     return true;
 }
 
 static bool
-libvfio_user_group_set_container(libvfio_group *group,
+libvfio_user_group_set_container(libvfio_group_t *group,
                                  libvfio_container_t *container,
                                  Error **errp)
 {
@@ -188,7 +188,7 @@ libvfio_user_group_set_container(libvfio_group *group,
 }
 
 static bool
-libvfio_user_group_unset_container(libvfio_group *group,
+libvfio_user_group_unset_container(libvfio_group_t *group,
                                    libvfio_container_t *container,
                                    Error **errp)
 {
@@ -196,7 +196,7 @@ libvfio_user_group_unset_container(libvfio_group *group,
 }
 
 static bool
-libvfio_user_init_dev(libvfio_t *vfio, libvfio_dev *dev,
+libvfio_user_init_dev(libvfio_t *vfio, libvfio_dev_t *dev,
                       const char *path, Error **errp)
 {
     /* XXX: could learn to lookup a specific device */
@@ -210,12 +210,12 @@ libvfio_user_init_dev(libvfio_t *vfio, libvfio_dev *dev,
 }
 
 static void
-libvfio_user_dev_deinit(libvfio_dev *dev)
+libvfio_user_dev_deinit(libvfio_dev_t *dev)
 {
 }
 
 static bool
-libvfio_user_dev_reset(libvfio_dev *dev, Error **errp)
+libvfio_user_dev_reset(libvfio_dev_t *dev, Error **errp)
 {
     int ret = 0;
 
@@ -228,7 +228,7 @@ libvfio_user_dev_reset(libvfio_dev *dev, Error **errp)
 }
 
 static bool
-libvfio_user_dev_set_irqs(libvfio_dev *dev,
+libvfio_user_dev_set_irqs(libvfio_dev_t *dev,
                           uint32_t index,
                           uint32_t start,
                           int *fds,
@@ -247,7 +247,7 @@ libvfio_user_dev_set_irqs(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_dev_get_irq_info(libvfio_dev *dev,
+libvfio_user_dev_get_irq_info(libvfio_dev_t *dev,
                               uint32_t index,
                               struct vfio_irq_info *irq,
                               Error **errp)
@@ -269,7 +269,7 @@ libvfio_user_dev_get_irq_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_dev_get_region_info(libvfio_dev *dev, uint32_t index,
+libvfio_user_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
                                  struct vfio_region_info *info, Error **errp)
 {
     vfio_user_msg msg = {
@@ -289,7 +289,7 @@ libvfio_user_dev_get_region_info(libvfio_dev *dev, uint32_t index,
 }
 
 static bool
-libvfio_user_dev_get_info(libvfio_dev *dev,
+libvfio_user_dev_get_info(libvfio_dev_t *dev,
                           struct vfio_device_info *info, Error **errp)
 {
     vfio_user_msg msg = {
@@ -314,7 +314,7 @@ libvfio_user_dev_get_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+libvfio_user_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
                                         struct vfio_pci_hot_reset_info *info,
                                         Error **errp)
 {
@@ -322,8 +322,8 @@ libvfio_user_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_dev_pci_hot_reset(libvfio_dev *dev,
-                               libvfio_group **groups,
+libvfio_user_dev_pci_hot_reset(libvfio_dev_t *dev,
+                               libvfio_group_t **groups,
                                size_t ngroups,
                                Error **errp)
 {
@@ -331,7 +331,7 @@ libvfio_user_dev_pci_hot_reset(libvfio_dev *dev,
 }
 
 static ssize_t
-libvfio_user_dev_write(libvfio_dev *dev,
+libvfio_user_dev_write(libvfio_dev_t *dev,
                        const void *buf, size_t size, off_t offset,
                        Error **errp)
 {
@@ -345,7 +345,7 @@ libvfio_user_dev_write(libvfio_dev *dev,
 }
 
 static ssize_t
-libvfio_user_dev_read(libvfio_dev *dev,
+libvfio_user_dev_read(libvfio_dev_t *dev,
                       void *buf, size_t size, off_t offset,
                       Error **errp)
 {
@@ -359,7 +359,7 @@ libvfio_user_dev_read(libvfio_dev *dev,
 }
 
 static void *
-libvfio_user_dev_mmap(libvfio_dev *dev,
+libvfio_user_dev_mmap(libvfio_dev_t *dev,
                       size_t length, int prot, int flags, off_t offset,
                       Error **errp)
 {
@@ -367,7 +367,7 @@ libvfio_user_dev_mmap(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_dev_unmmap(libvfio_dev *dev,
+libvfio_user_dev_unmmap(libvfio_dev_t *dev,
                         void *addr, size_t length, Error **errp)
 {
     return false;

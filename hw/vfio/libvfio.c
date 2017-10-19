@@ -220,7 +220,7 @@ libvfio_container_eeh_pe_op(libvfio_container_t *container,
 }
 
 bool
-libvfio_init_group(libvfio_t *vfio, libvfio_group *group,
+libvfio_init_group(libvfio_t *vfio, libvfio_group_t *group,
                    int groupid, Error **errp)
 {
     assert(vfio);
@@ -233,7 +233,7 @@ libvfio_init_group(libvfio_t *vfio, libvfio_group *group,
 }
 
 bool
-libvfio_group_get_host_fd(libvfio_group *group,
+libvfio_group_get_host_fd(libvfio_group_t *group,
                           int *fd)
 {
     assert(group);
@@ -249,7 +249,7 @@ libvfio_group_get_host_fd(libvfio_group *group,
 }
 
 void
-libvfio_group_deinit(libvfio_group *group)
+libvfio_group_deinit(libvfio_group_t *group)
 {
     assert(group);
 
@@ -263,7 +263,7 @@ libvfio_group_deinit(libvfio_group *group)
 }
 
 bool
-libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
+libvfio_group_get_device(libvfio_group_t *group, libvfio_dev_t *dev, Error **errp)
 {
     assert(group);
     assert(dev);
@@ -273,7 +273,7 @@ libvfio_group_get_device(libvfio_group *group, libvfio_dev *dev, Error **errp)
 }
 
 bool
-libvfio_group_set_container(libvfio_group *group, libvfio_container_t *container,
+libvfio_group_set_container(libvfio_group_t *group, libvfio_container_t *container,
                             Error **errp)
 {
     assert(group);
@@ -284,7 +284,7 @@ libvfio_group_set_container(libvfio_group *group, libvfio_container_t *container
 }
 
 bool
-libvfio_group_unset_container(libvfio_group *group, libvfio_container_t *container,
+libvfio_group_unset_container(libvfio_group_t *group, libvfio_container_t *container,
                               Error **errp)
 {
     assert(group);
@@ -295,7 +295,7 @@ libvfio_group_unset_container(libvfio_group *group, libvfio_container_t *contain
 }
 
 bool
-libvfio_init_dev(libvfio_t *vfio, libvfio_dev *dev,
+libvfio_init_dev(libvfio_t *vfio, libvfio_dev_t *dev,
                  const char *path, Error **errp)
 {
     assert(vfio);
@@ -308,7 +308,7 @@ libvfio_init_dev(libvfio_t *vfio, libvfio_dev *dev,
 }
 
 void
-libvfio_dev_deinit(libvfio_dev *dev)
+libvfio_dev_deinit(libvfio_dev_t *dev)
 {
     if (!dev->vfio) {
         return;
@@ -319,7 +319,7 @@ libvfio_dev_deinit(libvfio_dev *dev)
 }
 
 const char *
-libvfio_dev_get_name(libvfio_dev *dev)
+libvfio_dev_get_name(libvfio_dev_t *dev)
 {
     assert(dev);
 
@@ -327,7 +327,7 @@ libvfio_dev_get_name(libvfio_dev *dev)
 }
 
 int
-libvfio_dev_get_groupid(libvfio_dev *dev)
+libvfio_dev_get_groupid(libvfio_dev_t *dev)
 {
     assert(dev);
 
@@ -335,7 +335,7 @@ libvfio_dev_get_groupid(libvfio_dev *dev)
 }
 
 bool
-libvfio_dev_reset(libvfio_dev *dev, Error **errp)
+libvfio_dev_reset(libvfio_dev_t *dev, Error **errp)
 {
     assert(dev);
 
@@ -344,7 +344,7 @@ libvfio_dev_reset(libvfio_dev *dev, Error **errp)
 }
 
 bool
-libvfio_dev_set_irqs(libvfio_dev *dev,
+libvfio_dev_set_irqs(libvfio_dev_t *dev,
                      uint32_t index,
                      uint32_t start,
                      int *fds,
@@ -360,7 +360,7 @@ libvfio_dev_set_irqs(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_set_irq_fd(libvfio_dev *dev,
+libvfio_dev_set_irq_fd(libvfio_dev_t *dev,
                        uint32_t index,
                        int fd,
                        uint32_t flags,
@@ -371,7 +371,7 @@ libvfio_dev_set_irq_fd(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_set_irq(libvfio_dev *dev,
+libvfio_dev_set_irq(libvfio_dev_t *dev,
                     uint32_t index,
                     uint32_t flags,
                     Error **errp)
@@ -381,7 +381,7 @@ libvfio_dev_set_irq(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_get_irq_info(libvfio_dev *dev,
+libvfio_dev_get_irq_info(libvfio_dev_t *dev,
                          uint32_t index,
                          struct vfio_irq_info *irq,
                          Error **errp)
@@ -394,7 +394,7 @@ libvfio_dev_get_irq_info(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_get_info(libvfio_dev *dev,
+libvfio_dev_get_info(libvfio_dev_t *dev,
                      struct vfio_device_info *info, Error **errp)
 {
     assert(dev);
@@ -405,7 +405,7 @@ libvfio_dev_get_info(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_get_region_info(libvfio_dev *dev, uint32_t index,
+libvfio_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
                             struct vfio_region_info **info, Error **errp)
 {
     struct vfio_region_info *i = NULL;
@@ -433,7 +433,7 @@ retry:
 }
 
 bool
-libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+libvfio_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
                                    struct vfio_pci_hot_reset_info *info,
                                    Error **errp)
 {
@@ -446,8 +446,8 @@ libvfio_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_pci_hot_reset(libvfio_dev *dev,
-                          libvfio_group **groups,
+libvfio_dev_pci_hot_reset(libvfio_dev_t *dev,
+                          libvfio_group_t **groups,
                           size_t ngroups,
                           Error **errp)
 {
@@ -459,7 +459,7 @@ libvfio_dev_pci_hot_reset(libvfio_dev *dev,
 }
 
 ssize_t
-libvfio_dev_write(libvfio_dev *dev,
+libvfio_dev_write(libvfio_dev_t *dev,
                   const void *buf, size_t size, off_t offset,
                   Error **errp)
 {
@@ -471,7 +471,7 @@ libvfio_dev_write(libvfio_dev *dev,
 }
 
 ssize_t
-libvfio_dev_read(libvfio_dev *dev,
+libvfio_dev_read(libvfio_dev_t *dev,
                  void *buf, size_t size, off_t offset,
                  Error **errp)
 {
@@ -483,7 +483,7 @@ libvfio_dev_read(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_read_all(libvfio_dev *dev,
+libvfio_dev_read_all(libvfio_dev_t *dev,
                      void *buf, size_t size, off_t offset,
                      size_t *bytes_read, Error **errp)
 {
@@ -511,7 +511,7 @@ libvfio_dev_read_all(libvfio_dev *dev,
 }
 
 void *
-libvfio_dev_mmap(libvfio_dev *dev,
+libvfio_dev_mmap(libvfio_dev_t *dev,
                  size_t length, int prot, int flags, off_t offset,
                  Error **errp)
 {
@@ -522,7 +522,7 @@ libvfio_dev_mmap(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_unmmap(libvfio_dev *dev, void *addr, size_t length, Error **errp)
+libvfio_dev_unmmap(libvfio_dev_t *dev, void *addr, size_t length, Error **errp)
 {
     assert(dev);
 

@@ -1320,7 +1320,7 @@ static void vfio_msix_early_setup(VFIOPCIDevice *vdev, Error **errp)
     uint16_t ctrl;
     uint32_t table, pba;
     size_t bytes_read;
-    libvfio_dev *dev = &vdev->vbasedev.libvfio_dev;
+    libvfio_dev_t *dev = &vdev->vbasedev.libvfio_dev;
     VFIOMSIXInfo *msix;
 
     pos = pci_find_capability(&vdev->pdev, PCI_CAP_ID_MSIX);
@@ -2034,7 +2034,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     VFIOGroup *group;
     struct vfio_pci_hot_reset_info *info;
     struct vfio_pci_dependent_device *devices;
-    libvfio_group **groups;
+    libvfio_group_t **groups;
     int ret, i, count, ngroup = 0;
     bool multi = false;
 
@@ -2144,7 +2144,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         }
     }
 
-    groups = g_newa(libvfio_group *, info->count);
+    groups = g_newa(libvfio_group_t *, info->count);
     /* Fill in group fds */
     QLIST_FOREACH(group, &vfio_group_list, next) {
         for (i = 0; i < info->count; i++) {

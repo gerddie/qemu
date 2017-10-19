@@ -115,7 +115,7 @@ typedef struct VFIODeviceOps VFIODeviceOps;
 typedef struct VFIODevice {
     QLIST_ENTRY(VFIODevice) next;
     libvfio_t libvfio;
-    libvfio_dev libvfio_dev;
+    libvfio_dev_t libvfio_dev;
     struct VFIOGroup *group;
     char *sysfsdev;
     char *name;
@@ -138,7 +138,7 @@ struct VFIODeviceOps {
 };
 
 typedef struct VFIOGroup {
-    libvfio_group libvfio_group;
+    libvfio_group_t libvfio_group;
     VFIOContainer *container;
     QLIST_HEAD(, VFIODevice) device_list;
     QLIST_ENTRY(VFIOGroup) next;

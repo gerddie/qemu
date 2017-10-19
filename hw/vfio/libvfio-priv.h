@@ -72,68 +72,68 @@ struct libvfio_ops {
                                                         uint32_t op,
                                                         Error **errp);
     bool (*init_group)                                 (libvfio_t *vfio,
-                                                        libvfio_group *group,
+                                                        libvfio_group_t *group,
                                                         int groupid,
                                                         Error **errp);
-    void (*group_deinit)                               (libvfio_group *group);
-    bool (*group_get_device)                           (libvfio_group *group,
-                                                        libvfio_dev *dev,
+    void (*group_deinit)                               (libvfio_group_t *group);
+    bool (*group_get_device)                           (libvfio_group_t *group,
+                                                        libvfio_dev_t *dev,
                                                         Error **errp);
-    bool (*group_set_container)                        (libvfio_group *group,
+    bool (*group_set_container)                        (libvfio_group_t *group,
                                                         libvfio_container_t *container,
                                                         Error **errp);
-    bool (*group_unset_container)                      (libvfio_group *group,
+    bool (*group_unset_container)                      (libvfio_group_t *group,
                                                         libvfio_container_t *container,
                                                         Error **errp);
     bool (*init_dev)                                   (libvfio_t *vfio,
-                                                        libvfio_dev *dev,
+                                                        libvfio_dev_t *dev,
                                                         const char *path,
                                                         Error **errp);
-    void (*dev_deinit)                                 (libvfio_dev *dev);
-    bool (*dev_reset)                                  (libvfio_dev *dev,
+    void (*dev_deinit)                                 (libvfio_dev_t *dev);
+    bool (*dev_reset)                                  (libvfio_dev_t *dev,
                                                         Error **errp);
-    bool (*dev_set_irqs)                               (libvfio_dev *dev,
+    bool (*dev_set_irqs)                               (libvfio_dev_t *dev,
                                                         uint32_t index,
                                                         uint32_t start,
                                                         int *fds,
                                                         size_t nfds,
                                                         uint32_t flags,
                                                         Error **errp);
-    bool (*dev_get_irq_info)                           (libvfio_dev *dev,
+    bool (*dev_get_irq_info)                           (libvfio_dev_t *dev,
                                                         uint32_t index,
                                                         struct vfio_irq_info *irq,
                                                         Error **errp);
-    bool (*dev_get_info)                               (libvfio_dev *dev,
+    bool (*dev_get_info)                               (libvfio_dev_t *dev,
                                                         struct vfio_device_info *info,
                                                         Error **errp);
-    bool (*dev_get_region_info)                        (libvfio_dev *dev,
+    bool (*dev_get_region_info)                        (libvfio_dev_t *dev,
                                                         uint32_t index,
                                                         struct vfio_region_info *info,
                                                         Error **errp);
-    bool (*dev_get_pci_hot_reset_info)                 (libvfio_dev *dev,
+    bool (*dev_get_pci_hot_reset_info)                 (libvfio_dev_t *dev,
                                                         struct vfio_pci_hot_reset_info *info,
                                                         Error **errp);
-    bool (*dev_pci_hot_reset)                          (libvfio_dev *dev,
-                                                        libvfio_group **groups,
+    bool (*dev_pci_hot_reset)                          (libvfio_dev_t *dev,
+                                                        libvfio_group_t **groups,
                                                         size_t ngroups,
                                                         Error **errp);
-    ssize_t (*dev_write)                               (libvfio_dev *dev,
+    ssize_t (*dev_write)                               (libvfio_dev_t *dev,
                                                         const void *buf,
                                                         size_t size,
                                                         off_t offset,
                                                         Error **errp);
-    ssize_t (*dev_read)                                (libvfio_dev *dev,
+    ssize_t (*dev_read)                                (libvfio_dev_t *dev,
                                                         void *buf,
                                                         size_t size,
                                                         off_t offset,
                                                         Error **errp);
-    void * (*dev_mmap)                                 (libvfio_dev *dev,
+    void * (*dev_mmap)                                 (libvfio_dev_t *dev,
                                                         size_t length,
                                                         int prot,
                                                         int flags,
                                                         off_t offset,
                                                         Error **errp);
-    bool (*dev_unmmap)                                 (libvfio_dev *dev,
+    bool (*dev_unmmap)                                 (libvfio_dev_t *dev,
                                                         void *addr,
                                                         size_t length,
                                                         Error **errp);

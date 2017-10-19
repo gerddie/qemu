@@ -289,7 +289,7 @@ libvfio_host_container_eeh_pe_op(libvfio_container_t *container,
 }
 
 static bool
-libvfio_host_init_group(libvfio_t *vfio, libvfio_group *group,
+libvfio_host_init_group(libvfio_t *vfio, libvfio_group_t *group,
                         int groupid, Error **errp)
 {
     int fd;
@@ -332,7 +332,7 @@ close_fd_exit:
 }
 
 static void
-libvfio_host_group_deinit(libvfio_group *group)
+libvfio_host_group_deinit(libvfio_group_t *group)
 {
     if (group->fd >= 0) {
         qemu_close(group->fd);
@@ -341,8 +341,8 @@ libvfio_host_group_deinit(libvfio_group *group)
 }
 
 static bool
-libvfio_host_group_get_device(libvfio_group *group,
-                              libvfio_dev *dev, Error **errp)
+libvfio_host_group_get_device(libvfio_group_t *group,
+                              libvfio_dev_t *dev, Error **errp)
 {
     int fd = ioctl(group->fd, VFIO_GROUP_GET_DEVICE_FD, dev->name);
 
@@ -362,7 +362,7 @@ libvfio_host_group_get_device(libvfio_group *group,
 }
 
 static bool
-libvfio_host_group_set_container(libvfio_group *group,
+libvfio_host_group_set_container(libvfio_group_t *group,
                                  libvfio_container_t *container,
                                  Error **errp)
 {
@@ -376,7 +376,7 @@ libvfio_host_group_set_container(libvfio_group *group,
 }
 
 static bool
-libvfio_host_group_unset_container(libvfio_group *group,
+libvfio_host_group_unset_container(libvfio_group_t *group,
                                    libvfio_container_t *container,
                                    Error **errp)
 {
@@ -390,7 +390,7 @@ libvfio_host_group_unset_container(libvfio_group *group,
 }
 
 static bool
-libvfio_host_init_dev(libvfio_t *vfio, libvfio_dev *dev,
+libvfio_host_init_dev(libvfio_t *vfio, libvfio_dev_t *dev,
                       const char *path, Error **errp)
 {
     char *tmp, group_path[PATH_MAX], *group_name;
@@ -434,7 +434,7 @@ libvfio_host_init_dev(libvfio_t *vfio, libvfio_dev *dev,
 }
 
 static void
-libvfio_host_dev_deinit(libvfio_dev *dev)
+libvfio_host_dev_deinit(libvfio_dev_t *dev)
 {
     if (dev->fd >= 0) {
         qemu_close(dev->fd);
@@ -445,7 +445,7 @@ libvfio_host_dev_deinit(libvfio_dev *dev)
 }
 
 static bool
-libvfio_host_dev_reset(libvfio_dev *dev, Error **errp)
+libvfio_host_dev_reset(libvfio_dev_t *dev, Error **errp)
 {
     if (ioctl(dev->fd, VFIO_DEVICE_RESET)) {
         error_setg_errno(errp, errno, ERR_PREFIX "Failed to reset device");
@@ -456,7 +456,7 @@ libvfio_host_dev_reset(libvfio_dev *dev, Error **errp)
 }
 
 static bool
-libvfio_host_dev_set_irqs(libvfio_dev *dev,
+libvfio_host_dev_set_irqs(libvfio_dev_t *dev,
                           uint32_t index,
                           uint32_t start,
                           int *fds,
@@ -493,7 +493,7 @@ libvfio_host_dev_set_irqs(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_get_irq_info(libvfio_dev *dev,
+libvfio_host_dev_get_irq_info(libvfio_dev_t *dev,
                               uint32_t index,
                               struct vfio_irq_info *irq,
                               Error **errp)
@@ -510,7 +510,7 @@ libvfio_host_dev_get_irq_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_get_info(libvfio_dev *dev,
+libvfio_host_dev_get_info(libvfio_dev_t *dev,
                           struct vfio_device_info *info, Error **errp)
 {
     info->argsz = sizeof(*info);
@@ -525,7 +525,7 @@ libvfio_host_dev_get_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_get_region_info(libvfio_dev *dev, uint32_t index,
+libvfio_host_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
                                  struct vfio_region_info *info, Error **errp)
 {
     int ret;
@@ -542,7 +542,7 @@ libvfio_host_dev_get_region_info(libvfio_dev *dev, uint32_t index,
 }
 
 static bool
-libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev *dev,
+libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
                                         struct vfio_pci_hot_reset_info *info,
                                         Error **errp)
 {
@@ -557,8 +557,8 @@ libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_pci_hot_reset(libvfio_dev *dev,
-                               libvfio_group **groups,
+libvfio_host_dev_pci_hot_reset(libvfio_dev_t *dev,
+                               libvfio_group_t **groups,
                                size_t ngroups,
                                Error **errp)
 {
@@ -586,7 +586,7 @@ libvfio_host_dev_pci_hot_reset(libvfio_dev *dev,
 }
 
 static ssize_t
-libvfio_host_dev_write(libvfio_dev *dev,
+libvfio_host_dev_write(libvfio_dev_t *dev,
                        const void *buf, size_t size, off_t offset,
                        Error **errp)
 {
@@ -606,7 +606,7 @@ again:
 }
 
 static ssize_t
-libvfio_host_dev_read(libvfio_dev *dev,
+libvfio_host_dev_read(libvfio_dev_t *dev,
                       void *buf, size_t size, off_t offset,
                       Error **errp)
 {
@@ -626,7 +626,7 @@ again:
 }
 
 static void *
-libvfio_host_dev_mmap(libvfio_dev *dev,
+libvfio_host_dev_mmap(libvfio_dev_t *dev,
                       size_t length, int prot, int flags, off_t offset,
                       Error **errp)
 {
@@ -639,7 +639,7 @@ libvfio_host_dev_mmap(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_unmmap(libvfio_dev *dev,
+libvfio_host_dev_unmmap(libvfio_dev_t *dev,
                         void *addr, size_t length, Error **errp)
 {
     if (munmap(addr, length) < 0) {
