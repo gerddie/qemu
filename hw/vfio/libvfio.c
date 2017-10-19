@@ -263,7 +263,8 @@ libvfio_group_deinit(libvfio_group_t *group)
 }
 
 bool
-libvfio_group_get_device(libvfio_group_t *group, libvfio_dev_t *dev, Error **errp)
+libvfio_group_get_device(libvfio_group_t *group,
+                         libvfio_dev_t *dev, Error **errp)
 {
     assert(group);
     assert(dev);
@@ -273,7 +274,8 @@ libvfio_group_get_device(libvfio_group_t *group, libvfio_dev_t *dev, Error **err
 }
 
 bool
-libvfio_group_set_container(libvfio_group_t *group, libvfio_container_t *container,
+libvfio_group_set_container(libvfio_group_t *group,
+                            libvfio_container_t *container,
                             Error **errp)
 {
     assert(group);
@@ -284,7 +286,8 @@ libvfio_group_set_container(libvfio_group_t *group, libvfio_container_t *contain
 }
 
 bool
-libvfio_group_unset_container(libvfio_group_t *group, libvfio_container_t *container,
+libvfio_group_unset_container(libvfio_group_t *group,
+                              libvfio_container_t *container,
                               Error **errp)
 {
     assert(group);
@@ -434,15 +437,31 @@ retry:
 
 bool
 libvfio_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
-                                   struct vfio_pci_hot_reset_info *info,
+                                   struct vfio_pci_hot_reset_info **info,
                                    Error **errp)
 {
+    struct vfio_pci_hot_reset_info *i = NULL;
+    size_t argsz = sizeof(*i);
+
     assert(dev);
     assert(info);
-    assert(info->argsz >= sizeof(*info));
 
-    return LIBVFIO_CALL(dev->vfio, false,
-                        dev_get_pci_hot_reset_info, dev, info, errp);
+retry:
+    i = libvfio_realloc(dev->vfio, i, argsz);
+    i->argsz = argsz;
+
+    if (!LIBVFIO_CALL(dev->vfio, false,
+                      dev_get_pci_hot_reset_info, dev, i, errp)) {
+        libvfio_free(dev->vfio, i);
+        return false;
+    }
+    if (i->argsz != argsz) {
+        argsz = i->argsz;
+        goto retry;
+    }
+
+    *info = i;
+    return true;
 }
 
 bool

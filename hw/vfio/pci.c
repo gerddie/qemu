@@ -2045,11 +2045,8 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
     }
     vdev->vbasedev.needs_reset = false;
 
-    info = g_malloc0(sizeof(*info));
-    info->argsz = sizeof(*info);
-
     if (!libvfio_dev_get_pci_hot_reset_info(&vdev->vbasedev.libvfio_dev,
-                                            info,
+                                            &info,
                                             NULL)) {
         ret = -1;
         if (!vdev->has_pm_reset) {
@@ -2059,19 +2056,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
         goto out_single;
     }
 
-    count = info->count;
-    info = g_realloc(info, sizeof(*info) + (count * sizeof(*devices)));
-    info->argsz = sizeof(*info) + (count * sizeof(*devices));
     devices = &info->devices[0];
-
-    if (!libvfio_dev_get_pci_hot_reset_info(&vdev->vbasedev.libvfio_dev,
-                                            info,
-                                            &err)) {
-        ret = -1;
-        error_report_err(err);
-        goto out_single;
-    }
-
     trace_vfio_pci_hot_reset_has_dep_devices(vdev->vbasedev.name);
 
     /* Verify that we have all the groups required */
