@@ -86,6 +86,22 @@ vu_panic(VuDev *dev, const char *msg, ...)
 bool
 vu_dispatch(VuDev *dev)
 {
+    VhostUserMsg vmsg = { 0, };
+    int reply_requested;
+
+    if (!vu_message_read(dev, dev->sock, &vmsg)) {
+        return false;
+    }
+
+    reply_requested = vu_process_message(dev, &vmsg);
+    if (!reply_requested) {
+        return true;
+    }
+
+    if (!vu_message_write(dev, dev->sock, &vmsg)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -97,4 +113,19 @@ vu_init(VuDev *dev,
         vu_remove_watch_cb remove_watch,
         const VuDevIface *iface)
 {
+    assert(dev);
+    assert(socket >= 0);
+    assert(panic);
+    assert(set_watch);
+    assert(remove_watch);
+    assert(iface);
+
+    *dev = (VuDev) {
+        .sock = socket,
+    };
+}
+
+void vu_deinit(VuDev *dev)
+{
+
 }

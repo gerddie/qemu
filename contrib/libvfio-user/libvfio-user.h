@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <sys/poll.h>
 #include "standard-headers/linux/virtio_ring.h"
+#include <linux/vfio.h>
 
 typedef struct VuDev VuDev;
 
