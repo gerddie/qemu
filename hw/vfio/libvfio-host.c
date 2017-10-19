@@ -13,7 +13,7 @@
 #include <sys/ioctl.h>
 
 static bool
-libvfio_host_init_container(libvfio_t *vfio, libvfio_container *container,
+libvfio_host_init_container(libvfio_t *vfio, libvfio_container_t *container,
                             Error **errp)
 {
     int ret, fd = qemu_open("/dev/vfio/vfio", O_RDWR);
@@ -41,7 +41,7 @@ libvfio_host_init_container(libvfio_t *vfio, libvfio_container *container,
 }
 
 static void
-libvfio_host_container_deinit(libvfio_container *container)
+libvfio_host_container_deinit(libvfio_container_t *container)
 {
     if (container->fd >= 0) {
         qemu_close(container->fd);
@@ -50,7 +50,7 @@ libvfio_host_container_deinit(libvfio_container *container)
 }
 
 static bool
-libvfio_host_container_check_extension(libvfio_container *container,
+libvfio_host_container_check_extension(libvfio_container_t *container,
                                        int ext, Error **errp)
 {
     int ret = ioctl(container->fd, VFIO_CHECK_EXTENSION, ext);
@@ -66,7 +66,7 @@ libvfio_host_container_check_extension(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_set_iommu(libvfio_container *container, int iommu_type,
+libvfio_host_container_set_iommu(libvfio_container_t *container, int iommu_type,
                                  Error **errp)
 {
     if (ioctl(container->fd, VFIO_SET_IOMMU, iommu_type)) {
@@ -79,7 +79,7 @@ libvfio_host_container_set_iommu(libvfio_container *container, int iommu_type,
 }
 
 static bool
-libvfio_host_container_iommu_get_info(libvfio_container *container,
+libvfio_host_container_iommu_get_info(libvfio_container_t *container,
                                       struct vfio_iommu_type1_info *info,
                                       Error **errp)
 {
@@ -93,7 +93,7 @@ libvfio_host_container_iommu_get_info(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_iommu_enable(libvfio_container *container, Error **errp)
+libvfio_host_container_iommu_enable(libvfio_container_t *container, Error **errp)
 {
     if (ioctl(container->fd, VFIO_IOMMU_ENABLE)) {
         error_setg_errno(errp, errno, ERR_PREFIX "failed to enable container");
@@ -104,7 +104,7 @@ libvfio_host_container_iommu_enable(libvfio_container *container, Error **errp)
 }
 
 static bool
-libvfio_host_container_iommu_map_dma(libvfio_container *container,
+libvfio_host_container_iommu_map_dma(libvfio_container_t *container,
                                      uint64_t vaddr, uint64_t iova,
                                      uint64_t size, uint32_t flags,
                                      Error **errp)
@@ -144,7 +144,7 @@ error:
 }
 
 static bool
-libvfio_host_container_iommu_unmap_dma(libvfio_container *container,
+libvfio_host_container_iommu_unmap_dma(libvfio_container_t *container,
                                        uint64_t iova, uint64_t size,
                                        uint32_t flags, Error **errp)
 {
@@ -164,7 +164,7 @@ libvfio_host_container_iommu_unmap_dma(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_iommu_spapr_tce_get_info(libvfio_container *container,
+libvfio_host_container_iommu_spapr_tce_get_info(libvfio_container_t *container,
                                                 struct vfio_iommu_spapr_tce_info *info,
                                                 Error **errp)
 {
@@ -179,7 +179,7 @@ libvfio_host_container_iommu_spapr_tce_get_info(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_iommu_spapr_register_memory(libvfio_container *container,
+libvfio_host_container_iommu_spapr_register_memory(libvfio_container_t *container,
                                                    uint64_t vaddr,
                                                    uint64_t size,
                                                    uint32_t flags,
@@ -202,7 +202,7 @@ libvfio_host_container_iommu_spapr_register_memory(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_iommu_spapr_unregister_memory(libvfio_container *container,
+libvfio_host_container_iommu_spapr_unregister_memory(libvfio_container_t *container,
                                                      uint64_t vaddr,
                                                      uint64_t size,
                                                      uint32_t flags,
@@ -225,7 +225,7 @@ libvfio_host_container_iommu_spapr_unregister_memory(libvfio_container *containe
 }
 
 static bool
-libvfio_host_container_iommu_spapr_tce_create(libvfio_container *container,
+libvfio_host_container_iommu_spapr_tce_create(libvfio_container_t *container,
                                               uint32_t page_shift,
                                               uint64_t window_size,
                                               uint32_t levels,
@@ -252,7 +252,7 @@ libvfio_host_container_iommu_spapr_tce_create(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_iommu_spapr_tce_remove(libvfio_container *container,
+libvfio_host_container_iommu_spapr_tce_remove(libvfio_container_t *container,
                                               uint64_t start_addr,
                                               Error **errp)
 {
@@ -271,7 +271,7 @@ libvfio_host_container_iommu_spapr_tce_remove(libvfio_container *container,
 }
 
 static bool
-libvfio_host_container_eeh_pe_op(libvfio_container *container,
+libvfio_host_container_eeh_pe_op(libvfio_container_t *container,
                                  uint32_t op, Error **errp)
 {
     struct vfio_eeh_pe_op pe_op = {
@@ -363,7 +363,7 @@ libvfio_host_group_get_device(libvfio_group *group,
 
 static bool
 libvfio_host_group_set_container(libvfio_group *group,
-                                 libvfio_container *container,
+                                 libvfio_container_t *container,
                                  Error **errp)
 {
     if (ioctl(group->fd, VFIO_GROUP_SET_CONTAINER, &container->fd)) {
@@ -377,7 +377,7 @@ libvfio_host_group_set_container(libvfio_group *group,
 
 static bool
 libvfio_host_group_unset_container(libvfio_group *group,
-                                   libvfio_container *container,
+                                   libvfio_container_t *container,
                                    Error **errp)
 {
     if (ioctl(group->fd, VFIO_GROUP_UNSET_CONTAINER, &container->fd)) {
@@ -689,7 +689,7 @@ bool
 libvfio_init_host(libvfio_t *vfio, int api_version, Error **errp)
 {
     bool success;
-    libvfio_container container;
+    libvfio_container_t container;
     assert(vfio);
 
     if (VFIO_API_VERSION != api_version) {

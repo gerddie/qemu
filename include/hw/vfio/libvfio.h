@@ -40,7 +40,7 @@ typedef struct libvfio {
 typedef struct libvfio_container {
     libvfio_t *vfio;
     int fd;
-} libvfio_container;
+} libvfio_container_t;
 
 typedef struct libvfio_group {
     libvfio_t *vfio;
@@ -64,54 +64,54 @@ bool            libvfio_init_user                   (libvfio_t *vfio,
                                                      Error **errp);
 
 bool            libvfio_init_container              (libvfio_t *vfio,
-                                                     libvfio_container *container,
+                                                     libvfio_container_t *container,
                                                      Error **errp);
-void            libvfio_container_deinit            (libvfio_container *container);
-bool            libvfio_container_check_extension   (libvfio_container *container,
+void            libvfio_container_deinit            (libvfio_container_t *container);
+bool            libvfio_container_check_extension   (libvfio_container_t *container,
                                                      int ext, Error **errp);
-bool            libvfio_container_set_iommu         (libvfio_container *container,
+bool            libvfio_container_set_iommu         (libvfio_container_t *container,
                                                      int iommu_type,
                                                      Error **errp);
-bool            libvfio_container_iommu_get_info    (libvfio_container *container,
+bool            libvfio_container_iommu_get_info    (libvfio_container_t *container,
                                                      struct vfio_iommu_type1_info *info,
                                                      Error **errp);
-bool            libvfio_container_iommu_enable      (libvfio_container *container,
+bool            libvfio_container_iommu_enable      (libvfio_container_t *container,
                                                      Error **errp);
-bool            libvfio_container_iommu_map_dma     (libvfio_container *container,
+bool            libvfio_container_iommu_map_dma     (libvfio_container_t *container,
                                                      uint64_t vaddr,
                                                      uint64_t iova,
                                                      uint64_t size,
                                                      uint32_t flags,
                                                      Error **errp);
-bool            libvfio_container_iommu_unmap_dma   (libvfio_container *container,
+bool            libvfio_container_iommu_unmap_dma   (libvfio_container_t *container,
                                                      uint64_t iova,
                                                      uint64_t size,
                                                      uint32_t flags,
                                                      Error **errp);
-bool            libvfio_container_iommu_spapr_tce_get_info(libvfio_container *container,
+bool            libvfio_container_iommu_spapr_tce_get_info(libvfio_container_t *container,
                                                      struct vfio_iommu_spapr_tce_info *info,
                                                      Error **errp);
-bool            libvfio_container_iommu_spapr_register_memory(libvfio_container *container,
+bool            libvfio_container_iommu_spapr_register_memory(libvfio_container_t *container,
                                                      uint64_t vaddr,
                                                      uint64_t size,
                                                      uint32_t flags,
                                                      Error **errp);
-bool            libvfio_container_iommu_spapr_unregister_memory(libvfio_container *container,
+bool            libvfio_container_iommu_spapr_unregister_memory(libvfio_container_t *container,
                                                      uint64_t vaddr,
                                                      uint64_t size,
                                                      uint32_t flags,
                                                      Error **errp);
-bool            libvfio_container_iommu_spapr_tce_create(libvfio_container *container,
+bool            libvfio_container_iommu_spapr_tce_create(libvfio_container_t *container,
                                                      uint32_t page_shift,
                                                      uint64_t window_size,
                                                      uint32_t levels,
                                                      uint32_t flags,
                                                      uint64_t *start_addr,
                                                      Error **errp);
-bool            libvfio_container_iommu_spapr_tce_remove(libvfio_container *container,
+bool            libvfio_container_iommu_spapr_tce_remove(libvfio_container_t *container,
                                                      uint64_t start_addr,
                                                      Error **errp);
-bool            libvfio_container_eeh_pe_op         (libvfio_container *container,
+bool            libvfio_container_eeh_pe_op         (libvfio_container_t *container,
                                                      uint32_t op,
                                                      Error **errp);
 
@@ -123,10 +123,10 @@ bool            libvfio_group_get_host_fd           (libvfio_group *group,
                                                      int *fd);
 void            libvfio_group_deinit                (libvfio_group *group);
 bool            libvfio_group_set_container         (libvfio_group *group,
-                                                     libvfio_container *container,
+                                                     libvfio_container_t *container,
                                                      Error **errp);
 bool            libvfio_group_unset_container       (libvfio_group *group,
-                                                     libvfio_container *container,
+                                                     libvfio_container_t *container,
                                                      Error **errp);
 bool            libvfio_group_get_device            (libvfio_group *group,
                                                      libvfio_dev *dev,

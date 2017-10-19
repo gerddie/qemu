@@ -78,7 +78,7 @@ libvfio_user_read_payload(libvfio_t *vfio, void *payload,
 }
 
 static bool
-libvfio_user_init_container(libvfio_t *vfio, libvfio_container *container,
+libvfio_user_init_container(libvfio_t *vfio, libvfio_container_t *container,
                             Error **errp)
 {
     *container = (struct libvfio_container) {
@@ -88,12 +88,12 @@ libvfio_user_init_container(libvfio_t *vfio, libvfio_container *container,
 }
 
 static void
-libvfio_user_container_deinit(libvfio_container *container)
+libvfio_user_container_deinit(libvfio_container_t *container)
 {
 }
 
 static bool
-libvfio_user_container_check_extension(libvfio_container *container,
+libvfio_user_container_check_extension(libvfio_container_t *container,
                                        int ext, Error **errp)
 {
     if (ext == VFIO_TYPE1_IOMMU || VFIO_TYPE1v2_IOMMU) {
@@ -104,14 +104,14 @@ libvfio_user_container_check_extension(libvfio_container *container,
 }
 
 static bool
-libvfio_user_container_set_iommu(libvfio_container *container, int iommu_type,
+libvfio_user_container_set_iommu(libvfio_container_t *container, int iommu_type,
                                  Error **errp)
 {
     return true;
 }
 
 static bool
-libvfio_user_container_iommu_get_info(libvfio_container *container,
+libvfio_user_container_iommu_get_info(libvfio_container_t *container,
                                       struct vfio_iommu_type1_info *info,
                                       Error **errp)
 {
@@ -123,7 +123,7 @@ libvfio_user_container_iommu_get_info(libvfio_container *container,
 }
 
 static bool
-libvfio_user_container_iommu_map_dma(libvfio_container *container,
+libvfio_user_container_iommu_map_dma(libvfio_container_t *container,
                                      uint64_t vaddr, uint64_t iova,
                                      uint64_t size, uint32_t flags,
                                      Error **errp)
@@ -145,7 +145,7 @@ libvfio_user_container_iommu_map_dma(libvfio_container *container,
 }
 
 static bool
-libvfio_user_container_iommu_unmap_dma(libvfio_container *container,
+libvfio_user_container_iommu_unmap_dma(libvfio_container_t *container,
                                        uint64_t iova, uint64_t size,
                                        uint32_t flags, Error **errp)
 {
@@ -181,7 +181,7 @@ libvfio_user_group_get_device(libvfio_group *group,
 
 static bool
 libvfio_user_group_set_container(libvfio_group *group,
-                                 libvfio_container *container,
+                                 libvfio_container_t *container,
                                  Error **errp)
 {
     return true;
@@ -189,7 +189,7 @@ libvfio_user_group_set_container(libvfio_group *group,
 
 static bool
 libvfio_user_group_unset_container(libvfio_group *group,
-                                   libvfio_container *container,
+                                   libvfio_container_t *container,
                                    Error **errp)
 {
     return true;

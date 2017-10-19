@@ -77,7 +77,7 @@ typedef struct VFIOAddressSpace {
 struct VFIOGroup;
 
 typedef struct VFIOContainer {
-    libvfio_container libvfio_container;
+    libvfio_container_t libvfio_container;
     VFIOAddressSpace *space;
     MemoryListener listener;
     MemoryListener prereg_listener;
