@@ -112,7 +112,7 @@ vfio_user_serial_trigger_interrupt(VuSerialDev *serial)
         return -EINVAL;
     } else if ((serial->irq_index == VFIO_PCI_INTX_IRQ_INDEX) &&
          (!serial->intx_evtfd)) {
-        g_debug("%s: Intr eventfd not found\n", __func__);
+        g_debug("%s: Intr eventfd not found", __func__);
         return -EINVAL;
     }
 
@@ -122,9 +122,9 @@ vfio_user_serial_trigger_interrupt(VuSerialDev *serial)
         ret = eventfd_write(serial->intx_evtfd, 1);
     }
 
-    g_debug("Intx triggered\n");
-    if (ret != 1) {
-        g_critical("%s: eventfd signal failed (%d)\n", __func__, ret);
+    g_debug("Intx triggered");
+    if (ret < 0) {
+        g_critical("%s: eventfd signal failed (%d)", __func__, ret);
     }
 
     return ret;
@@ -230,7 +230,116 @@ handle_bar_read(VuSerialDev *serial, unsigned int index,
     /* Handle read requests by guest */
     switch (offset) {
     case UART_RX:
+        /* if DLAB set, data is LSB of divisor */
+        if (serial->s.dlab) {
+            *buf  = (uint8_t)serial->s.divisor;
+            break;
+        }
+
+        /* return data in tx buffer */
+        if (serial->s.rxtx.head != serial->s.rxtx.tail) {
+            *buf = serial->s.rxtx.fifo[serial->s.rxtx.tail];
+            serial->s.rxtx.count--;
+            CIRCULAR_BUF_INC_IDX(serial->s.rxtx.tail);
+        }
+
+        if (serial->s.rxtx.head == serial->s.rxtx.tail) {
+            /*
+             *  Trigger interrupt if tx buffer empty interrupt is
+             *  enabled and fifo is empty
+             */
+            g_debug("Serial port %d: Buffer Empty", index);
+            if (serial->s.uart_reg[UART_IER] & UART_IER_THRI) {
+                vfio_user_serial_trigger_interrupt(serial);
+            }
+        }
+
         break;
+    case UART_IER:
+        if (serial->s.dlab) {
+            *buf = (uint8_t)(serial->s.divisor >> 8);
+            break;
+        }
+        *buf = serial->s.uart_reg[offset] & 0x0f;
+        break;
+
+    case UART_IIR: {
+        uint8_t ier = serial->s.uart_reg[UART_IER];
+        *buf = 0;
+
+        /* Interrupt priority 1: Parity, overrun, framing or break */
+        if ((ier & UART_IER_RLSI) && serial->s.overrun) {
+            *buf |= UART_IIR_RLSI;
+        }
+
+        /* Interrupt priority 2: Fifo trigger level reached */
+        if ((ier & UART_IER_RDI) &&
+            (serial->s.rxtx.count == serial->s.intr_trigger_level)) {
+            *buf |= UART_IIR_RDI;
+        }
+
+        /* Interrupt priotiry 3: transmitter holding register empty */
+        if ((ier & UART_IER_THRI) &&
+            (serial->s.rxtx.head == serial->s.rxtx.tail)) {
+            *buf |= UART_IIR_THRI;
+        }
+
+        /* Interrupt priotiry 4: Modem status: CTS, DSR, RI or DCD  */
+        if ((ier & UART_IER_MSI) &&
+            (serial->s.uart_reg[UART_MCR] & (UART_MCR_RTS | UART_MCR_DTR))) {
+            *buf |= UART_IIR_MSI;
+        }
+
+        /* bit0: 0=> interrupt pending, 1=> no interrupt is pending */
+        if (*buf == 0) {
+            *buf = UART_IIR_NO_INT;
+        }
+
+        /* set bit 6 & 7 to be 16550 compatible */
+        *buf |= 0xC0;
+    }
+    break;
+
+    case UART_LCR:
+    case UART_MCR:
+        *buf = serial->s.uart_reg[offset];
+        break;
+
+    case UART_LSR: {
+        uint8_t lsr = 0;
+
+        /* atleast one char in FIFO */
+        if (serial->s.rxtx.head != serial->s.rxtx.tail) {
+            lsr |= UART_LSR_DR;
+        }
+
+        /* if FIFO overrun */
+        if (serial->s.overrun) {
+            lsr |= UART_LSR_OE;
+        }
+
+        /* transmit FIFO empty and tramsitter empty */
+        if (serial->s.rxtx.head == serial->s.rxtx.tail) {
+            lsr |= UART_LSR_TEMT | UART_LSR_THRE;
+        }
+
+        *buf = lsr;
+        break;
+    }
+
+    case UART_MSR:
+        *buf = UART_MSR_DSR | UART_MSR_DDSR | UART_MSR_DCD;
+
+        /* if AFE is 1 and FIFO have space, set CTS bit */
+        if ((serial->s.uart_reg[UART_MCR] & UART_MCR_AFE) &&
+            serial->s.rxtx.count < serial->s.max_fifo_size) {
+            *buf |= UART_MSR_CTS | UART_MSR_DCTS;
+        } else {
+            *buf |= UART_MSR_CTS | UART_MSR_DCTS;
+        }
+
+        break;
+
     case UART_SCR:
         *buf = serial->s.uart_reg[offset];
         break;
@@ -249,7 +358,132 @@ handle_bar_write(VuSerialDev *serial, unsigned int index,
     /* Handle data written by guest */
     switch (offset) {
     case UART_TX:
+        /* if DLAB set, data is LSB of divisor */
+        if (serial->s.dlab) {
+            serial->s.divisor |= data;
+            break;
+        }
+
+        /* save in TX buffer */
+        if (serial->s.rxtx.count < serial->s.max_fifo_size) {
+            serial->s.rxtx.fifo[serial->s.rxtx.head] = data;
+            serial->s.rxtx.count++;
+            CIRCULAR_BUF_INC_IDX(serial->s.rxtx.head);
+            serial->s.overrun = false;
+
+            /*
+             * Trigger interrupt if receive data interrupt is
+             * enabled and fifo reached trigger level
+             */
+            if ((serial->s.uart_reg[UART_IER] & UART_IER_RDI) &&
+               (serial->s.rxtx.count == serial->s.intr_trigger_level)) {
+                /* trigger interrupt */
+                g_debug("Serial port %d: Fifo level trigger", index);
+                vfio_user_serial_trigger_interrupt(serial);
+            }
+        } else {
+            g_debug("Serial port %d: Buffer Overflow", index);
+            serial->s.overrun = true;
+
+            /*
+             * Trigger interrupt if receiver line status interrupt
+             * is enabled
+             */
+            if (serial->s.uart_reg[UART_IER] & UART_IER_RLSI) {
+                vfio_user_serial_trigger_interrupt(serial);
+            }
+        }
         break;
+
+    case UART_IER:
+        /* if DLAB set, data is MSB of divisor */
+        if (serial->s.dlab) {
+            serial->s.divisor |= (uint16_t)data << 8;
+        } else {
+            serial->s.uart_reg[offset] = data;
+            if ((data & UART_IER_THRI) &&
+                (serial->s.rxtx.head == serial->s.rxtx.tail)) {
+                g_debug("Serial port %d: IER_THRI write", index);
+                vfio_user_serial_trigger_interrupt(serial);
+            }
+        }
+        break;
+
+    case UART_FCR:
+        serial->s.fcr = data;
+
+        if (data & (UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT)) {
+            /* clear loop back FIFO */
+            serial->s.rxtx.count = 0;
+            serial->s.rxtx.head = 0;
+            serial->s.rxtx.tail = 0;
+        }
+
+        switch (data & UART_FCR_TRIGGER_MASK) {
+        case UART_FCR_TRIGGER_1:
+            serial->s.intr_trigger_level = 1;
+            break;
+
+        case UART_FCR_TRIGGER_4:
+            serial->s.intr_trigger_level = 4;
+            break;
+
+        case UART_FCR_TRIGGER_8:
+            serial->s.intr_trigger_level = 8;
+            break;
+
+        case UART_FCR_TRIGGER_14:
+            serial->s.intr_trigger_level = 14;
+            break;
+        }
+
+        /*
+         * Set trigger level to 1 otherwise or  implement timer with
+         * timeout of 4 characters and on expiring that timer set
+         * Recevice data timeout in IIR register
+         */
+        serial->s.intr_trigger_level = 1;
+        if (data & UART_FCR_ENABLE_FIFO) {
+            serial->s.max_fifo_size = MAX_FIFO_SIZE;
+        } else {
+            serial->s.max_fifo_size = 1;
+            serial->s.intr_trigger_level = 1;
+        }
+
+        break;
+
+    case UART_LCR:
+        if (data & UART_LCR_DLAB) {
+            serial->s.dlab = true;
+            serial->s.divisor = 0;
+        } else {
+            serial->s.dlab = false;
+        }
+
+        serial->s.uart_reg[offset] = data;
+        break;
+
+    case UART_MCR:
+        serial->s.uart_reg[offset] = data;
+
+        if ((serial->s.uart_reg[UART_IER] & UART_IER_MSI) &&
+            (data & UART_MCR_OUT2)) {
+            g_debug("Serial port %d: MCR_OUT2 write", index);
+            vfio_user_serial_trigger_interrupt(serial);
+        }
+
+        if ((serial->s.uart_reg[UART_IER] & UART_IER_MSI) &&
+            (data & (UART_MCR_RTS | UART_MCR_DTR))) {
+            g_debug("Serial port %d: MCR RTS/DTR write", index);
+            vfio_user_serial_trigger_interrupt(serial);
+        }
+        break;
+
+    case UART_LSR:
+    case UART_MSR:
+        /* do nothing */
+        break;
+
     case UART_SCR:
         serial->s.uart_reg[offset] = data;
         break;
