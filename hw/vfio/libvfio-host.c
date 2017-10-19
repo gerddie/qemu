@@ -525,10 +525,13 @@ libvfio_host_dev_get_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_host_dev_get_region_info(libvfio_dev *dev, int index,
+libvfio_host_dev_get_region_info(libvfio_dev *dev, uint32_t index,
                                  struct vfio_region_info *info, Error **errp)
 {
-    int ret = ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info);
+    int ret;
+
+    info->index = index;
+    ret = ioctl(dev->fd, VFIO_DEVICE_GET_REGION_INFO, info);
     if (ret && errno != ENOSPC) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "error getting region info");

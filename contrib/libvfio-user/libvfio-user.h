@@ -23,6 +23,29 @@
 typedef struct VuDev VuDev;
 
 typedef struct VuDevIface {
+    int         (*get_device_info)              (VuDev *dev,
+                                                 struct vfio_device_info *info);
+    ssize_t     (*read)                         (VuDev *dev,
+                                                 char *buf,
+                                                 size_t count,
+                                                 off_t *ppos);
+    ssize_t     (*write)                        (VuDev *dev,
+                                                 const char *buf,
+                                                 size_t count,
+                                                 off_t *ppos);
+    int         (*get_region_info)              (VuDev *dev,
+                                                 int index,
+                                                 struct vfio_region_info *info);
+    int         (*get_irq_info)                 (VuDev *dev,
+                                                 uint32_t index,
+                                                 struct vfio_irq_info *info);
+    int         (*set_irqs)                     (VuDev *dev,
+                                                 uint32_t index,
+                                                 uint32_t start,
+                                                 int *fds,
+                                                 size_t nfds,
+                                                 uint32_t flags);
+    int         (*reset)                        (VuDev *dev);
 } VuDevIface;
 
 enum VuWatchCondtion {

@@ -393,7 +393,7 @@ libvfio_dev_get_info(libvfio_dev *dev,
 }
 
 bool
-libvfio_dev_get_region_info(libvfio_dev *dev, int index,
+libvfio_dev_get_region_info(libvfio_dev *dev, uint32_t index,
                             struct vfio_region_info *info, Error **errp)
 {
     assert(dev);

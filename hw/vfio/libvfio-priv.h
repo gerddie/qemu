@@ -107,7 +107,7 @@ struct libvfio_ops {
                                                         struct vfio_device_info *info,
                                                         Error **errp);
     bool (*dev_get_region_info)                        (libvfio_dev *dev,
-                                                        int index,
+                                                        uint32_t index,
                                                         struct vfio_region_info *info,
                                                         Error **errp);
     bool (*dev_get_pci_hot_reset_info)                 (libvfio_dev *dev,

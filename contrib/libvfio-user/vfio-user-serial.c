@@ -180,8 +180,9 @@ vfio_user_serial_read_base(VuDev *dev)
     }
 }
 
-static void handle_pci_cfg_write(VuSerialDev *serial, uint16_t offset,
-                                 char *buf, uint32_t count)
+static void
+handle_pci_cfg_write(VuSerialDev *serial, uint16_t offset,
+                     char *buf, uint32_t count)
 {
     uint32_t cfg_addr, bar_mask, bar_index = 0;
 
@@ -886,6 +887,13 @@ fail:
 }
 
 static VuDevIface vfio_user_serial_iface = {
+    .get_device_info = vfio_user_serial_get_device_info,
+    .read = vfio_user_serial_read,
+    .write = vfio_user_serial_write,
+    .get_region_info = vfio_user_serial_get_region_info,
+    .get_irq_info = vfio_user_serial_get_irq_info,
+    .set_irqs = vfio_user_serial_set_irqs,
+    .reset = vfio_user_serial_reset,
 };
 
 int
