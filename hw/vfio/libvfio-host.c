@@ -13,7 +13,7 @@
 #include <sys/ioctl.h>
 
 static bool
-libvfio_host_init_container(libvfio *vfio, libvfio_container *container,
+libvfio_host_init_container(libvfio_t *vfio, libvfio_container *container,
                             Error **errp)
 {
     int ret, fd = qemu_open("/dev/vfio/vfio", O_RDWR);
@@ -289,7 +289,7 @@ libvfio_host_container_eeh_pe_op(libvfio_container *container,
 }
 
 static bool
-libvfio_host_init_group(libvfio *vfio, libvfio_group *group,
+libvfio_host_init_group(libvfio_t *vfio, libvfio_group *group,
                         int groupid, Error **errp)
 {
     int fd;
@@ -390,7 +390,7 @@ libvfio_host_group_unset_container(libvfio_group *group,
 }
 
 static bool
-libvfio_host_init_dev(libvfio *vfio, libvfio_dev *dev,
+libvfio_host_init_dev(libvfio_t *vfio, libvfio_dev *dev,
                       const char *path, Error **errp)
 {
     char *tmp, group_path[PATH_MAX], *group_name;
@@ -650,7 +650,7 @@ libvfio_host_dev_unmmap(libvfio_dev *dev,
     return true;
 }
 
-static libvfio_ops libvfio_host_ops = {
+static libvfio_ops_t libvfio_host_ops = {
     .init_container = libvfio_host_init_container,
     .container_deinit = libvfio_host_container_deinit,
     .container_check_extension = libvfio_host_container_check_extension,
@@ -686,7 +686,7 @@ static libvfio_ops libvfio_host_ops = {
 };
 
 bool
-libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
+libvfio_init_host(libvfio_t *vfio, int api_version, Error **errp)
 {
     bool success;
     libvfio_container container;
@@ -700,6 +700,7 @@ libvfio_init_host(libvfio *vfio, int api_version, Error **errp)
 
     *vfio = (struct libvfio) {
         .ops = &libvfio_host_ops,
+        .realloc = realloc,
     };
 
     /* check kernel version */

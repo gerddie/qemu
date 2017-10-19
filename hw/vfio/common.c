@@ -1251,27 +1251,11 @@ int vfio_get_region_info(VFIODevice *vbasedev, int index,
                          struct vfio_region_info **info)
 {
     Error *err = NULL;
-    size_t argsz = sizeof(struct vfio_region_info);
-
-    *info = g_malloc0(argsz);
-
-    (*info)->index = index;
-retry:
-    (*info)->argsz = argsz;
 
     if (!libvfio_dev_get_region_info(&vbasedev->libvfio_dev,
-                                     index, *info, &err)) {
+                                     index, info, &err)) {
         error_report_err(err);
-        g_free(*info);
-        *info = NULL;
         return -1;
-    }
-
-    if ((*info)->argsz > argsz) {
-        argsz = (*info)->argsz;
-        *info = g_realloc(*info, argsz);
-
-        goto retry;
     }
 
     return 0;

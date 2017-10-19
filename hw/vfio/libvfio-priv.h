@@ -20,7 +20,7 @@ G_BEGIN_DECLS
 #define ERR_PREFIX "libvfio error: "
 
 struct libvfio_ops {
-    bool (*init_container)                              (libvfio *vfio,
+    bool (*init_container)                              (libvfio_t *vfio,
                                                          libvfio_container *container,
                                                          Error **errp);
     void (*container_deinit)                            (libvfio_container *container);
@@ -71,7 +71,7 @@ struct libvfio_ops {
     bool (*container_eeh_pe_op)                        (libvfio_container *container,
                                                         uint32_t op,
                                                         Error **errp);
-    bool (*init_group)                                 (libvfio *vfio,
+    bool (*init_group)                                 (libvfio_t *vfio,
                                                         libvfio_group *group,
                                                         int groupid,
                                                         Error **errp);
@@ -85,7 +85,7 @@ struct libvfio_ops {
     bool (*group_unset_container)                      (libvfio_group *group,
                                                         libvfio_container *container,
                                                         Error **errp);
-    bool (*init_dev)                                   (libvfio *vfio,
+    bool (*init_dev)                                   (libvfio_t *vfio,
                                                         libvfio_dev *dev,
                                                         const char *path,
                                                         Error **errp);

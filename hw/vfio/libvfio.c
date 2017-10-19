@@ -33,8 +33,20 @@
     (vfio)->ops->op(__VA_ARGS__);               \
 })
 
+static void *
+libvfio_realloc(libvfio_t *vfio, void *mem, size_t n_bytes)
+{
+    return vfio->realloc(mem, n_bytes);
+}
+
+static void *
+libvfio_free(libvfio_t *vfio, void *mem)
+{
+    return vfio->realloc(mem, 0);
+}
+
 bool
-libvfio_init_container(libvfio *vfio, libvfio_container *container,
+libvfio_init_container(libvfio_t *vfio, libvfio_container *container,
                        Error **errp)
 {
     assert(vfio);
@@ -208,7 +220,7 @@ libvfio_container_eeh_pe_op(libvfio_container *container,
 }
 
 bool
-libvfio_init_group(libvfio *vfio, libvfio_group *group,
+libvfio_init_group(libvfio_t *vfio, libvfio_group *group,
                    int groupid, Error **errp)
 {
     assert(vfio);
@@ -283,7 +295,7 @@ libvfio_group_unset_container(libvfio_group *group, libvfio_container *container
 }
 
 bool
-libvfio_init_dev(libvfio *vfio, libvfio_dev *dev,
+libvfio_init_dev(libvfio_t *vfio, libvfio_dev *dev,
                  const char *path, Error **errp)
 {
     assert(vfio);
@@ -394,14 +406,30 @@ libvfio_dev_get_info(libvfio_dev *dev,
 
 bool
 libvfio_dev_get_region_info(libvfio_dev *dev, uint32_t index,
-                            struct vfio_region_info *info, Error **errp)
+                            struct vfio_region_info **info, Error **errp)
 {
+    struct vfio_region_info *i = NULL;
+    size_t argsz = sizeof(*i);
+
     assert(dev);
     assert(info);
-    assert(info->argsz >= sizeof(*info));
 
-    return LIBVFIO_CALL(dev->vfio, false,
-                        dev_get_region_info, dev, index, info, errp);
+retry:
+    i = libvfio_realloc(dev->vfio, i, argsz);
+    i->argsz = argsz;
+
+    if (!LIBVFIO_CALL(dev->vfio, false,
+                      dev_get_region_info, dev, index, i, errp)) {
+        libvfio_free(dev->vfio, i);
+        return false;
+    }
+    if (i->argsz != argsz) {
+        argsz = i->argsz;
+        goto retry;
+    }
+
+    *info = i;
+    return true;
 }
 
 bool

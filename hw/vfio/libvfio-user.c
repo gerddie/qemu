@@ -13,7 +13,7 @@
 #include "vfio-user.h"
 
 static bool
-libvfio_user_write(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_write(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE + msg->size;
     int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t *)msg, size);
@@ -27,7 +27,7 @@ libvfio_user_write(libvfio *vfio, vfio_user_msg *msg, Error **errp)
 }
 
 static bool
-libvfio_user_read_hdr(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_read_hdr(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE;
     int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t *)msg, size);
@@ -41,7 +41,7 @@ libvfio_user_read_hdr(libvfio *vfio, vfio_user_msg *msg, Error **errp)
 }
 
 static bool
-libvfio_user_read(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_read(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 {
     int ret;
 
@@ -64,7 +64,7 @@ libvfio_user_read(libvfio *vfio, vfio_user_msg *msg, Error **errp)
 }
 
 static bool
-libvfio_user_read_payload(libvfio *vfio, void *payload,
+libvfio_user_read_payload(libvfio_t *vfio, void *payload,
                           size_t size, Error **errp)
 {
     int ret = qemu_chr_fe_read_all(vfio->chr, payload, size);
@@ -78,7 +78,7 @@ libvfio_user_read_payload(libvfio *vfio, void *payload,
 }
 
 static bool
-libvfio_user_init_container(libvfio *vfio, libvfio_container *container,
+libvfio_user_init_container(libvfio_t *vfio, libvfio_container *container,
                             Error **errp)
 {
     *container = (struct libvfio_container) {
@@ -156,7 +156,7 @@ libvfio_user_container_iommu_unmap_dma(libvfio_container *container,
 }
 
 static bool
-libvfio_user_init_group(libvfio *vfio, libvfio_group *group,
+libvfio_user_init_group(libvfio_t *vfio, libvfio_group *group,
                         int groupid, Error **errp)
 {
     *group = (struct libvfio_group) {
@@ -196,7 +196,7 @@ libvfio_user_group_unset_container(libvfio_group *group,
 }
 
 static bool
-libvfio_user_init_dev(libvfio *vfio, libvfio_dev *dev,
+libvfio_user_init_dev(libvfio_t *vfio, libvfio_dev *dev,
                       const char *path, Error **errp)
 {
     /* XXX: could learn to lookup a specific device */
@@ -373,7 +373,7 @@ libvfio_user_dev_unmmap(libvfio_dev *dev,
     return false;
 }
 
-static libvfio_ops libvfio_user_ops = {
+static libvfio_ops_t libvfio_user_ops = {
     .init_container = libvfio_user_init_container,
     .container_deinit = libvfio_user_container_deinit,
     .container_check_extension = libvfio_user_container_check_extension,
@@ -402,9 +402,9 @@ static libvfio_ops libvfio_user_ops = {
 };
 
 bool
-libvfio_init_user(libvfio *vfio,
+libvfio_init_user(libvfio_t *vfio,
                   CharBackend *chr,
-                  libvfio_get_mem_fd *get_mem_fd,
+                  libvfio_get_mem_fd_t *get_mem_fd,
                   Error **errp)
 {
     assert(vfio);
@@ -414,6 +414,7 @@ libvfio_init_user(libvfio *vfio,
     *vfio = (struct libvfio) {
         .chr = chr,
         .get_mem_fd = get_mem_fd,
+        .realloc = realloc,
         .ops = &libvfio_user_ops,
     };
 

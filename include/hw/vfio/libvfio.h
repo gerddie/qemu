@@ -21,45 +21,49 @@
 extern "C" {
 #endif
 
-typedef struct libvfio_ops libvfio_ops;
+typedef struct libvfio_ops libvfio_ops_t;
 
-typedef bool libvfio_get_mem_fd(void *ptr,
-                                uint64_t *offset, int *fd,
-                                Error **errp);
+typedef bool libvfio_get_mem_fd_t                   (void *ptr,
+                                                     uint64_t *offset,
+                                                     int *fd,
+                                                     Error **errp);
+
+typedef void * libvfio_realloc_t                    (void *mem, size_t n_bytes);
 
 typedef struct libvfio {
-    const libvfio_ops *ops;
+    const libvfio_ops_t *ops;
     CharBackend *chr;
-    libvfio_get_mem_fd *get_mem_fd;
-} libvfio;
+    libvfio_get_mem_fd_t *get_mem_fd;
+    libvfio_realloc_t *realloc; /* realloc() by default */
+} libvfio_t;
 
 typedef struct libvfio_container {
-    libvfio *vfio;
+    libvfio_t *vfio;
     int fd;
 } libvfio_container;
 
 typedef struct libvfio_group {
-    libvfio *vfio;
+    libvfio_t *vfio;
     int fd;
     int groupid;
 } libvfio_group;
 
 typedef struct libvfio_dev {
-    libvfio *vfio;
+    libvfio_t *vfio;
     int fd;
     int groupid;
     char *name;
 } libvfio_dev;
 
-bool            libvfio_init_host                   (libvfio *vfio,
+bool            libvfio_init_host                   (libvfio_t *vfio,
                                                      int api_version,
                                                      Error **errp);
-bool            libvfio_init_user                   (libvfio *vfio,
+bool            libvfio_init_user                   (libvfio_t *vfio,
                                                      CharBackend *chr,
-                                                     libvfio_get_mem_fd *get_mem_fd,
+                                                     libvfio_get_mem_fd_t *get_mem_fd,
                                                      Error **errp);
 
-bool            libvfio_init_container              (libvfio *vfio,
+bool            libvfio_init_container              (libvfio_t *vfio,
                                                      libvfio_container *container,
                                                      Error **errp);
 void            libvfio_container_deinit            (libvfio_container *container);
@@ -111,7 +115,7 @@ bool            libvfio_container_eeh_pe_op         (libvfio_container *containe
                                                      uint32_t op,
                                                      Error **errp);
 
-bool            libvfio_init_group                  (libvfio *vfio,
+bool            libvfio_init_group                  (libvfio_t *vfio,
                                                      libvfio_group *group,
                                                      int groupid,
                                                      Error **errp);
@@ -128,7 +132,7 @@ bool            libvfio_group_get_device            (libvfio_group *group,
                                                      libvfio_dev *dev,
                                                      Error **errp);
 
-bool            libvfio_init_dev                    (libvfio *vfio,
+bool            libvfio_init_dev                    (libvfio_t *vfio,
                                                      libvfio_dev *dev,
                                                      const char *path,
                                                      Error **errp);
@@ -162,7 +166,7 @@ bool            libvfio_dev_get_info                (libvfio_dev *dev,
                                                      Error **errp);
 bool            libvfio_dev_get_region_info         (libvfio_dev *dev,
                                                      uint32_t index,
-                                                     struct vfio_region_info *info,
+                                                     struct vfio_region_info **info,
                                                      Error **errp);
 bool            libvfio_dev_get_pci_hot_reset_info  (libvfio_dev *dev,
                                                      struct vfio_pci_hot_reset_info *info,
