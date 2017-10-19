@@ -13,6 +13,71 @@
 #include "vfio-user.h"
 
 static bool
+libvfio_user_write(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+{
+    int size = VFIO_USER_HDR_SIZE + msg->size;
+    int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t*)msg, size);
+
+    if (ret != size) {
+        error_setg(errp, "failed to write %d bytes, wrote %d", size, ret);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_user_read_hdr(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+{
+    int size = VFIO_USER_HDR_SIZE;
+    int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t*)msg, size);
+
+    if (ret != size) {
+        error_setg(errp, "failed to read %d bytes, read %d", size, ret);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_user_read(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+{
+    int ret;
+
+    if (!libvfio_user_read_hdr(vfio, msg, errp)) {
+        return false;
+    }
+
+    if (msg->size > sizeof(msg->payload)) {
+        error_setg(errp, "invalid payload size %" PRIu32, msg->size);
+        return false;
+    }
+
+    ret = qemu_chr_fe_read_all(vfio->chr, &msg->payload.u8, msg->size);
+    if (ret != msg->size) {
+        error_setg(errp, "failed to read %d bytes, read %d", msg->size, ret);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+libvfio_user_read_payload(libvfio *vfio, void *payload,
+                          size_t size, Error **errp)
+{
+    int ret = qemu_chr_fe_read_all(vfio->chr, payload, size);
+
+    if (ret != size) {
+        error_setg(errp, "failed to read %zu bytes, read %d", size, ret);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
 libvfio_user_init_container(libvfio *vfio, libvfio_container *container,
                             Error **errp)
 {
@@ -187,10 +252,16 @@ libvfio_user_dev_get_irq_info(libvfio_dev *dev,
                               struct vfio_irq_info *irq,
                               Error **errp)
 {
-    int ret = 0;
+    vfio_user_msg msg = {
+        .request = VFIO_USER_REQ_DEV_GET_IRQ_INFO,
+        .size = sizeof(msg.payload.u32),
+        .payload.u32 = index,
+    };
 
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "failed to get irq info");
+    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
+        return false;
+    }
+    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
         return false;
     }
 
@@ -198,64 +269,19 @@ libvfio_user_dev_get_irq_info(libvfio_dev *dev,
 }
 
 static bool
-libvfio_user_write(libvfio *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_dev_get_region_info(libvfio_dev *dev, uint32_t index,
+                                 struct vfio_region_info *info, Error **errp)
 {
-    int size = VFIO_USER_HDR_SIZE + msg->size;
-    int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t*)msg, size);
+    vfio_user_msg msg = {
+        .request = VFIO_USER_REQ_DEV_GET_REGION_INFO,
+        .size = sizeof(msg.payload.u32),
+        .payload.u32 = index,
+    };
 
-    if (ret != size) {
-        error_setg(errp, "failed to write %d bytes, wrote %d", size, ret);
+    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
         return false;
     }
-
-    return true;
-}
-
-static bool
-libvfio_user_read_hdr(libvfio *vfio, vfio_user_msg *msg, Error **errp)
-{
-    int size = VFIO_USER_HDR_SIZE;
-    int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t*)msg, size);
-
-    if (ret != size) {
-        error_setg(errp, "failed to read %d bytes, read %d", size, ret);
-        return false;
-    }
-
-    return true;
-}
-
-static bool
-libvfio_user_read(libvfio *vfio, vfio_user_msg *msg, Error **errp)
-{
-    int ret;
-
-    if (!libvfio_user_read_hdr(vfio, msg, errp)) {
-        return false;
-    }
-
-    if (msg->size > sizeof(msg->payload)) {
-        error_setg(errp, "invalid payload size %" PRIu32, msg->size);
-        return false;
-    }
-
-    ret = qemu_chr_fe_read_all(vfio->chr, &msg->payload.u8, msg->size);
-    if (ret != msg->size) {
-        error_setg(errp, "failed to read %d bytes, read %d", msg->size, ret);
-        return false;
-    }
-
-    return true;
-
-}
-static bool
-libvfio_user_read_payload(libvfio *vfio, void *payload,
-                          size_t size, Error **errp)
-{
-    int ret = qemu_chr_fe_read_all(vfio->chr, payload, size);
-
-    if (ret != size) {
-        error_setg(errp, "failed to read %zu bytes, read %d", size, ret);
+    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
         return false;
     }
 
@@ -281,26 +307,6 @@ libvfio_user_dev_get_info(libvfio_dev *dev,
         return false;
     }
     if (!libvfio_user_read_payload(dev->vfio, info, sizeof(*info), errp)) {
-        return false;
-    }
-
-    return true;
-}
-
-static bool
-libvfio_user_dev_get_region_info(libvfio_dev *dev, uint32_t index,
-                                 struct vfio_region_info *info, Error **errp)
-{
-    vfio_user_msg msg = {
-        .request = VFIO_USER_REQ_DEV_GET_REGION_INFO,
-        .size = sizeof(msg.payload.u32),
-        .payload.u32 = index,
-    };
-
-    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
-        return false;
-    }
-    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
         return false;
     }
 

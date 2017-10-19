@@ -34,7 +34,7 @@ typedef struct VuDevIface {
                                                  size_t count,
                                                  off_t *ppos);
     int         (*get_region_info)              (VuDev *dev,
-                                                 int index,
+                                                 uint32_t index,
                                                  struct vfio_region_info *info);
     int         (*get_irq_info)                 (VuDev *dev,
                                                  uint32_t index,

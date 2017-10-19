@@ -647,7 +647,7 @@ vfio_user_serial_get_device_info(VuDev *dev,
 }
 
 static int
-vfio_user_serial_get_region_info(VuDev *dev, int index,
+vfio_user_serial_get_region_info(VuDev *dev, uint32_t index,
                                  struct vfio_region_info *info)
 {
     VuSerialDev *serial = container_of(dev, VuSerialDev, parent.parent);

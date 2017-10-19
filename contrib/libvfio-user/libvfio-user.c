@@ -53,8 +53,11 @@ vu_request_to_string(unsigned int req)
 {
 #define REQ(req) [req] = #req
     static const char *vu_request_str[] = {
-        REQ(VFIO_USER_REQ_MAX),
+        REQ(VFIO_USER_REQ_NONE),
         REQ(VFIO_USER_REQ_DEV_GET_INFO),
+        REQ(VFIO_USER_REQ_DEV_GET_REGION_INFO),
+        REQ(VFIO_USER_REQ_DEV_GET_IRQ_INFO),
+        REQ(VFIO_USER_REQ_MAX),
     };
 #undef REQ
 
@@ -85,13 +88,41 @@ vu_panic(VuDev *dev, const char *msg, ...)
 }
 
 static bool
-vu_get_device_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_device_get_info(VuDev *dev, vfio_user_msg *vmsg)
 {
-    vmsg->size = sizeof(vmsg->payload.device_info);
-
     if (dev->iface->get_device_info(dev, &vmsg->payload.device_info) < 0) {
         vu_panic(dev, "failed to get device info");
     }
+
+    vmsg->size = sizeof(vmsg->payload.device_info);
+
+    return true;
+}
+
+static bool
+vu_device_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
+{
+    if (vmsg->size != sizeof(vmsg->payload.u32) ||
+        dev->iface->get_region_info(dev, vmsg->payload.u32,
+                                    &vmsg->payload.region_info) < 0) {
+        vu_panic(dev, "failed to get region info");
+    }
+
+    vmsg->size = sizeof(vmsg->payload.region_info);
+
+    return true;
+}
+
+static bool
+vu_device_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
+{
+    if (vmsg->size != sizeof(vmsg->payload.u32) ||
+        dev->iface->get_irq_info(dev, vmsg->payload.u32,
+                                 &vmsg->payload.irq_info) < 0) {
+        vu_panic(dev, "failed to get irq info");
+    }
+
+    vmsg->size = sizeof(vmsg->payload.irq_info);
 
     return true;
 }
@@ -130,7 +161,11 @@ vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
 
     switch (vmsg->request) {
     case VFIO_USER_REQ_DEV_GET_INFO:
-        return vu_get_device_info(dev, vmsg);
+        return vu_device_get_info(dev, vmsg);
+    case VFIO_USER_REQ_DEV_GET_REGION_INFO:
+        return vu_device_get_region_info(dev, vmsg);
+    case VFIO_USER_REQ_DEV_GET_IRQ_INFO:
+        return vu_device_get_irq_info(dev, vmsg);
     default:
         vmsg_close_fds(vmsg);
         vu_panic(dev, "Unhandled request: %d", vmsg->request);
@@ -178,23 +213,31 @@ vu_message_read(VuDev *dev, vfio_user_msg *vmsg)
         }
     }
 
-    /* if (vmsg->size) { */
-    /*     do { */
-    /*         rc = read(fd, &vmsg->payload, vmsg->size); */
-    /*     } while (rc < 0 && (errno == EINTR || errno == EAGAIN)); */
+    if (vmsg->size > sizeof(vmsg->payload)) {
+        vu_panic(dev, "Invalid message size: %" PRIu32, vmsg->size);
+        goto fail;
+    }
 
-    /*     if (rc <= 0) { */
-    /*         vu_panic(dev, "Error while reading: %s", strerror(errno)); */
-    /*         goto fail; */
-    /*     } */
+    if (vmsg->size) {
+        do {
+            rc = read(fd, &vmsg->payload, vmsg->size);
+        } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
 
-    /*     assert(rc == vmsg->size); */
-    /* } */
+        if (rc <= 0) {
+            vu_panic(dev, "Error while reading: %s", strerror(errno));
+            goto fail;
+        }
+
+        if (rc != vmsg->size) {
+            vu_panic(dev, "Error while reading");
+            goto fail;
+        }
+    }
 
     return true;
 
-/* fail: */
-/*     vmsg_close_fds(vmsg); */
+fail:
+    vmsg_close_fds(vmsg);
 
     return false;
 }

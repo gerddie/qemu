@@ -30,7 +30,7 @@ typedef enum vfio_user_req {
     VFIO_USER_REQ_NONE = 0,
     VFIO_USER_REQ_DEV_GET_INFO = 1,
     VFIO_USER_REQ_DEV_GET_REGION_INFO = 2,
-    /* VFIO_USER_REQ_DEV_GET_IRQ_INFO = 3, */
+    VFIO_USER_REQ_DEV_GET_IRQ_INFO = 3,
     /* VFIO_USER_REQ_DEV_SET_IRQS = 4, */
     /* VFIO_USER_REQ_DEV_RESET = 5, */
     /* VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO = 6, */
@@ -38,14 +38,17 @@ typedef enum vfio_user_req {
 
     /* VFIO_USER_REQ_DEV_MMAP, */
     /* VFIO_USER_REQ_DEV_UNMMAP, */
-    VFIO_USER_REQ_IOMMU_MAP_DMA,
-    VFIO_USER_REQ_IOMMU_UNMAP_DMA,
+    /* VFIO_USER_REQ_IOMMU_MAP_DMA, */
+    /* VFIO_USER_REQ_IOMMU_UNMAP_DMA, */
 
     VFIO_USER_REQ_MAX
 } vfio_user_req;
 
 typedef struct vfio_user_msg {
-    vfio_user_req request;
+    union {
+        vfio_user_req request;
+        int reply;
+    };
     uint32_t flags;
     uint32_t size; /* the following payload size */
 
@@ -54,6 +57,8 @@ typedef struct vfio_user_msg {
         uint32_t u32;
         uint64_t u64;
         struct vfio_device_info device_info;
+        struct vfio_region_info region_info;
+        struct vfio_irq_info irq_info;
     } payload;
 
     int fd_num;
