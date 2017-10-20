@@ -60,10 +60,6 @@ typedef struct vfio_user_msg {
         struct vfio_region_info region_info;
         struct vfio_irq_info irq_info;
     } payload;
-
-    bool alloc_payload;
-    int fd_num;
-    int fds[VFIO_USER_MAX_FDS];
 } VFIO_USER_PACKED vfio_user_msg_t;
 
 #define VFIO_USER_HDR_SIZE offsetof(vfio_user_msg_t, payload.u8)

@@ -48,6 +48,14 @@
         }                                       \
     } while (0)
 
+typedef struct VuMsg {
+    int fd_num;
+    int fds[VFIO_USER_MAX_FDS];
+
+    vfio_user_msg_t msg;
+    void *ptr;
+} VuMsg;
+
 static const char *
 vu_request_to_string(unsigned int req)
 {
@@ -58,6 +66,7 @@ vu_request_to_string(unsigned int req)
         REQ(VFIO_USER_REQ_DEV_GET_REGION_INFO),
         REQ(VFIO_USER_REQ_DEV_GET_IRQ_INFO),
         REQ(VFIO_USER_REQ_DEV_RESET),
+
         REQ(VFIO_USER_REQ_MAX),
     };
 #undef REQ
@@ -89,28 +98,41 @@ vu_panic(VuDev *dev, const char *msg, ...)
 }
 
 static int
-vu_dev_get_info(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_dev_get_info(VuDev *dev, VuMsg *vmsg)
 {
-    int ret = dev->iface->get_device_info(dev, &vmsg->payload.device_info);
+    vfio_user_msg_t *msg = &vmsg->msg;
+    int ret = dev->iface->get_device_info(dev, &msg->payload.device_info);
 
-    vmsg->size = sizeof(vmsg->payload.device_info);
+    msg->size = sizeof(msg->payload.device_info);
 
     return ret;
 }
 
 static int
-vu_dev_get_region_info(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_dev_get_region_info(VuDev *dev, VuMsg *vmsg)
 {
+    vfio_user_msg_t *msg = &vmsg->msg;
+    struct vfio_region_info *i;
+    size_t argsz = sizeof(*i);
     int ret;
 
-    if (vmsg->size != sizeof(vmsg->payload.u32)) {
+    if (msg->size != sizeof(msg->payload.u32)) {
         goto err;
     }
 
-    ret = dev->iface->get_region_info(dev, vmsg->payload.u32,
-                                      &vmsg->payload.region_info);
+retry:
+    i = vmsg->ptr = realloc(vmsg->ptr, argsz);
+    ret = dev->iface->get_region_info(dev, msg->payload.u32, i);
+    if (ret < 0) {
+        goto err;
+    }
 
-    vmsg->size = sizeof(vmsg->payload.region_info);
+    if (i->argsz > argsz) {
+        argsz = i->argsz;
+        goto retry;
+    }
+
+    msg->size = i->argsz;
 
     return ret;
 
@@ -120,27 +142,29 @@ err:
 }
 
 static bool
-vu_dev_get_irq_info(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_dev_get_irq_info(VuDev *dev, VuMsg *vmsg)
 {
-    if (vmsg->size != sizeof(vmsg->payload.u32) ||
-        dev->iface->get_irq_info(dev, vmsg->payload.u32,
-                                 &vmsg->payload.irq_info) < 0) {
+    vfio_user_msg_t *msg = &vmsg->msg;
+
+    if (msg->size != sizeof(msg->payload.u32) ||
+        dev->iface->get_irq_info(dev, msg->payload.u32,
+                                 &msg->payload.irq_info) < 0) {
         vu_panic(dev, "failed to get irq info");
     }
 
-    vmsg->size = sizeof(vmsg->payload.irq_info);
+    msg->size = sizeof(msg->payload.irq_info);
 
     return true;
 }
 
 static bool
-vu_dev_reset(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_dev_reset(VuDev *dev, VuMsg *vmsg)
 {
     return dev->iface->reset(dev);
 }
 
 static void
-vmsg_close_fds(vfio_user_msg_t *vmsg)
+vmsg_close_fds(VuMsg *vmsg)
 {
     int i;
 
@@ -150,15 +174,17 @@ vmsg_close_fds(vfio_user_msg_t *vmsg)
     vmsg->fd_num = 0;
 }
 
-static bool
-vu_process_message(VuDev *dev, vfio_user_msg_t *vmsg)
+static int
+vu_process_message(VuDev *dev, VuMsg *vmsg)
 {
+    vfio_user_msg_t *msg = &vmsg->msg;
+
     /* Print out generic part of the request. */
     DPRINT("================ vfio-user message ================\n");
-    DPRINT("Request: %s (%d)\n", vu_request_to_string(vmsg->request),
-           vmsg->request);
-    DPRINT("Flags:   0x%x\n", vmsg->flags);
-    DPRINT("Size:    %d\n", vmsg->size);
+    DPRINT("Request: %s (%d)\n", vu_request_to_string(msg->request),
+           msg->request);
+    DPRINT("Flags:   0x%x\n", msg->flags);
+    DPRINT("Size:    %d\n", msg->size);
 
     if (vmsg->fd_num) {
         int i;
@@ -169,7 +195,7 @@ vu_process_message(VuDev *dev, vfio_user_msg_t *vmsg)
         DPRINT("\n");
     }
 
-    switch (vmsg->request) {
+    switch (msg->request) {
     case VFIO_USER_REQ_DEV_GET_INFO:
         return vu_dev_get_info(dev, vmsg);
     case VFIO_USER_REQ_DEV_GET_REGION_INFO:
@@ -180,18 +206,18 @@ vu_process_message(VuDev *dev, vfio_user_msg_t *vmsg)
         return vu_dev_reset(dev, vmsg);
     default:
         vmsg_close_fds(vmsg);
-        vu_panic(dev, "Unhandled request: %d", vmsg->request);
+        vu_panic(dev, "Unhandled request: %d", msg->request);
     }
 
     return false;
 }
 
 static bool
-vu_message_read(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_message_read(VuDev *dev, VuMsg *vmsg)
 {
     char control[CMSG_SPACE(VFIO_USER_MAX_FDS * sizeof(int))] = { };
     struct iovec iov = {
-        .iov_base = (char *)vmsg,
+        .iov_base = (char *)&vmsg->msg,
         .iov_len = VFIO_USER_HDR_SIZE,
     };
     struct msghdr msg = {
@@ -225,14 +251,14 @@ vu_message_read(VuDev *dev, vfio_user_msg_t *vmsg)
         }
     }
 
-    if (vmsg->size > sizeof(vmsg->payload)) {
-        vu_panic(dev, "Invalid message size: %" PRIu32, vmsg->size);
+    if (vmsg->msg.size > sizeof(vmsg->msg.payload)) {
+        vu_panic(dev, "Invalid message size: %" PRIu32, vmsg->msg.size);
         goto fail;
     }
 
-    if (vmsg->size) {
+    if (vmsg->msg.size) {
         do {
-            rc = read(fd, &vmsg->payload, vmsg->size);
+            rc = read(fd, &vmsg->msg.payload, vmsg->msg.size);
         } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
 
         if (rc <= 0) {
@@ -240,7 +266,7 @@ vu_message_read(VuDev *dev, vfio_user_msg_t *vmsg)
             goto fail;
         }
 
-        if (rc != vmsg->size) {
+        if (rc != vmsg->msg.size) {
             vu_panic(dev, "Error while reading");
             goto fail;
         }
@@ -255,20 +281,21 @@ fail:
 }
 
 static bool
-vu_message_write(VuDev *dev, vfio_user_msg_t *vmsg)
+vu_message_write(VuDev *dev, VuMsg *vmsg)
 {
-    int rc, fd = dev->sock;
-    uint8_t *p = (uint8_t *)vmsg;
+    ssize_t ret;
+    uint8_t *p = (uint8_t *)&vmsg->msg;
+    struct iovec vec[2] = {
+        { .iov_base = p, .iov_len = VFIO_USER_HDR_SIZE },
+        { .iov_base = vmsg->ptr ?: p + VFIO_USER_HDR_SIZE,
+          .iov_len = vmsg->msg.size },
+    };
 
     do {
-        rc = write(fd, p, VFIO_USER_HDR_SIZE);
-    } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
+        ret = writev(dev->sock, vec, 2);
+    } while (ret < 0 && (errno == EINTR || errno == EAGAIN));
 
-    do {
-        rc = write(fd, p + VFIO_USER_HDR_SIZE, vmsg->size);
-    } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
-
-    if (rc <= 0) {
+    if (ret <= 0) {
         vu_panic(dev, "Error while writing: %s", strerror(errno));
         return false;
     }
@@ -279,18 +306,19 @@ vu_message_write(VuDev *dev, vfio_user_msg_t *vmsg)
 bool
 vu_dispatch(VuDev *dev)
 {
-    vfio_user_msg_t vmsg = { 0, };
+    VuMsg vmsg = { 0, };
 
     if (!vu_message_read(dev, &vmsg)) {
         return false;
     }
 
-    vmsg.reply = vu_process_message(dev, &vmsg);
+    vmsg.msg.reply = vu_process_message(dev, &vmsg);
 
     if (!vu_message_write(dev, &vmsg)) {
         return false;
     }
 
+    free(vmsg.ptr);
     return true;
 }
 

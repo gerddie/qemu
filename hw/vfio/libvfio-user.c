@@ -55,6 +55,24 @@ libvfio_user_read_payload(libvfio_t *vfio, void *payload,
 }
 
 static bool
+libvfio_user_read_alloc(libvfio_t *vfio, vfio_user_msg_t *msg,
+                        void **pp, Error **errp)
+{
+    if (!libvfio_user_read_hdr(vfio, msg, errp)) {
+        return false;
+    }
+
+    *pp = malloc(msg->size);
+
+    if (!libvfio_user_read_payload(vfio, *pp, msg->size, errp)) {
+        free(*pp);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
 libvfio_user_read(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
 {
     if (!libvfio_user_read_hdr(vfio, msg, errp)) {
@@ -273,7 +291,7 @@ libvfio_user_dev_get_irq_info(libvfio_dev_t *dev,
 
 static bool
 libvfio_user_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
-                                 struct vfio_region_info *info, Error **errp)
+                                 struct vfio_region_info **info, Error **errp)
 {
     vfio_user_msg_t msg = {
         .request = VFIO_USER_REQ_DEV_GET_REGION_INFO,
@@ -284,7 +302,7 @@ libvfio_user_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
     if (!libvfio_user_write(dev->vfio, &msg, errp)) {
         return false;
     }
-    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
+    if (!libvfio_user_read_alloc(dev->vfio, &msg, (void **)info, errp)) {
         return false;
     }
 
@@ -318,7 +336,7 @@ libvfio_user_dev_get_info(libvfio_dev_t *dev,
 
 static bool
 libvfio_user_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
-                                        struct vfio_pci_hot_reset_info *info,
+                                        struct vfio_pci_hot_reset_info **info,
                                         Error **errp)
 {
     return false;

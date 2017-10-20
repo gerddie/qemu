@@ -108,10 +108,10 @@ struct libvfio_ops {
                                                         Error **errp);
     bool (*dev_get_region_info)                        (libvfio_dev_t *dev,
                                                         uint32_t index,
-                                                        struct vfio_region_info *info,
+                                                        struct vfio_region_info **info,
                                                         Error **errp);
     bool (*dev_get_pci_hot_reset_info)                 (libvfio_dev_t *dev,
-                                                        struct vfio_pci_hot_reset_info *info,
+                                                        struct vfio_pci_hot_reset_info **info,
                                                         Error **errp);
     bool (*dev_pci_hot_reset)                          (libvfio_dev_t *dev,
                                                         libvfio_group_t **groups,
@@ -138,6 +138,18 @@ struct libvfio_ops {
                                                         size_t length,
                                                         Error **errp);
 };
+
+static inline void *
+libvfio_realloc(libvfio_t *vfio, void *mem, size_t n_bytes)
+{
+    return vfio->realloc(mem, n_bytes);
+}
+
+static inline void *
+libvfio_free(libvfio_t *vfio, void *mem)
+{
+    return vfio->realloc(mem, 0);
+}
 
 G_END_DECLS
 

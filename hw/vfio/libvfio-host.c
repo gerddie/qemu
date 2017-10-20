@@ -525,8 +525,8 @@ libvfio_host_dev_get_info(libvfio_dev_t *dev,
 }
 
 static bool
-libvfio_host_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
-                                 struct vfio_region_info *info, Error **errp)
+libvfio_ioctl_get_region_info(libvfio_dev_t *dev, uint32_t index,
+                              struct vfio_region_info *info, Error **errp)
 {
     int ret;
 
@@ -542,9 +542,33 @@ libvfio_host_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
 }
 
 static bool
-libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
-                                        struct vfio_pci_hot_reset_info *info,
-                                        Error **errp)
+libvfio_host_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
+                                 struct vfio_region_info **info, Error **errp)
+{
+    struct vfio_region_info *i = NULL;
+    size_t argsz = sizeof(*i);
+
+retry:
+    i = libvfio_realloc(dev->vfio, i, argsz);
+    i->argsz = argsz;
+
+    if (!libvfio_ioctl_get_region_info(dev, index, i, errp)) {
+        libvfio_free(dev->vfio, i);
+        return false;
+    }
+    if (i->argsz != argsz) {
+        argsz = i->argsz;
+        goto retry;
+    }
+
+    *info = i;
+    return true;
+}
+
+static bool
+libvfio_ioctl_get_pci_hot_reset_info(libvfio_dev_t *dev,
+                                     struct vfio_pci_hot_reset_info *info,
+                                     Error **errp)
 {
     int ret = ioctl(dev->fd, VFIO_DEVICE_GET_PCI_HOT_RESET_INFO, info);
     if (ret && errno != ENOSPC) {
@@ -553,6 +577,32 @@ libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
         return false;
     }
 
+    return true;
+}
+
+static bool
+libvfio_host_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
+                                        struct vfio_pci_hot_reset_info **info,
+                                        Error **errp)
+{
+
+    struct vfio_pci_hot_reset_info *i = NULL;
+    size_t argsz = sizeof(*i);
+
+retry:
+    i = libvfio_realloc(dev->vfio, i, argsz);
+    i->argsz = argsz;
+
+    if (!libvfio_ioctl_get_pci_hot_reset_info(dev, i, errp)) {
+        libvfio_free(dev->vfio, i);
+        return false;
+    }
+    if (i->argsz != argsz) {
+        argsz = i->argsz;
+        goto retry;
+    }
+
+    *info = i;
     return true;
 }
 

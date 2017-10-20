@@ -33,18 +33,6 @@
     (vfio)->ops->op(__VA_ARGS__);               \
 })
 
-static void *
-libvfio_realloc(libvfio_t *vfio, void *mem, size_t n_bytes)
-{
-    return vfio->realloc(mem, n_bytes);
-}
-
-static void *
-libvfio_free(libvfio_t *vfio, void *mem)
-{
-    return vfio->realloc(mem, 0);
-}
-
 bool
 libvfio_init_container(libvfio_t *vfio, libvfio_container_t *container,
                        Error **errp)
@@ -411,28 +399,11 @@ bool
 libvfio_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
                             struct vfio_region_info **info, Error **errp)
 {
-    struct vfio_region_info *i = NULL;
-    size_t argsz = sizeof(*i);
-
     assert(dev);
     assert(info);
 
-retry:
-    i = libvfio_realloc(dev->vfio, i, argsz);
-    i->argsz = argsz;
-
-    if (!LIBVFIO_CALL(dev->vfio, false,
-                      dev_get_region_info, dev, index, i, errp)) {
-        libvfio_free(dev->vfio, i);
-        return false;
-    }
-    if (i->argsz != argsz) {
-        argsz = i->argsz;
-        goto retry;
-    }
-
-    *info = i;
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_region_info, dev, index, info, errp);
 }
 
 bool
@@ -440,28 +411,11 @@ libvfio_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
                                    struct vfio_pci_hot_reset_info **info,
                                    Error **errp)
 {
-    struct vfio_pci_hot_reset_info *i = NULL;
-    size_t argsz = sizeof(*i);
-
     assert(dev);
     assert(info);
 
-retry:
-    i = libvfio_realloc(dev->vfio, i, argsz);
-    i->argsz = argsz;
-
-    if (!LIBVFIO_CALL(dev->vfio, false,
-                      dev_get_pci_hot_reset_info, dev, i, errp)) {
-        libvfio_free(dev->vfio, i);
-        return false;
-    }
-    if (i->argsz != argsz) {
-        argsz = i->argsz;
-        goto retry;
-    }
-
-    *info = i;
-    return true;
+    return LIBVFIO_CALL(dev->vfio, false,
+                        dev_get_pci_hot_reset_info, dev, info, errp);
 }
 
 bool
