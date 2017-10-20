@@ -88,7 +88,7 @@ vu_panic(VuDev *dev, const char *msg, ...)
 }
 
 static bool
-vu_device_get_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_info(VuDev *dev, vfio_user_msg *vmsg)
 {
     if (dev->iface->get_device_info(dev, &vmsg->payload.device_info) < 0) {
         vu_panic(dev, "failed to get device info");
@@ -100,7 +100,7 @@ vu_device_get_info(VuDev *dev, vfio_user_msg *vmsg)
 }
 
 static bool
-vu_device_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
 {
     if (vmsg->size != sizeof(vmsg->payload.u32) ||
         dev->iface->get_region_info(dev, vmsg->payload.u32,
@@ -114,7 +114,7 @@ vu_device_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
 }
 
 static bool
-vu_device_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
 {
     if (vmsg->size != sizeof(vmsg->payload.u32) ||
         dev->iface->get_irq_info(dev, vmsg->payload.u32,
@@ -161,11 +161,11 @@ vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
 
     switch (vmsg->request) {
     case VFIO_USER_REQ_DEV_GET_INFO:
-        return vu_device_get_info(dev, vmsg);
+        return vu_dev_get_info(dev, vmsg);
     case VFIO_USER_REQ_DEV_GET_REGION_INFO:
-        return vu_device_get_region_info(dev, vmsg);
+        return vu_dev_get_region_info(dev, vmsg);
     case VFIO_USER_REQ_DEV_GET_IRQ_INFO:
-        return vu_device_get_irq_info(dev, vmsg);
+        return vu_dev_get_irq_info(dev, vmsg);
     default:
         vmsg_close_fds(vmsg);
         vu_panic(dev, "Unhandled request: %d", vmsg->request);

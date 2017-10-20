@@ -31,25 +31,33 @@ typedef void *  libvfio_realloc_t                   (void *mem, size_t n_bytes);
 typedef struct libvfio_ops libvfio_ops_t;
 
 typedef struct libvfio {
+    libvfio_realloc_t *realloc; /* realloc() by default */
+
+    /*< private >*/
     const libvfio_ops_t *ops;
     CharBackend *chr;
     libvfio_get_mem_fd_t *get_mem_fd;
-    libvfio_realloc_t *realloc; /* realloc() by default */
 } libvfio_t;
 
 typedef struct libvfio_container {
     libvfio_t *vfio;
+
+    /*< private >*/
     int fd;
 } libvfio_container_t;
 
 typedef struct libvfio_group {
     libvfio_t *vfio;
+
+    /*< private >*/
     int fd;
     int groupid;
 } libvfio_group_t;
 
 typedef struct libvfio_dev {
     libvfio_t *vfio;
+
+    /*< private >*/
     int fd;
     int groupid;
     char *name;

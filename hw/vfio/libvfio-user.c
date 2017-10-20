@@ -41,10 +41,22 @@ libvfio_user_read_hdr(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 }
 
 static bool
+libvfio_user_read_payload(libvfio_t *vfio, void *payload,
+                          size_t size, Error **errp)
+{
+    int ret = qemu_chr_fe_read_all(vfio->chr, payload, size);
+
+    if (ret != size) {
+        error_setg(errp, "failed to read %zu bytes, read %d", size, ret);
+        return false;
+    }
+
+    return true;
+}
+
+static bool
 libvfio_user_read(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 {
-    int ret;
-
     if (!libvfio_user_read_hdr(vfio, msg, errp)) {
         return false;
     }
@@ -54,23 +66,7 @@ libvfio_user_read(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
         return false;
     }
 
-    ret = qemu_chr_fe_read_all(vfio->chr, &msg->payload.u8, msg->size);
-    if (ret != msg->size) {
-        error_setg(errp, "failed to read %d bytes, read %d", msg->size, ret);
-        return false;
-    }
-
-    return true;
-}
-
-static bool
-libvfio_user_read_payload(libvfio_t *vfio, void *payload,
-                          size_t size, Error **errp)
-{
-    int ret = qemu_chr_fe_read_all(vfio->chr, payload, size);
-
-    if (ret != size) {
-        error_setg(errp, "failed to read %zu bytes, read %d", size, ret);
+    if (!libvfio_user_read_payload(vfio, &msg->payload.u8, msg->size, errp)) {
         return false;
     }
 
@@ -90,6 +86,7 @@ libvfio_user_init_container(libvfio_t *vfio, libvfio_container_t *container,
 static void
 libvfio_user_container_deinit(libvfio_container_t *container)
 {
+    container->vfio = NULL;
 }
 
 static bool
@@ -169,6 +166,7 @@ libvfio_user_init_group(libvfio_t *vfio, libvfio_group_t *group,
 static void
 libvfio_user_group_deinit(libvfio_group_t *group)
 {
+    group->vfio = NULL;
 }
 
 static bool
@@ -184,6 +182,7 @@ libvfio_user_group_set_container(libvfio_group_t *group,
                                  libvfio_container_t *container,
                                  Error **errp)
 {
+    /* nothing to do so far */
     return true;
 }
 
@@ -192,6 +191,7 @@ libvfio_user_group_unset_container(libvfio_group_t *group,
                                    libvfio_container_t *container,
                                    Error **errp)
 {
+    /* nothing to do so far */
     return true;
 }
 
@@ -212,6 +212,9 @@ libvfio_user_init_dev(libvfio_t *vfio, libvfio_dev_t *dev,
 static void
 libvfio_user_dev_deinit(libvfio_dev_t *dev)
 {
+    g_free(dev->name);
+    dev->name = NULL;
+    dev->vfio = NULL;
 }
 
 static bool
