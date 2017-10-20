@@ -241,7 +241,7 @@ libvfio_host_container_iommu_spapr_tce_create(libvfio_container_t *container,
         .flags = flags
     };
 
-    if (!ioctl(container->fd, VFIO_IOMMU_SPAPR_TCE_CREATE, &create)) {
+    if (ioctl(container->fd, VFIO_IOMMU_SPAPR_TCE_CREATE, &create)) {
         error_setg_errno(errp, errno,
                          ERR_PREFIX "IOMMU_SPAPR_TCE_CREATE failed");
         return false;

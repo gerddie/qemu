@@ -31,9 +31,11 @@ typedef enum vfio_user_req {
     VFIO_USER_REQ_DEV_GET_INFO = 1,
     VFIO_USER_REQ_DEV_GET_REGION_INFO = 2,
     VFIO_USER_REQ_DEV_GET_IRQ_INFO = 3,
-    /* VFIO_USER_REQ_DEV_SET_IRQS = 4, */
-    VFIO_USER_REQ_DEV_RESET = 5,
-    /* VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO = 6, */
+    VFIO_USER_REQ_DEV_READ = 4,
+    VFIO_USER_REQ_DEV_WRITE = 5,
+    VFIO_USER_REQ_DEV_RESET = 6,
+    VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO = 7,
+    VFIO_USER_REQ_DEV_SET_IRQS = 8,
     /* VFIO_USER_REQ_DEV_PCI_HOT_RESET = 7, */
 
     /* VFIO_USER_REQ_DEV_MMAP, */
@@ -43,6 +45,11 @@ typedef enum vfio_user_req {
 
     VFIO_USER_REQ_MAX
 } vfio_user_req_t;
+
+typedef struct vfio_user_msg_rw {
+    uint64_t size;
+    uint64_t offset;
+} vfio_user_msg_rw_t;
 
 typedef struct vfio_user_msg {
     union {
@@ -59,6 +66,8 @@ typedef struct vfio_user_msg {
         struct vfio_device_info device_info;
         struct vfio_region_info region_info;
         struct vfio_irq_info irq_info;
+        struct vfio_irq_set irq_set;
+        struct vfio_user_msg_rw rw;
     } payload;
 } VFIO_USER_PACKED vfio_user_msg_t;
 

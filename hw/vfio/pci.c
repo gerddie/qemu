@@ -2032,7 +2032,7 @@ static int vfio_pci_hot_reset(VFIOPCIDevice *vdev, bool single)
 {
     Error *err = NULL;
     VFIOGroup *group;
-    struct vfio_pci_hot_reset_info *info;
+    struct vfio_pci_hot_reset_info *info = NULL;
     struct vfio_pci_dependent_device *devices;
     libvfio_group_t **groups;
     int ret, i, count, ngroup = 0;
@@ -2575,6 +2575,7 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
     size_t size, bytes_read;
     int i, ret;
 
+    vdev->vbasedev.libvfio.realloc = g_realloc;
     if (qemu_chr_fe_backend_connected(&vdev->vbasedev.chr)) {
         if (!libvfio_init_user(&vdev->vbasedev.libvfio,
                                &vdev->vbasedev.chr,

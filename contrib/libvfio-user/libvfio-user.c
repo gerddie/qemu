@@ -65,7 +65,11 @@ vu_request_to_string(unsigned int req)
         REQ(VFIO_USER_REQ_DEV_GET_INFO),
         REQ(VFIO_USER_REQ_DEV_GET_REGION_INFO),
         REQ(VFIO_USER_REQ_DEV_GET_IRQ_INFO),
+        REQ(VFIO_USER_REQ_DEV_READ),
+        REQ(VFIO_USER_REQ_DEV_WRITE),
         REQ(VFIO_USER_REQ_DEV_RESET),
+        REQ(VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO),
+        REQ(VFIO_USER_REQ_DEV_SET_IRQS),
 
         REQ(VFIO_USER_REQ_MAX),
     };
@@ -114,7 +118,7 @@ vu_dev_get_region_info(VuDev *dev, VuMsg *vmsg)
     vfio_user_msg_t *msg = &vmsg->msg;
     struct vfio_region_info *i;
     size_t argsz = sizeof(*i);
-    int ret;
+    int ret = -EINVAL;
 
     if (msg->size != sizeof(msg->payload.u32)) {
         goto err;
@@ -122,8 +126,9 @@ vu_dev_get_region_info(VuDev *dev, VuMsg *vmsg)
 
 retry:
     i = vmsg->ptr = realloc(vmsg->ptr, argsz);
+    i->argsz = argsz;
     ret = dev->iface->get_region_info(dev, msg->payload.u32, i);
-    if (ret < 0) {
+    if (ret < 0 && ret != -ENOSPC) {
         goto err;
     }
 
@@ -138,29 +143,104 @@ retry:
 
 err:
     vu_panic(dev, "failed to get region info");
-    return -EINVAL;
+    return ret;
 }
 
-static bool
+static int
 vu_dev_get_irq_info(VuDev *dev, VuMsg *vmsg)
 {
     vfio_user_msg_t *msg = &vmsg->msg;
+    int ret = -EINVAL;
 
-    if (msg->size != sizeof(msg->payload.u32) ||
-        dev->iface->get_irq_info(dev, msg->payload.u32,
-                                 &msg->payload.irq_info) < 0) {
+    if (msg->size != sizeof(msg->payload.u32)) {
         vu_panic(dev, "failed to get irq info");
+        return ret;
     }
+
+    ret = dev->iface->get_irq_info(dev, msg->payload.u32,
+                                   &msg->payload.irq_info);
 
     msg->size = sizeof(msg->payload.irq_info);
 
-    return true;
+    return ret;
 }
 
-static bool
+static int
+vu_dev_set_irqs(VuDev *dev, VuMsg *vmsg)
+{
+    vfio_user_msg_t *msg = &vmsg->msg;
+    int ret = -EINVAL;
+
+    if (msg->size != sizeof(msg->payload.irq_set)) {
+        vu_panic(dev, "failed to get irq set msg");
+        return ret;
+    }
+
+    ret = dev->iface->set_irqs(dev, msg->payload.irq_set.index,
+                               msg->payload.irq_set.start,
+                               vmsg->fds, vmsg->fd_num,
+                               msg->payload.irq_set.flags);
+    msg->size = 0;
+
+    return ret;
+}
+
+static int
 vu_dev_reset(VuDev *dev, VuMsg *vmsg)
 {
     return dev->iface->reset(dev);
+}
+
+static int
+vu_dev_get_pci_hot_reset_info(VuDev *dev, VuMsg *vmsg)
+{
+    /* return dev->iface->get_pci_host_reset_info(dev); */
+    return -EINVAL;
+}
+
+static int
+vu_dev_read(VuDev *dev, VuMsg *vmsg)
+{
+    vfio_user_msg_t *msg = &vmsg->msg;
+    off_t pos = msg->payload.rw.offset;
+    int ret = -EINVAL;
+
+    if (msg->size != sizeof(msg->payload.rw)) {
+        goto err;
+    }
+
+    vmsg->ptr = realloc(vmsg->ptr, msg->payload.rw.size);
+    ret = dev->iface->read(dev, vmsg->ptr, msg->payload.rw.size, &pos);
+    msg->size = pos - msg->payload.rw.offset;
+
+    return ret;
+
+err:
+    vu_panic(dev, "failed to read");
+    return ret;
+}
+
+static int
+vu_dev_write(VuDev *dev, VuMsg *vmsg)
+{
+    vfio_user_msg_t *msg = &vmsg->msg;
+    vfio_user_msg_rw_t *rw = vmsg->ptr ?: &msg->payload.rw;
+    void *buf = (uint8_t *)rw + sizeof(msg->payload.rw);
+    off_t pos = rw->offset;
+    int ret = -EINVAL;
+
+    if (msg->size < sizeof(msg->payload.rw)) {
+        goto err;
+    }
+
+    /* written = pos - rw->offset */
+    ret = dev->iface->write(dev, buf, rw->size, &pos);
+    msg->size = 0;
+    return ret;
+
+err:
+    vu_panic(dev, "failed to write");
+    return ret;
 }
 
 static void
@@ -204,6 +284,14 @@ vu_process_message(VuDev *dev, VuMsg *vmsg)
         return vu_dev_get_irq_info(dev, vmsg);
     case VFIO_USER_REQ_DEV_RESET:
         return vu_dev_reset(dev, vmsg);
+    case VFIO_USER_REQ_DEV_READ:
+        return vu_dev_read(dev, vmsg);
+    case VFIO_USER_REQ_DEV_WRITE:
+        return vu_dev_write(dev, vmsg);
+    case VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO:
+        return vu_dev_get_pci_hot_reset_info(dev, vmsg);
+    case VFIO_USER_REQ_DEV_SET_IRQS:
+        return vu_dev_set_irqs(dev, vmsg);
     default:
         vmsg_close_fds(vmsg);
         vu_panic(dev, "Unhandled request: %d", msg->request);
@@ -252,13 +340,12 @@ vu_message_read(VuDev *dev, VuMsg *vmsg)
     }
 
     if (vmsg->msg.size > sizeof(vmsg->msg.payload)) {
-        vu_panic(dev, "Invalid message size: %" PRIu32, vmsg->msg.size);
-        goto fail;
+        vmsg->ptr = realloc(vmsg->ptr, vmsg->msg.size);
     }
 
     if (vmsg->msg.size) {
         do {
-            rc = read(fd, &vmsg->msg.payload, vmsg->msg.size);
+            rc = read(fd, vmsg->ptr ?: &vmsg->msg.payload, vmsg->msg.size);
         } while (rc < 0 && (errno == EINTR || errno == EAGAIN));
 
         if (rc <= 0) {
@@ -307,19 +394,23 @@ bool
 vu_dispatch(VuDev *dev)
 {
     VuMsg vmsg = { 0, };
+    bool success = false;
 
     if (!vu_message_read(dev, &vmsg)) {
-        return false;
+        goto end;
     }
 
     vmsg.msg.reply = vu_process_message(dev, &vmsg);
 
     if (!vu_message_write(dev, &vmsg)) {
-        return false;
+        goto end;
     }
 
+    success = true;
+
+end:
     free(vmsg.ptr);
-    return true;
+    return success;
 }
 
 void

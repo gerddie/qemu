@@ -236,7 +236,7 @@ handle_pci_cfg_write(VuSerialDev *serial, uint16_t offset,
 }
 
 static void
-handle_bar_read(VuSerialDev *serial, unsigned int index,
+handle_bar_read(VuSerialDev *serial, uint32_t index,
                 uint16_t offset, char *buf, uint32_t count)
 {
     /* Handle read requests by guest */
@@ -362,7 +362,7 @@ handle_bar_read(VuSerialDev *serial, unsigned int index,
 }
 
 static void
-handle_bar_write(VuSerialDev *serial, unsigned int index,
+handle_bar_write(VuSerialDev *serial, uint32_t index,
                  uint16_t offset, char *buf, uint32_t count)
 {
     uint8_t data = *buf;
@@ -510,7 +510,7 @@ vfio_user_serial_access(VuDev *dev, char *buf, size_t count,
                         off_t pos, bool is_write)
 {
     VuSerialDev *serial = container_of(dev, VuSerialDev, parent.parent);
-    unsigned int index;
+    uint32_t index;
     off_t offset;
     int ret = 0;
 
@@ -556,7 +556,7 @@ accessfailed:
 static ssize_t
 vfio_user_serial_read(VuDev *dev, char *buf, size_t count, off_t *ppos)
 {
-    unsigned int done = 0;
+    ssize_t done = 0;
     int ret;
 
     while (count) {
@@ -597,7 +597,7 @@ read_err:
 static ssize_t
 vfio_user_serial_write(VuDev *dev, const char *buf, size_t count, off_t *ppos)
 {
-    unsigned int done = 0;
+    ssize_t done = 0;
     int ret;
 
     while (count) {

@@ -13,17 +13,33 @@
 #include "vfio-user.h"
 
 static bool
-libvfio_user_write(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
+libvfio_user_write_fds(libvfio_t *vfio, vfio_user_msg_t *msg,
+                       int *fds, int nfds, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE + msg->size;
-    int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t *)msg, size);
+    int ret;
 
+    if (nfds > 0) {
+        ret = qemu_chr_fe_set_msgfds(vfio->chr, fds, nfds);
+        if (ret < 0) {
+            error_setg(errp, "failed to set msgfds");
+            return false;
+        }
+    }
+
+    ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t *)msg, size);
     if (ret != size) {
         error_setg(errp, "failed to write %d bytes, wrote %d", size, ret);
         return false;
     }
 
     return true;
+}
+
+static bool
+libvfio_user_write(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
+{
+    return libvfio_user_write_fds(vfio, msg, NULL, 0, errp);
 }
 
 static bool
@@ -61,11 +77,15 @@ libvfio_user_read_alloc(libvfio_t *vfio, vfio_user_msg_t *msg,
     if (!libvfio_user_read_hdr(vfio, msg, errp)) {
         return false;
     }
+    if (msg->reply < 0) {
+        return false;
+    }
 
     *pp = malloc(msg->size);
 
     if (!libvfio_user_read_payload(vfio, *pp, msg->size, errp)) {
         free(*pp);
+        *pp = NULL;
         return false;
     }
 
@@ -257,10 +277,24 @@ libvfio_user_dev_set_irqs(libvfio_dev_t *dev,
                           uint32_t flags,
                           Error **errp)
 {
-    int ret = 0;
+    vfio_user_msg_t msg = {
+        .request = VFIO_USER_REQ_DEV_SET_IRQS,
+        .size = sizeof(msg.payload.irq_set),
+        .payload.irq_set = {
+            .flags = flags,
+            .index = index,
+            .start = start,
+            .count = nfds,
+        }
+    };
 
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "failed to set irqs");
+    if (!libvfio_user_write_fds(dev->vfio, &msg, fds, nfds, errp)) {
+        return false;
+    }
+    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
+        return false;
+    }
+    if (msg.reply < 0) {
         return false;
     }
 
@@ -283,6 +317,9 @@ libvfio_user_dev_get_irq_info(libvfio_dev_t *dev,
         return false;
     }
     if (!libvfio_user_read(dev->vfio, &msg, errp)) {
+        return false;
+    }
+    if (msg.reply < 0) {
         return false;
     }
 
@@ -339,7 +376,18 @@ libvfio_user_dev_get_pci_hot_reset_info(libvfio_dev_t *dev,
                                         struct vfio_pci_hot_reset_info **info,
                                         Error **errp)
 {
-    return false;
+    vfio_user_msg_t msg = {
+        .request = VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO,
+    };
+
+    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
+        return false;
+    }
+    if (!libvfio_user_read_alloc(dev->vfio, &msg, (void **)info, errp)) {
+        return false;
+    }
+
+    return true;
 }
 
 static bool
@@ -356,13 +404,20 @@ libvfio_user_dev_write(libvfio_dev_t *dev,
                        const void *buf, size_t size, off_t offset,
                        Error **errp)
 {
-    ssize_t ret = 0;
+    vfio_user_msg_t msg = {
+        .request = VFIO_USER_REQ_DEV_WRITE,
+        .size = sizeof(msg.payload.rw) + size,
+        .payload.rw.size = size,
+        .payload.rw.offset = offset,
+    };
 
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "failed during dev_write");
+    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
+        return -1;
     }
-
-    return ret;
+    if (!libvfio_user_read(dev->vfio, &msg, errp)) {
+        return -1;
+    }
+    return size;
 }
 
 static ssize_t
@@ -370,13 +425,24 @@ libvfio_user_dev_read(libvfio_dev_t *dev,
                       void *buf, size_t size, off_t offset,
                       Error **errp)
 {
-    ssize_t ret = 0;
+    vfio_user_msg_t msg = {
+        .request = VFIO_USER_REQ_DEV_READ,
+        .size = sizeof(msg.payload.rw),
+        .payload.rw.size = size,
+        .payload.rw.offset = offset,
+    };
 
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "failed during dev_read");
+    if (!libvfio_user_write(dev->vfio, &msg, errp)) {
+        return -1;
+    }
+    if (!libvfio_user_read_hdr(dev->vfio, &msg, errp)) {
+        return -1;
+    }
+    if (!libvfio_user_read_payload(dev->vfio, buf, msg.size, errp)) {
+        return -1;
     }
 
-    return ret;
+    return msg.reply;
 }
 
 static void *
@@ -414,7 +480,7 @@ static libvfio_ops_t libvfio_user_ops = {
     .dev_get_irq_info = libvfio_user_dev_get_irq_info,
     .dev_get_info = libvfio_user_dev_get_info,
     .dev_get_region_info = libvfio_user_dev_get_region_info,
-    /* .dev_get_pci_hot_reset_info = libvfio_user_dev_get_pci_hot_reset_info, */
+    .dev_get_pci_hot_reset_info = libvfio_user_dev_get_pci_hot_reset_info,
     /* .dev_pci_hot_reset = libvfio_user_dev_pci_hot_reset, */
     .dev_write = libvfio_user_dev_write,
     .dev_read = libvfio_user_dev_read,
