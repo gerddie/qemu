@@ -57,6 +57,7 @@ vu_request_to_string(unsigned int req)
         REQ(VFIO_USER_REQ_DEV_GET_INFO),
         REQ(VFIO_USER_REQ_DEV_GET_REGION_INFO),
         REQ(VFIO_USER_REQ_DEV_GET_IRQ_INFO),
+        REQ(VFIO_USER_REQ_DEV_RESET),
         REQ(VFIO_USER_REQ_MAX),
     };
 #undef REQ
@@ -87,30 +88,35 @@ vu_panic(VuDev *dev, const char *msg, ...)
     /* FIXME: find a way to call virtio_error? */
 }
 
-static bool
+static int
 vu_dev_get_info(VuDev *dev, vfio_user_msg *vmsg)
 {
-    if (dev->iface->get_device_info(dev, &vmsg->payload.device_info) < 0) {
-        vu_panic(dev, "failed to get device info");
-    }
+    int ret = dev->iface->get_device_info(dev, &vmsg->payload.device_info);
 
     vmsg->size = sizeof(vmsg->payload.device_info);
 
-    return true;
+    return ret;
 }
 
-static bool
+static int
 vu_dev_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
 {
-    if (vmsg->size != sizeof(vmsg->payload.u32) ||
-        dev->iface->get_region_info(dev, vmsg->payload.u32,
-                                    &vmsg->payload.region_info) < 0) {
-        vu_panic(dev, "failed to get region info");
+    int ret;
+
+    if (vmsg->size != sizeof(vmsg->payload.u32)) {
+        goto err;
     }
+
+    ret = dev->iface->get_region_info(dev, vmsg->payload.u32,
+                                      &vmsg->payload.region_info);
 
     vmsg->size = sizeof(vmsg->payload.region_info);
 
-    return true;
+    return ret;
+
+err:
+    vu_panic(dev, "failed to get region info");
+    return -EINVAL;
 }
 
 static bool
@@ -127,6 +133,12 @@ vu_dev_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
     return true;
 }
 
+static bool
+vu_dev_reset(VuDev *dev, vfio_user_msg *vmsg)
+{
+    return dev->iface->reset(dev);
+}
+
 static void
 vmsg_close_fds(vfio_user_msg *vmsg)
 {
@@ -141,8 +153,6 @@ vmsg_close_fds(vfio_user_msg *vmsg)
 static bool
 vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
 {
-    /* int do_reply = 0; */
-
     /* Print out generic part of the request. */
     DPRINT("================ vfio-user message ================\n");
     DPRINT("Request: %s (%d)\n", vu_request_to_string(vmsg->request),
@@ -166,6 +176,8 @@ vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
         return vu_dev_get_region_info(dev, vmsg);
     case VFIO_USER_REQ_DEV_GET_IRQ_INFO:
         return vu_dev_get_irq_info(dev, vmsg);
+    case VFIO_USER_REQ_DEV_RESET:
+        return vu_dev_reset(dev, vmsg);
     default:
         vmsg_close_fds(vmsg);
         vu_panic(dev, "Unhandled request: %d", vmsg->request);
@@ -268,16 +280,12 @@ bool
 vu_dispatch(VuDev *dev)
 {
     vfio_user_msg vmsg = { 0, };
-    int reply_requested;
 
     if (!vu_message_read(dev, &vmsg)) {
         return false;
     }
 
-    reply_requested = vu_process_message(dev, &vmsg);
-    if (!reply_requested) {
-        return true;
-    }
+    vmsg.reply = vu_process_message(dev, &vmsg);
 
     if (!vu_message_write(dev, &vmsg)) {
         return false;

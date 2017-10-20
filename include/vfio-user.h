@@ -32,7 +32,7 @@ typedef enum vfio_user_req {
     VFIO_USER_REQ_DEV_GET_REGION_INFO = 2,
     VFIO_USER_REQ_DEV_GET_IRQ_INFO = 3,
     /* VFIO_USER_REQ_DEV_SET_IRQS = 4, */
-    /* VFIO_USER_REQ_DEV_RESET = 5, */
+    VFIO_USER_REQ_DEV_RESET = 5,
     /* VFIO_USER_REQ_DEV_GET_PCI_HOT_RESET_INFO = 6, */
     /* VFIO_USER_REQ_DEV_PCI_HOT_RESET = 7, */
 
@@ -61,6 +61,7 @@ typedef struct vfio_user_msg {
         struct vfio_irq_info irq_info;
     } payload;
 
+    bool alloc_payload;
     int fd_num;
     int fds[VFIO_USER_MAX_FDS];
 } VFIO_USER_PACKED vfio_user_msg;
