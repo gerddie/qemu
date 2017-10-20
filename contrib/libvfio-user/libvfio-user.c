@@ -89,7 +89,7 @@ vu_panic(VuDev *dev, const char *msg, ...)
 }
 
 static int
-vu_dev_get_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_info(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     int ret = dev->iface->get_device_info(dev, &vmsg->payload.device_info);
 
@@ -99,7 +99,7 @@ vu_dev_get_info(VuDev *dev, vfio_user_msg *vmsg)
 }
 
 static int
-vu_dev_get_region_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_region_info(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     int ret;
 
@@ -120,7 +120,7 @@ err:
 }
 
 static bool
-vu_dev_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_get_irq_info(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     if (vmsg->size != sizeof(vmsg->payload.u32) ||
         dev->iface->get_irq_info(dev, vmsg->payload.u32,
@@ -134,13 +134,13 @@ vu_dev_get_irq_info(VuDev *dev, vfio_user_msg *vmsg)
 }
 
 static bool
-vu_dev_reset(VuDev *dev, vfio_user_msg *vmsg)
+vu_dev_reset(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     return dev->iface->reset(dev);
 }
 
 static void
-vmsg_close_fds(vfio_user_msg *vmsg)
+vmsg_close_fds(vfio_user_msg_t *vmsg)
 {
     int i;
 
@@ -151,7 +151,7 @@ vmsg_close_fds(vfio_user_msg *vmsg)
 }
 
 static bool
-vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
+vu_process_message(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     /* Print out generic part of the request. */
     DPRINT("================ vfio-user message ================\n");
@@ -187,7 +187,7 @@ vu_process_message(VuDev *dev, vfio_user_msg *vmsg)
 }
 
 static bool
-vu_message_read(VuDev *dev, vfio_user_msg *vmsg)
+vu_message_read(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     char control[CMSG_SPACE(VFIO_USER_MAX_FDS * sizeof(int))] = { };
     struct iovec iov = {
@@ -255,7 +255,7 @@ fail:
 }
 
 static bool
-vu_message_write(VuDev *dev, vfio_user_msg *vmsg)
+vu_message_write(VuDev *dev, vfio_user_msg_t *vmsg)
 {
     int rc, fd = dev->sock;
     uint8_t *p = (uint8_t *)vmsg;
@@ -279,7 +279,7 @@ vu_message_write(VuDev *dev, vfio_user_msg *vmsg)
 bool
 vu_dispatch(VuDev *dev)
 {
-    vfio_user_msg vmsg = { 0, };
+    vfio_user_msg_t vmsg = { 0, };
 
     if (!vu_message_read(dev, &vmsg)) {
         return false;

@@ -42,11 +42,11 @@ typedef enum vfio_user_req {
     /* VFIO_USER_REQ_IOMMU_UNMAP_DMA, */
 
     VFIO_USER_REQ_MAX
-} vfio_user_req;
+} vfio_user_req_t;
 
 typedef struct vfio_user_msg {
     union {
-        vfio_user_req request;
+        vfio_user_req_t request;
         int reply;
     };
     uint32_t flags;
@@ -64,9 +64,9 @@ typedef struct vfio_user_msg {
     bool alloc_payload;
     int fd_num;
     int fds[VFIO_USER_MAX_FDS];
-} VFIO_USER_PACKED vfio_user_msg;
+} VFIO_USER_PACKED vfio_user_msg_t;
 
-#define VFIO_USER_HDR_SIZE offsetof(vfio_user_msg, payload.u8)
+#define VFIO_USER_HDR_SIZE offsetof(vfio_user_msg_t, payload.u8)
 
 #ifdef __cplusplus
 }

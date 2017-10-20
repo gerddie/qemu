@@ -13,7 +13,7 @@
 #include "vfio-user.h"
 
 static bool
-libvfio_user_write(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_write(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE + msg->size;
     int ret = qemu_chr_fe_write_all(vfio->chr, (uint8_t *)msg, size);
@@ -27,7 +27,7 @@ libvfio_user_write(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
 }
 
 static bool
-libvfio_user_read_hdr(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_read_hdr(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
 {
     int size = VFIO_USER_HDR_SIZE;
     int ret = qemu_chr_fe_read_all(vfio->chr, (uint8_t *)msg, size);
@@ -55,7 +55,7 @@ libvfio_user_read_payload(libvfio_t *vfio, void *payload,
 }
 
 static bool
-libvfio_user_read(libvfio_t *vfio, vfio_user_msg *msg, Error **errp)
+libvfio_user_read(libvfio_t *vfio, vfio_user_msg_t *msg, Error **errp)
 {
     if (!libvfio_user_read_hdr(vfio, msg, errp)) {
         return false;
@@ -255,7 +255,7 @@ libvfio_user_dev_get_irq_info(libvfio_dev_t *dev,
                               struct vfio_irq_info *irq,
                               Error **errp)
 {
-    vfio_user_msg msg = {
+    vfio_user_msg_t msg = {
         .request = VFIO_USER_REQ_DEV_GET_IRQ_INFO,
         .size = sizeof(msg.payload.u32),
         .payload.u32 = index,
@@ -275,7 +275,7 @@ static bool
 libvfio_user_dev_get_region_info(libvfio_dev_t *dev, uint32_t index,
                                  struct vfio_region_info *info, Error **errp)
 {
-    vfio_user_msg msg = {
+    vfio_user_msg_t msg = {
         .request = VFIO_USER_REQ_DEV_GET_REGION_INFO,
         .size = sizeof(msg.payload.u32),
         .payload.u32 = index,
@@ -295,7 +295,7 @@ static bool
 libvfio_user_dev_get_info(libvfio_dev_t *dev,
                           struct vfio_device_info *info, Error **errp)
 {
-    vfio_user_msg msg = {
+    vfio_user_msg_t msg = {
         .request = VFIO_USER_REQ_DEV_GET_INFO,
     };
 
