@@ -157,6 +157,11 @@ static void init_common_fadt_data(Object *o, AcpiFadtData *data)
     *data = fadt;
 }
 
+typedef struct TPMPPIConfig {
+    uint32_t tpmppi_address;
+    uint8_t tpm_version;
+} QEMU_PACKED TPMPPIConfig;
+
 static void acpi_get_pm_info(AcpiPmInfo *pm)
 {
     Object *piix = piix4_pm_find();
@@ -2624,7 +2629,8 @@ static bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
 }
 
 static
-void acpi_build(AcpiBuildTables *tables, MachineState *machine)
+void acpi_build(AcpiBuildTables *tables, MachineState *machine,
+                TPMPPIConfig *tpm_ppi_config)
 {
     PCMachineState *pcms = PC_MACHINE(machine);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
@@ -2703,6 +2709,10 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
         if (misc.tpm_version == TPM_VERSION_2_0) {
             acpi_add_table(table_offsets, tables_blob);
             build_tpm2(tables_blob, tables->linker, tables->tcpalog);
+        }
+        if (tpm_ppi_config) {
+            tpm_ppi_config->tpmppi_address = TPM_PPI_ADDR_BASE;
+            tpm_ppi_config->tpm_version = misc.tpm_version;
         }
     }
     if (pcms->numa_nodes) {
@@ -2827,7 +2837,7 @@ static void acpi_build_update(void *build_opaque)
 
     acpi_build_tables_init(&tables);
 
-    acpi_build(&tables, MACHINE(qdev_get_machine()));
+    acpi_build(&tables, MACHINE(qdev_get_machine()), NULL);
 
     acpi_ram_update(build_state->table_mr, tables.table_data);
 
@@ -2872,6 +2882,7 @@ void acpi_setup(void)
     AcpiBuildTables tables;
     AcpiBuildState *build_state;
     Object *vmgenid_dev;
+    TPMPPIConfig *tpm_ppi_config;
 
     if (!pcms->fw_cfg) {
         ACPI_BUILD_DPRINTF("No fw cfg. Bailing out.\n");
@@ -2889,9 +2900,10 @@ void acpi_setup(void)
     }
 
     build_state = g_malloc0(sizeof *build_state);
+    tpm_ppi_config = g_malloc0(sizeof *tpm_ppi_config);
 
     acpi_build_tables_init(&tables);
-    acpi_build(&tables, MACHINE(pcms));
+    acpi_build(&tables, MACHINE(pcms), tpm_ppi_config);
 
     /* Now expose it all to Guest */
     build_state->table_mr = acpi_add_rom_blob(build_state, tables.table_data,
@@ -2905,6 +2917,11 @@ void acpi_setup(void)
 
     fw_cfg_add_file(pcms->fw_cfg, ACPI_BUILD_TPMLOG_FILE,
                     tables.tcpalog->data, acpi_data_len(tables.tcpalog));
+
+    if (tpm_find()) {
+        fw_cfg_add_file(pcms->fw_cfg, "etc/tpm/ppi",
+                        tpm_ppi_config, sizeof *tpm_ppi_config);
+    }
 
     vmgenid_dev = find_vmgenid_dev();
     if (vmgenid_dev) {
