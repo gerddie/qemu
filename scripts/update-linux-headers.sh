@@ -141,7 +141,9 @@ EOF
 
 rm -rf "$output/include/standard-headers/linux"
 mkdir -p "$output/include/standard-headers/linux"
-for i in "$tmpdir"/include/linux/*virtio*.h "$tmpdir/include/linux/input.h" \
+for i in "$tmpdir"/include/linux/*virtio*.h \
+         "$tmpdir/include/linux/fw_cfg.h" \
+         "$tmpdir/include/linux/input.h" \
          "$tmpdir/include/linux/input-event-codes.h" \
          "$tmpdir/include/linux/pci_regs.h"; do
     cp_portable "$i" "$output/include/standard-headers/linux"
