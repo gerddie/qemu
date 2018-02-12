@@ -14,7 +14,7 @@
 #include "libqos/fw_cfg.h"
 #include "libqtest.h"
 
-#include "hw/nvram/fw_cfg_keys.h"
+#include "standard-headers/linux/fw_cfg.h"
 
 typedef struct {
     const char *args;
