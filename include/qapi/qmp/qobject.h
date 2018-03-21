@@ -34,13 +34,17 @@
 
 #include "qapi/qapi-builtin-types.h"
 
-struct QObject {
+struct QObjectCommon {
     QType type;
     size_t refcnt;
 };
 
-/* Get the 'base' part of an object */
-#define QOBJECT(obj) (&(obj)->base)
+struct QObject {
+    struct QObjectCommon base;
+};
+
+#define QOBJECT(x) \
+   container_of(&(x)->base, QObject, base)
 
 /* High-level interface for qobject_incref() */
 #define QINCREF(obj)      \
@@ -61,16 +65,15 @@ struct QObject {
 QEMU_BUILD_BUG_MSG(QTYPE__MAX != 7,
                    "The QTYPE_CAST_TO_* list needs to be extended");
 
-#define qobject_to(type, obj) ({ \
-    QObject *_tmp = qobject_check_type(obj, glue(QTYPE_CAST_TO_, type)); \
-    _tmp ? container_of(_tmp, type, base) : (type *)NULL; })
+#define qobject_to(type, obj)                                       \
+    ((type *)qobject_check_type(obj, glue(QTYPE_CAST_TO_, type)))
 
 /* Initialize an object to default values */
 static inline void qobject_init(QObject *obj, QType type)
 {
     assert(QTYPE_NONE < type && type < QTYPE__MAX);
-    obj->refcnt = 1;
-    obj->type = type;
+    obj->base.refcnt = 1;
+    obj->base.type = type;
 }
 
 /**
@@ -78,8 +81,9 @@ static inline void qobject_init(QObject *obj, QType type)
  */
 static inline void qobject_incref(QObject *obj)
 {
-    if (obj)
-        obj->refcnt++;
+    if (obj) {
+        obj->base.refcnt++;
+    }
 }
 
 /**
@@ -102,8 +106,8 @@ void qobject_destroy(QObject *obj);
  */
 static inline void qobject_decref(QObject *obj)
 {
-    assert(!obj || obj->refcnt);
-    if (obj && --obj->refcnt == 0) {
+    assert(!obj || obj->base.refcnt);
+    if (obj && --obj->base.refcnt == 0) {
         qobject_destroy(obj);
     }
 }
@@ -113,8 +117,8 @@ static inline void qobject_decref(QObject *obj)
  */
 static inline QType qobject_type(const QObject *obj)
 {
-    assert(QTYPE_NONE < obj->type && obj->type < QTYPE__MAX);
-    return obj->type;
+    assert(QTYPE_NONE < obj->base.type && obj->base.type < QTYPE__MAX);
+    return obj->base.type;
 }
 
 /**
