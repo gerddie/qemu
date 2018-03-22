@@ -25,6 +25,7 @@ QmpReturn *qmp_return_new(QmpSession *session, const QObject *request)
     const QDict *req = qobject_to(QDict, request);
     QObject *id = req ? qdict_get(req, "id") : NULL;
 
+    qret->oob = req ? qmp_is_oob(req) : false;
     qret->session = session;
     qret->rsp = qdict_new();
     if (id) {
@@ -39,6 +40,15 @@ QmpReturn *qmp_return_new(QmpSession *session, const QObject *request)
     return qret;
 }
 
+static void qmp_return_free_with_lock(QmpReturn *qret)
+{
+    if (qret->session) {
+        QTAILQ_REMOVE(&qret->session->pending, qret, entry);
+    }
+    qobject_unref(qret->rsp);
+    g_free(qret);
+}
+
 void qmp_return_free(QmpReturn *qret)
 {
     QmpSession *session = qret->session;
@@ -46,21 +56,51 @@ void qmp_return_free(QmpReturn *qret)
     if (session) {
         qemu_mutex_lock(&session->pending_lock);
     }
-    QTAILQ_REMOVE(&session->pending, qret, entry);
+
+    qmp_return_free_with_lock(qret);
+
     if (session) {
         qemu_mutex_unlock(&session->pending_lock);
     }
-    qobject_unref(qret->rsp);
-    g_free(qret);
+}
+
+static void qmp_return_orderly(QmpReturn *qret)
+{
+    QmpSession *session = qret->session;
+    QmpReturn *ret, *next;
+
+    if (!session) {
+        /* the client was destroyed before return, discard */
+        qmp_return_free(qret);
+        return;
+    }
+    if (qret->oob) {
+        session->return_cb(session, qret->rsp);
+        qmp_return_free(qret);
+        return;
+    }
+
+    /* mark as finished */
+    qret->session = NULL;
+
+    qemu_mutex_lock(&session->pending_lock);
+    /* process the list of pending and return until reaching an unfinshed */
+    QTAILQ_FOREACH_SAFE(ret, &session->pending, entry, next) {
+        if (ret->session) {
+            goto end;
+        }
+        session->return_cb(session, ret->rsp);
+        ret->session = session;
+        qmp_return_free_with_lock(ret);
+    }
+end:
+    qemu_mutex_unlock(&session->pending_lock);
 }
 
 void qmp_return(QmpReturn *qret, QObject *rsp)
 {
     qdict_put_obj(qret->rsp, "return", rsp ?: QOBJECT(qdict_new()));
-    if (qret->session) {
-        qret->session->return_cb(qret->session, qret->rsp);
-    }
-    qmp_return_free(qret);
+    qmp_return_orderly(qret);
 }
 
 void qmp_return_error(QmpReturn *qret, Error *err)
@@ -70,10 +110,7 @@ void qmp_return_error(QmpReturn *qret, Error *err)
     qdict_put_str(qdict, "desc", error_get_pretty(err));
     qdict_put_obj(qret->rsp, "error", QOBJECT(qdict));
     error_free(err);
-    if (qret->session) {
-        qret->session->return_cb(qret->session, qret->rsp);
-    }
-    qmp_return_free(qret);
+    qmp_return_orderly(qret);
 }
 
 static QDict *qmp_dispatch_check_obj(const QObject *request, bool allow_oob,
