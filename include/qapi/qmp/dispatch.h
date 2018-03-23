@@ -15,6 +15,7 @@
 #define QAPI_QMP_DISPATCH_H
 
 #include "qemu/queue.h"
+#include "qapi/qmp/json-parser.h"
 
 typedef void (QmpCommandFunc)(QDict *, QObject **, Error **);
 
@@ -41,6 +42,7 @@ typedef struct QmpSession QmpSession;
 typedef void (QmpDispatchReturn) (QmpSession *session, QDict *rsp);
 
 struct QmpSession {
+    JSONMessageParser parser;
     QmpDispatchReturn *return_cb;
     QmpCommandList *cmds;
 };
@@ -51,7 +53,11 @@ void qmp_unregister_command(QmpCommandList *cmds, const char *name);
 QmpCommand *qmp_find_command(QmpCommandList *cmds, const char *name);
 void qmp_session_init(QmpSession *session,
                       QmpCommandList *cmds, QmpDispatchReturn *return_cb);
-
+static inline void
+qmp_session_feed(QmpSession *session, const char *buf, size_t count)
+{
+    json_message_parser_feed(&session->parser, buf, count);
+}
 void qmp_session_destroy(QmpSession *session);
 void qmp_disable_command(QmpCommandList *cmds, const char *name);
 void qmp_enable_command(QmpCommandList *cmds, const char *name);
