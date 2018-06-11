@@ -91,6 +91,7 @@ typedef enum VhostUserRequest {
     VHOST_USER_POSTCOPY_END     = 30,
     VHOST_USER_INPUT_GET_CONFIG = 31,
     VHOST_USER_GPU_SET_SOCKET   = 32,
+    VHOST_USER_GPU_GET_NUM_CAPSETS = 33,
     VHOST_USER_MAX
 } VhostUserRequest;
 
@@ -919,6 +920,20 @@ static int vhost_user_get_u64(struct vhost_dev *dev, int request, uint64_t *u64)
 
     *u64 = msg.payload.u64;
 
+    return 0;
+}
+
+int vhost_user_gpu_get_num_capsets(struct vhost_dev *dev, uint32_t *num)
+{
+    uint64_t u64;
+
+    if (vhost_user_get_u64(dev, VHOST_USER_GPU_GET_NUM_CAPSETS, &u64) < 0) {
+        return -1;
+    }
+    if (u64 > INT32_MAX) {
+        return -1;
+    }
+    *num = u64;
     return 0;
 }
 

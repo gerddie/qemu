@@ -777,6 +777,14 @@ Master message types
       ancillary data. The GPU protocol is used to inform the master of
       rendering state and updates. See vhost-user-gpu.rst for details.
 
+ * VHOST_USER_GPU_GET_NUM_CAPSETS
+      Id: 33
+      Master payload: N/A
+      Slave payload: u64
+
+      Get the virtio-gpu 'num_capsets' config value. For non-virgl
+      rendering, the value can be 0.
+
 Slave message types
 -------------------
 
