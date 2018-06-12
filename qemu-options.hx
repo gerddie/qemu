@@ -4247,16 +4247,20 @@ secondary:
 If you want to know the detail of above command line, you can read
 the colo-compare git log.
 
-@item -object vhost-user-backend,id=id=@var{id},chardev=@var{chardevid}
+@item -object vhost-user-backend,id=id=@var{id}[,chardev=@var{chardevid},cmd=@var{cmd}]
 
 Create a vhost-user-backend object that holds a connection to a
 vhost-user backend and can be referenced from virtio/vhost-user
 devices that support it.
 
 The @var{id} parameter is a unique ID that will be used to reference
-this vhost-user backend from the @option{vhost-user} device. The
-@var{chardev} parameter is the unique ID of a character device backend
-that provides the connection to the vhost-user slave process. (Since 3.0)
+this vhost-user backend from the @option{vhost-user} device.
+
+You must specify either @var{chardev} or @var{cmd}. The @var{chardev}
+parameter is the unique ID of a character device backend that provides
+the connection to the vhost-user slave process.  The @var{cmd}
+parameter will simplify handling of the backend, by running the given
+command and establishing the connection. (Since 3.1)
 
 @example
 
