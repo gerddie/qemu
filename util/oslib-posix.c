@@ -88,6 +88,39 @@ int qemu_daemon(int nochdir, int noclose)
     return daemon(nochdir, noclose);
 }
 
+bool qemu_write_pidfile(const char *pidfile, Error **errp)
+{
+    int pidfd;
+    char pidstr[32];
+
+    pidfd = qemu_open(pidfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    if (pidfd == -1) {
+        error_setg_errno(errp, errno, "Cannot open pid file");
+        return false;
+    }
+
+    if (lockf(pidfd, F_TLOCK, 0)) {
+        error_setg_errno(errp, errno, "Cannot lock pid file");
+        goto fail;
+    }
+    if (ftruncate(pidfd, 0)) {
+        error_setg_errno(errp, errno, "Failed to truncate pid file");
+        goto fail;
+    }
+
+    snprintf(pidstr, sizeof(pidstr), "%d\n", getpid());
+    if (write(pidfd, pidstr, strlen(pidstr)) != strlen(pidstr)) {
+        error_setg(errp, "Failed to write pid file");
+        goto fail;
+    }
+    return true;
+
+fail:
+    unlink(pidfile);
+    close(pidfd);
+    return false;
+}
+
 void *qemu_oom_check(void *ptr)
 {
     if (ptr == NULL) {
