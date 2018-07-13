@@ -92,6 +92,11 @@ bool qemu_write_pidfile(const char *pidfile, Error **errp)
 {
     int pidfd;
     char pidstr[32];
+    struct flock lock = {
+        .l_type = F_WRLCK,
+        .l_whence = SEEK_SET,
+        .l_len = 1,
+    };
 
     pidfd = qemu_open(pidfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
     if (pidfd == -1) {
@@ -99,10 +104,11 @@ bool qemu_write_pidfile(const char *pidfile, Error **errp)
         return false;
     }
 
-    if (lockf(pidfd, F_TLOCK, 0)) {
+    if (fcntl(pidfd, F_SETLK, &lock)) {
         error_setg_errno(errp, errno, "Cannot lock pid file");
         goto fail;
     }
+
     if (ftruncate(pidfd, 0)) {
         error_setg_errno(errp, errno, "Failed to truncate pid file");
         goto fail;
