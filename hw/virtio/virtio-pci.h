@@ -27,7 +27,7 @@
 #include "hw/virtio/virtio-gpu.h"
 #include "hw/virtio/virtio-crypto.h"
 #include "hw/virtio/vhost-user-scsi.h"
-#if defined(CONFIG_VHOST_USER) && defined(CONFIG_LINUX)
+#if defined(CONFIG_VHOST_USER)
 #include "hw/virtio/vhost-user-blk.h"
 #endif
 
@@ -248,7 +248,7 @@ struct VHostUserSCSIPCI {
     VHostUserSCSI vdev;
 };
 
-#if defined(CONFIG_VHOST_USER) && defined(CONFIG_LINUX)
+#if defined(CONFIG_VHOST_USER)
 /*
  * vhost-user-blk-pci: This extends VirtioPCIProxy.
  */

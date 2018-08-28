@@ -1419,8 +1419,8 @@ for opt do
   ;;
   --enable-vhost-user)
       vhost_user="yes"
-      if test "$mingw32" = "yes"; then
-          error_exit "vhost-user isn't available on win32"
+      if test "$linux" != "yes"; then
+          error_exit "vhost-user isn't available on non-linux"
       fi
   ;;
   --disable-capstone) capstone="no"
@@ -1454,10 +1454,10 @@ for opt do
 done
 
 if test "$vhost_user" = ""; then
-    if test "$mingw32" = "yes"; then
-        vhost_user="no"
-    else
+    if test "$linux" = "yes"; then
         vhost_user="yes"
+    else
+        vhost_user="no"
     fi
 fi
 

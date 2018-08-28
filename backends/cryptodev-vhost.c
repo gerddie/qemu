@@ -124,7 +124,7 @@ cryptodev_get_vhost(CryptoDevBackendClient *cc,
     }
 
     switch (cc->type) {
-#if defined(CONFIG_VHOST_USER) && defined(CONFIG_LINUX)
+#if defined(CONFIG_VHOST_USER)
     case CRYPTODEV_BACKEND_TYPE_VHOST_USER:
         vhost_crypto = cryptodev_vhost_user_get_vhost(cc, b, queue);
         break;
