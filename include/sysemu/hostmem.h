@@ -26,6 +26,8 @@
     OBJECT_GET_CLASS(HostMemoryBackendClass, (obj), TYPE_MEMORY_BACKEND)
 #define MEMORY_BACKEND_CLASS(klass) \
     OBJECT_CLASS_CHECK(HostMemoryBackendClass, (klass), TYPE_MEMORY_BACKEND)
+#define IS_MEMORY_BACKEND(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_BACKEND)
 
 typedef struct HostMemoryBackend HostMemoryBackend;
 typedef struct HostMemoryBackendClass HostMemoryBackendClass;

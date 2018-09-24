@@ -593,7 +593,7 @@ static int query_memdev(Object *obj, void *opaque)
     MemdevList **list = opaque;
     MemdevList *m = NULL;
 
-    if (object_dynamic_cast(obj, TYPE_MEMORY_BACKEND)) {
+    if (IS_MEMORY_BACKEND(obj)) {
         m = g_malloc0(sizeof(*m));
 
         m->value = g_malloc0(sizeof(*m->value));
