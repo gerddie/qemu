@@ -138,8 +138,7 @@ qcrypto_tls_session_new(QCryptoTLSCreds *creds,
         goto error;
     }
 
-    if (object_dynamic_cast(OBJECT(creds),
-                            TYPE_QCRYPTO_TLS_CREDS_ANON)) {
+    if (IS_QCRYPTO_TLS_CREDS_ANON(creds)) {
         QCryptoTLSCredsAnon *acreds = QCRYPTO_TLS_CREDS_ANON(creds);
         char *prio;
 
@@ -174,8 +173,7 @@ qcrypto_tls_session_new(QCryptoTLSCreds *creds,
                        gnutls_strerror(ret));
             goto error;
         }
-    } else if (object_dynamic_cast(OBJECT(creds),
-                                   TYPE_QCRYPTO_TLS_CREDS_PSK)) {
+    } else if (IS_QCRYPTO_TLS_CREDS_PSK(creds)) {
         QCryptoTLSCredsPSK *pcreds = QCRYPTO_TLS_CREDS_PSK(creds);
         char *prio;
 
@@ -210,8 +208,7 @@ qcrypto_tls_session_new(QCryptoTLSCreds *creds,
                        gnutls_strerror(ret));
             goto error;
         }
-    } else if (object_dynamic_cast(OBJECT(creds),
-                                   TYPE_QCRYPTO_TLS_CREDS_X509)) {
+    } else if (IS_QCRYPTO_TLS_CREDS_X509(creds)) {
         QCryptoTLSCredsX509 *tcreds = QCRYPTO_TLS_CREDS_X509(creds);
         const char *prio = creds->priority;
         if (!prio) {
@@ -397,16 +394,13 @@ int
 qcrypto_tls_session_check_credentials(QCryptoTLSSession *session,
                                       Error **errp)
 {
-    if (object_dynamic_cast(OBJECT(session->creds),
-                            TYPE_QCRYPTO_TLS_CREDS_ANON)) {
+    if (IS_QCRYPTO_TLS_CREDS_ANON(session->creds)) {
         trace_qcrypto_tls_session_check_creds(session, "nop");
         return 0;
-    } else if (object_dynamic_cast(OBJECT(session->creds),
-                            TYPE_QCRYPTO_TLS_CREDS_PSK)) {
+    } else if (IS_QCRYPTO_TLS_CREDS_PSK(session->creds)) {
         trace_qcrypto_tls_session_check_creds(session, "nop");
         return 0;
-    } else if (object_dynamic_cast(OBJECT(session->creds),
-                            TYPE_QCRYPTO_TLS_CREDS_X509)) {
+    } else if (IS_QCRYPTO_TLS_CREDS_X509(session->creds)) {
         if (session->creds->verifyPeer) {
             int ret = qcrypto_tls_session_check_certificate(session,
                                                             errp);

@@ -26,6 +26,8 @@
 #define TYPE_QCRYPTO_TLS_CREDS_PSK "tls-creds-psk"
 #define QCRYPTO_TLS_CREDS_PSK(obj)                  \
     OBJECT_CHECK(QCryptoTLSCredsPSK, (obj), TYPE_QCRYPTO_TLS_CREDS_PSK)
+#define IS_QCRYPTO_TLS_CREDS_PSK(obj)                              \
+    object_dynamic_cast(OBJECT(obj), TYPE_QCRYPTO_TLS_CREDS_PSK)
 
 typedef struct QCryptoTLSCredsPSK QCryptoTLSCredsPSK;
 typedef struct QCryptoTLSCredsPSKClass QCryptoTLSCredsPSKClass;

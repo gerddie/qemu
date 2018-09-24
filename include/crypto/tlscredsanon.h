@@ -26,6 +26,8 @@
 #define TYPE_QCRYPTO_TLS_CREDS_ANON "tls-creds-anon"
 #define QCRYPTO_TLS_CREDS_ANON(obj)                  \
     OBJECT_CHECK(QCryptoTLSCredsAnon, (obj), TYPE_QCRYPTO_TLS_CREDS_ANON)
+#define IS_QCRYPTO_TLS_CREDS_ANON(obj)                              \
+    object_dynamic_cast(OBJECT(obj), TYPE_QCRYPTO_TLS_CREDS_ANON)
 
 
 typedef struct QCryptoTLSCredsAnon QCryptoTLSCredsAnon;

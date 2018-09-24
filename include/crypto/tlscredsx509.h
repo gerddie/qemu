@@ -26,6 +26,8 @@
 #define TYPE_QCRYPTO_TLS_CREDS_X509 "tls-creds-x509"
 #define QCRYPTO_TLS_CREDS_X509(obj)                  \
     OBJECT_CHECK(QCryptoTLSCredsX509, (obj), TYPE_QCRYPTO_TLS_CREDS_X509)
+#define IS_QCRYPTO_TLS_CREDS_X509(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_QCRYPTO_TLS_CREDS_X509)
 
 typedef struct QCryptoTLSCredsX509 QCryptoTLSCredsX509;
 typedef struct QCryptoTLSCredsX509Class QCryptoTLSCredsX509Class;

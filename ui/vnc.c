@@ -3464,10 +3464,8 @@ vnc_display_setup_auth(int *auth,
         }
         *subauth = VNC_AUTH_INVALID;
     } else {
-        bool is_x509 = object_dynamic_cast(OBJECT(tlscreds),
-                                           TYPE_QCRYPTO_TLS_CREDS_X509) != NULL;
-        bool is_anon = object_dynamic_cast(OBJECT(tlscreds),
-                                           TYPE_QCRYPTO_TLS_CREDS_ANON) != NULL;
+        bool is_x509 = IS_QCRYPTO_TLS_CREDS_X509(tlscreds);
+        bool is_anon = IS_QCRYPTO_TLS_CREDS_ANON(tlscreds);
 
         if (!is_x509 && !is_anon) {
             error_setg(errp,
