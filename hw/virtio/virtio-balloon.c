@@ -324,7 +324,7 @@ static int build_dimm_list(Object *obj, void *opaque)
 {
     GSList **list = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_PC_DIMM)) {
+    if (IS_PC_DIMM(obj)) {
         DeviceState *dev = DEVICE(obj);
         if (dev->realized) { /* only realized DIMMs matter */
             *list = g_slist_prepend(*list, dev);

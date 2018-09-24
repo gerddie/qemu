@@ -3576,7 +3576,7 @@ out:
 static void spapr_machine_device_plug(HotplugHandler *hotplug_dev,
                                       DeviceState *dev, Error **errp)
 {
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (IS_PC_DIMM(dev)) {
         spapr_memory_plug(hotplug_dev, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_SPAPR_CPU_CORE)) {
         spapr_core_plug(hotplug_dev, dev, errp);
@@ -3586,7 +3586,7 @@ static void spapr_machine_device_plug(HotplugHandler *hotplug_dev,
 static void spapr_machine_device_unplug(HotplugHandler *hotplug_dev,
                                         DeviceState *dev, Error **errp)
 {
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (IS_PC_DIMM(dev)) {
         spapr_memory_unplug(hotplug_dev, dev);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_SPAPR_CPU_CORE)) {
         spapr_core_unplug(hotplug_dev, dev);
@@ -3599,7 +3599,7 @@ static void spapr_machine_device_unplug_request(HotplugHandler *hotplug_dev,
     sPAPRMachineState *sms = SPAPR_MACHINE(OBJECT(hotplug_dev));
     MachineClass *mc = MACHINE_GET_CLASS(sms);
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (IS_PC_DIMM(dev)) {
         if (spapr_ovec_test(sms->ov5_cas, OV5_HP_EVT)) {
             spapr_memory_unplug_request(hotplug_dev, dev, errp);
         } else {
@@ -3623,7 +3623,7 @@ static void spapr_machine_device_unplug_request(HotplugHandler *hotplug_dev,
 static void spapr_machine_device_pre_plug(HotplugHandler *hotplug_dev,
                                           DeviceState *dev, Error **errp)
 {
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (IS_PC_DIMM(dev)) {
         spapr_memory_pre_plug(hotplug_dev, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_SPAPR_CPU_CORE)) {
         spapr_core_pre_plug(hotplug_dev, dev, errp);
@@ -3633,7 +3633,7 @@ static void spapr_machine_device_pre_plug(HotplugHandler *hotplug_dev,
 static HotplugHandler *spapr_get_hotplug_handler(MachineState *machine,
                                                  DeviceState *dev)
 {
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM) ||
+    if (IS_PC_DIMM(dev) ||
         object_dynamic_cast(OBJECT(dev), TYPE_SPAPR_CPU_CORE)) {
         return HOTPLUG_HANDLER(machine);
     }

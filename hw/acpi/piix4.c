@@ -375,8 +375,7 @@ static void piix4_device_plug_cb(HotplugHandler *hotplug_dev,
 {
     PIIX4PMState *s = PIIX4_PM(hotplug_dev);
 
-    if (s->acpi_memory_hotplug.is_enabled &&
-        object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (s->acpi_memory_hotplug.is_enabled && IS_PC_DIMM(dev)) {
         if (IS_NVDIMM(dev)) {
             nvdimm_acpi_plug_cb(hotplug_dev, dev);
         } else {
@@ -402,8 +401,7 @@ static void piix4_device_unplug_request_cb(HotplugHandler *hotplug_dev,
 {
     PIIX4PMState *s = PIIX4_PM(hotplug_dev);
 
-    if (s->acpi_memory_hotplug.is_enabled &&
-        object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (s->acpi_memory_hotplug.is_enabled && IS_PC_DIMM(dev)) {
         acpi_memory_unplug_request_cb(hotplug_dev, &s->acpi_memory_hotplug,
                                       dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
@@ -423,8 +421,7 @@ static void piix4_device_unplug_cb(HotplugHandler *hotplug_dev,
 {
     PIIX4PMState *s = PIIX4_PM(hotplug_dev);
 
-    if (s->acpi_memory_hotplug.is_enabled &&
-        object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+    if (s->acpi_memory_hotplug.is_enabled && IS_PC_DIMM(dev)) {
         acpi_memory_unplug_cb(&s->acpi_memory_hotplug, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU) &&
                !s->cpu_hotplug_legacy) {
