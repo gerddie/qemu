@@ -90,15 +90,13 @@ void build_acpi_ipmi_devices(Aml *scope, BusState *bus)
         IPMIInterface *ii;
         IPMIInterfaceClass *iic;
         IPMIFwInfo info;
-        Object *obj = object_dynamic_cast(OBJECT(kid->child),
-                                          TYPE_IPMI_INTERFACE);
 
-        if (!obj) {
+        if (!IS_IPMI_INTERFACE(kid->child)) {
             continue;
         }
 
-        ii = IPMI_INTERFACE(obj);
-        iic = IPMI_INTERFACE_GET_CLASS(obj);
+        ii = IPMI_INTERFACE(kid->child);
+        iic = IPMI_INTERFACE_GET_CLASS(ii);
         memset(&info, 0, sizeof(info));
         iic->get_fwinfo(ii, &info);
         aml_append(scope, aml_ipmi_device(&info));

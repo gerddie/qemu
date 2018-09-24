@@ -113,6 +113,8 @@ uint32_t ipmi_next_uuid(void);
      OBJECT_CLASS_CHECK(IPMIInterfaceClass, (class), TYPE_IPMI_INTERFACE)
 #define IPMI_INTERFACE_GET_CLASS(class) \
      OBJECT_GET_CLASS(IPMIInterfaceClass, (class), TYPE_IPMI_INTERFACE)
+#define IS_IPMI_INTERFACE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_IPMI_INTERFACE)
 
 typedef struct IPMIInterface {
     Object parent;
