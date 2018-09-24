@@ -837,7 +837,7 @@ static void s390_pcihost_hot_plug(HotplugHandler *hotplug_dev,
                                          s->bus_no, 1);
             } while (pci_get_bus(pdev) && pci_dev_bus_num(pdev));
         }
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+    } else if (IS_PCI_DEVICE(dev)) {
         pdev = PCI_DEVICE(dev);
 
         if (pdev->cap_present & QEMU_PCI_CAP_MULTIFUNCTION) {
@@ -926,7 +926,7 @@ static void s390_pcihost_hot_unplug(HotplugHandler *hotplug_dev,
     if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_BRIDGE)) {
         error_setg(errp, "PCI bridge hot unplug currently not supported");
         return;
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+    } else if (IS_PCI_DEVICE(dev)) {
         pci_dev = PCI_DEVICE(dev);
 
         QTAILQ_FOREACH(pbdev, &s->zpci_devs, link) {

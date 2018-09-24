@@ -2484,7 +2484,7 @@ static int pci_qdev_find_recursive(PCIBus *bus,
     }
 
     /* roughly check if given qdev is pci device */
-    if (object_dynamic_cast(OBJECT(qdev), TYPE_PCI_DEVICE)) {
+    if (IS_PCI_DEVICE(qdev)) {
         *pdev = PCI_DEVICE(qdev);
         return 0;
     }

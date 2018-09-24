@@ -198,6 +198,8 @@ enum {
      OBJECT_CLASS_CHECK(PCIDeviceClass, (klass), TYPE_PCI_DEVICE)
 #define PCI_DEVICE_GET_CLASS(obj) \
      OBJECT_GET_CLASS(PCIDeviceClass, (obj), TYPE_PCI_DEVICE)
+#define IS_PCI_DEVICE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)
 
 /* Implemented by devices that can be plugged on PCI Express buses */
 #define INTERFACE_PCIE_DEVICE "pci-express-device"

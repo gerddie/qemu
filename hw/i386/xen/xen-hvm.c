@@ -574,7 +574,7 @@ static void xen_device_realize(DeviceListener *listener,
 {
     XenIOState *state = container_of(listener, XenIOState, device_listener);
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+    if (IS_PCI_DEVICE(dev)) {
         PCIDevice *pci_dev = PCI_DEVICE(dev);
         XenPciDevice *xendev = g_new(XenPciDevice, 1);
 
@@ -592,7 +592,7 @@ static void xen_device_unrealize(DeviceListener *listener,
 {
     XenIOState *state = container_of(listener, XenIOState, device_listener);
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+    if (IS_PCI_DEVICE(dev)) {
         PCIDevice *pci_dev = PCI_DEVICE(dev);
         XenPciDevice *xendev, *next;
 
