@@ -1727,7 +1727,7 @@ static void virt_machine_device_plug_cb(HotplugHandler *hotplug_dev,
     VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
 
     if (vms->platform_bus_dev) {
-        if (object_dynamic_cast(OBJECT(dev), TYPE_SYS_BUS_DEVICE)) {
+        if (IS_SYS_BUS_DEVICE(dev)) {
             platform_bus_link_device(PLATFORM_BUS_DEVICE(vms->platform_bus_dev),
                                      SYS_BUS_DEVICE(dev));
         }
@@ -1737,7 +1737,7 @@ static void virt_machine_device_plug_cb(HotplugHandler *hotplug_dev,
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                         DeviceState *dev)
 {
-    if (object_dynamic_cast(OBJECT(dev), TYPE_SYS_BUS_DEVICE)) {
+    if (IS_SYS_BUS_DEVICE(dev)) {
         return HOTPLUG_HANDLER(machine);
     }
 

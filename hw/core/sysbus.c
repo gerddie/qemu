@@ -35,18 +35,13 @@ typedef struct SysBusFind {
 static int find_sysbus_device(Object *obj, void *opaque)
 {
     SysBusFind *find = opaque;
-    Object *dev;
-    SysBusDevice *sbdev;
 
-    dev = object_dynamic_cast(obj, TYPE_SYS_BUS_DEVICE);
-    sbdev = (SysBusDevice *)dev;
-
-    if (!sbdev) {
+    if (!IS_SYS_BUS_DEVICE(obj)) {
         /* Container, traverse it for children */
         return object_child_foreach(obj, find_sysbus_device, opaque);
     }
 
-    find->func(sbdev, find->opaque);
+    find->func(SYS_BUS_DEVICE(obj), find->opaque);
 
     return 0;
 }

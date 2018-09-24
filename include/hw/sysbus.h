@@ -21,6 +21,8 @@ typedef struct SysBusDevice SysBusDevice;
      OBJECT_CLASS_CHECK(SysBusDeviceClass, (klass), TYPE_SYS_BUS_DEVICE)
 #define SYS_BUS_DEVICE_GET_CLASS(obj) \
      OBJECT_GET_CLASS(SysBusDeviceClass, (obj), TYPE_SYS_BUS_DEVICE)
+#define IS_SYS_BUS_DEVICE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_SYS_BUS_DEVICE)
 
 /**
  * SysBusDeviceClass:

@@ -149,7 +149,7 @@ DeviceState *qdev_try_create(BusState *bus, const char *type)
          * being put onto a bus should be created with object_new(TYPE_FOO),
          * not qdev_create(NULL, TYPE_FOO).
          */
-        g_assert(object_dynamic_cast(OBJECT(dev), TYPE_SYS_BUS_DEVICE));
+        g_assert(IS_SYS_BUS_DEVICE(dev));
         bus = sysbus_get_default();
     }
 
