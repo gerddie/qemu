@@ -906,7 +906,7 @@ static int hmp_info_irq_foreach(Object *obj, void *opaque)
     InterruptStatsProviderClass *k;
     Monitor *mon = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_INTERRUPT_STATS_PROVIDER)) {
+    if (IS_INTERRUPT_STATS_PROVIDER(obj)) {
         intc = INTERRUPT_STATS_PROVIDER(obj);
         k = INTERRUPT_STATS_PROVIDER_GET_CLASS(obj);
         uint64_t *irq_counts;
@@ -944,7 +944,7 @@ static int hmp_info_pic_foreach(Object *obj, void *opaque)
     InterruptStatsProviderClass *k;
     Monitor *mon = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_INTERRUPT_STATS_PROVIDER)) {
+    if (IS_INTERRUPT_STATS_PROVIDER(obj)) {
         intc = INTERRUPT_STATS_PROVIDER(obj);
         k = INTERRUPT_STATS_PROVIDER_GET_CLASS(obj);
         if (k->print_info) {

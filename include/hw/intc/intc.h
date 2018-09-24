@@ -14,6 +14,8 @@
 #define INTERRUPT_STATS_PROVIDER(obj) \
     INTERFACE_CHECK(InterruptStatsProvider, (obj), \
                     TYPE_INTERRUPT_STATS_PROVIDER)
+#define IS_INTERRUPT_STATS_PROVIDER(obj) \
+    object_dynamic_cast((obj), TYPE_INTERRUPT_STATS_PROVIDER)
 
 typedef struct InterruptStatsProvider {
     Object parent;
