@@ -2009,7 +2009,7 @@ static void pc_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
 {
     if (IS_PC_DIMM(dev)) {
         pc_memory_pre_plug(hotplug_dev, dev, errp);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+    } else if (IS_CPU(dev)) {
         pc_cpu_pre_plug(hotplug_dev, dev, errp);
     }
 }
@@ -2019,7 +2019,7 @@ static void pc_machine_device_plug_cb(HotplugHandler *hotplug_dev,
 {
     if (IS_PC_DIMM(dev)) {
         pc_memory_plug(hotplug_dev, dev, errp);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+    } else if (IS_CPU(dev)) {
         pc_cpu_plug(hotplug_dev, dev, errp);
     }
 }
@@ -2029,7 +2029,7 @@ static void pc_machine_device_unplug_request_cb(HotplugHandler *hotplug_dev,
 {
     if (IS_PC_DIMM(dev)) {
         pc_memory_unplug_request(hotplug_dev, dev, errp);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+    } else if (IS_CPU(dev)) {
         pc_cpu_unplug_request_cb(hotplug_dev, dev, errp);
     } else {
         error_setg(errp, "acpi: device unplug request for not supported device"
@@ -2042,7 +2042,7 @@ static void pc_machine_device_unplug_cb(HotplugHandler *hotplug_dev,
 {
     if (IS_PC_DIMM(dev)) {
         pc_memory_unplug(hotplug_dev, dev, errp);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+    } else if (IS_CPU(dev)) {
         pc_cpu_unplug_cb(hotplug_dev, dev, errp);
     } else {
         error_setg(errp, "acpi: device unplug for not supported device"
@@ -2053,8 +2053,7 @@ static void pc_machine_device_unplug_cb(HotplugHandler *hotplug_dev,
 static HotplugHandler *pc_get_hotpug_handler(MachineState *machine,
                                              DeviceState *dev)
 {
-    if (IS_PC_DIMM(dev) ||
-        object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+    if (IS_PC_DIMM(dev) || IS_CPU(dev)) {
         return HOTPLUG_HANDLER(machine);
     }
 
