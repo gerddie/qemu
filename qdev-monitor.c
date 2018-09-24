@@ -219,7 +219,7 @@ static DeviceClass *qdev_get_device_class(const char **driver, Error **errp)
         }
     }
 
-    if (!object_class_dynamic_cast(oc, TYPE_DEVICE)) {
+    if (!IS_DEVICE_CLASS(oc)) {
         if (*driver != original_name) {
             error_setg(errp, "'%s' (alias '%s') is not a valid device model"
                        " name", original_name, *driver);
@@ -834,7 +834,7 @@ static DeviceState *find_device_state(const char *id, Error **errp)
         return NULL;
     }
 
-    if (!object_dynamic_cast(obj, TYPE_DEVICE)) {
+    if (!IS_DEVICE(obj)) {
         error_setg(errp, "%s is not a hotpluggable device", id);
         return NULL;
     }

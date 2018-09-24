@@ -1226,8 +1226,7 @@ int qdev_prop_check_globals(void)
             continue;
         }
         oc = object_class_by_name(prop->driver);
-        oc = object_class_dynamic_cast(oc, TYPE_DEVICE);
-        if (!oc) {
+        if (!IS_DEVICE_CLASS(oc)) {
             warn_report("global %s.%s has invalid class name",
                         prop->driver, prop->property);
             ret = 1;

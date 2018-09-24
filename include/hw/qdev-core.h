@@ -15,6 +15,9 @@ enum {
 #define DEVICE(obj) OBJECT_CHECK(DeviceState, (obj), TYPE_DEVICE)
 #define DEVICE_CLASS(klass) OBJECT_CLASS_CHECK(DeviceClass, (klass), TYPE_DEVICE)
 #define DEVICE_GET_CLASS(obj) OBJECT_GET_CLASS(DeviceClass, (obj), TYPE_DEVICE)
+#define IS_DEVICE(obj) object_dynamic_cast(OBJECT(obj), TYPE_DEVICE)
+#define IS_DEVICE_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_DEVICE)
 
 typedef enum DeviceCategory {
     DEVICE_CATEGORY_BRIDGE,
