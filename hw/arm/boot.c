@@ -817,7 +817,7 @@ static void load_image_to_fw_cfg(FWCfgState *fw_cfg, uint16_t size_key,
 
 static int do_arm_linux_init(Object *obj, void *opaque)
 {
-    if (object_dynamic_cast(obj, TYPE_ARM_LINUX_BOOT_IF)) {
+    if (IS_ARM_LINUX_BOOT_IF(obj)) {
         ARMLinuxBootIf *albif = ARM_LINUX_BOOT_IF(obj);
         ARMLinuxBootIfClass *albifc = ARM_LINUX_BOOT_IF_GET_CLASS(obj);
         struct arm_boot_info *info = opaque;

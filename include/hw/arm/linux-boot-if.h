@@ -15,6 +15,8 @@
     OBJECT_GET_CLASS(ARMLinuxBootIfClass, (obj), TYPE_ARM_LINUX_BOOT_IF)
 #define ARM_LINUX_BOOT_IF(obj) \
     INTERFACE_CHECK(ARMLinuxBootIf, (obj), TYPE_ARM_LINUX_BOOT_IF)
+#define IS_ARM_LINUX_BOOT_IF(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_ARM_LINUX_BOOT_IF)
 
 typedef struct ARMLinuxBootIf {
     /*< private >*/
