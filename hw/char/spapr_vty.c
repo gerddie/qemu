@@ -19,7 +19,9 @@ typedef struct VIOsPAPRVTYDevice {
 
 #define TYPE_VIO_SPAPR_VTY_DEVICE "spapr-vty"
 #define VIO_SPAPR_VTY_DEVICE(obj) \
-     OBJECT_CHECK(VIOsPAPRVTYDevice, (obj), TYPE_VIO_SPAPR_VTY_DEVICE)
+    OBJECT_CHECK(VIOsPAPRVTYDevice, (obj), TYPE_VIO_SPAPR_VTY_DEVICE)
+#define IS_VIO_SPAPR_VTY_DEVICE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_VIO_SPAPR_VTY_DEVICE)
 
 static int vty_can_receive(void *opaque)
 {
@@ -225,7 +227,7 @@ VIOsPAPRDevice *spapr_vty_get_default(VIOsPAPRBus *bus)
         DeviceState *iter = kid->child;
 
         /* Only look at VTY devices */
-        if (!object_dynamic_cast(OBJECT(iter), TYPE_VIO_SPAPR_VTY_DEVICE)) {
+        if (!IS_VIO_SPAPR_VTY_DEVICE(iter)) {
             continue;
         }
 
@@ -260,7 +262,7 @@ VIOsPAPRDevice *vty_lookup(sPAPRMachineState *spapr, target_ulong reg)
         return spapr_vty_get_default(spapr->vio_bus);
     }
 
-    if (!object_dynamic_cast(OBJECT(sdev), TYPE_VIO_SPAPR_VTY_DEVICE)) {
+    if (!IS_VIO_SPAPR_VTY_DEVICE(sdev)) {
         return NULL;
     }
 
