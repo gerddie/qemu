@@ -214,6 +214,8 @@ int qemu_chr_wait_connected(Chardev *chr, Error **errp);
     OBJECT_CLASS_CHECK(ChardevClass, (klass), TYPE_CHARDEV)
 #define CHARDEV_GET_CLASS(obj) \
     OBJECT_GET_CLASS(ChardevClass, (obj), TYPE_CHARDEV)
+#define IS_CHARDEV_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_CHARDEV)
 
 #define TYPE_CHARDEV_NULL "chardev-null"
 #define TYPE_CHARDEV_MUX "chardev-mux"
