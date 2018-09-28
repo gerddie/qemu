@@ -333,7 +333,7 @@ static void cpu_common_realizefn(DeviceState *dev, Error **errp)
      * if this is one of the user-only emulators; in that case there's
      * no need to check the ignore_memory_transaction_failures board flag.
      */
-    if (object_dynamic_cast(machine, TYPE_MACHINE)) {
+    if (IS_MACHINE(machine)) {
         ObjectClass *oc = object_get_class(machine);
         MachineClass *mc = MACHINE_CLASS(oc);
 

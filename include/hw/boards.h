@@ -56,6 +56,8 @@ void memory_region_allocate_system_memory(MemoryRegion *mr, Object *owner,
     OBJECT_GET_CLASS(MachineClass, (obj), TYPE_MACHINE)
 #define MACHINE_CLASS(klass) \
     OBJECT_CLASS_CHECK(MachineClass, (klass), TYPE_MACHINE)
+#define IS_MACHINE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_MACHINE)
 
 MachineClass *find_default_machine(void);
 extern MachineState *current_machine;

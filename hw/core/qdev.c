@@ -218,15 +218,13 @@ void qdev_set_legacy_instance_id(DeviceState *dev, int alias_id,
 
 HotplugHandler *qdev_get_machine_hotplug_handler(DeviceState *dev)
 {
-    MachineState *machine;
-    MachineClass *mc;
     Object *m_obj = qdev_get_machine();
 
-    if (object_dynamic_cast(m_obj, TYPE_MACHINE)) {
-        machine = MACHINE(m_obj);
-        mc = MACHINE_GET_CLASS(machine);
+    if (IS_MACHINE(m_obj)) {
+        MachineClass *mc = MACHINE_GET_CLASS(m_obj);
+
         if (mc->get_hotplug_handler) {
-            return mc->get_hotplug_handler(machine, dev);
+            return mc->get_hotplug_handler(MACHINE(m_obj), dev);
         }
     }
 
