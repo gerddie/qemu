@@ -812,7 +812,7 @@ static void s390_pcihost_hot_plug(HotplugHandler *hotplug_dev,
     S390PCIBusDevice *pbdev = NULL;
     S390pciState *s = s390_get_phb();
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_BRIDGE)) {
+    if (IS_PCI_BRIDGE(dev)) {
         BusState *bus;
         PCIBridge *pb = PCI_BRIDGE(dev);
         PCIDevice *pdev = PCI_DEVICE(dev);
@@ -924,7 +924,7 @@ static void s390_pcihost_hot_unplug(HotplugHandler *hotplug_dev,
     S390PCIBusDevice *pbdev = NULL;
     S390pciState *s = s390_get_phb();
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_BRIDGE)) {
+    if (IS_PCI_BRIDGE(dev)) {
         error_setg(errp, "PCI bridge hot unplug currently not supported");
         return;
     } else if (IS_PCI_DEVICE(dev)) {
