@@ -382,7 +382,7 @@ static int pnv_dt_isa_device(DeviceState *dev, void *opaque)
     ForeachPopulateArgs *args = opaque;
     ISADevice *d = ISA_DEVICE(dev);
 
-    if (object_dynamic_cast(OBJECT(dev), TYPE_MC146818_RTC)) {
+    if (IS_MC146818_RTC(dev)) {
         pnv_dt_rtc(d, args->fdt, args->offset);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_ISA_SERIAL)) {
         pnv_dt_serial(d, args->fdt, args->offset);
