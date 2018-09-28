@@ -207,7 +207,7 @@ typedef struct ForeachPopulateArgs {
 
 static int xscom_dt_child(Object *child, void *opaque)
 {
-    if (object_dynamic_cast(child, TYPE_PNV_XSCOM_INTERFACE)) {
+    if (IS_PNV_XSCOM_INTERFACE(child)) {
         ForeachPopulateArgs *args = opaque;
         PnvXScomInterface *xd = PNV_XSCOM_INTERFACE(child);
         PnvXScomInterfaceClass *xc = PNV_XSCOM_INTERFACE_GET_CLASS(xd);
