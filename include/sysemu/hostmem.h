@@ -29,6 +29,10 @@
 #define IS_MEMORY_BACKEND(obj) \
     object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_BACKEND)
 
+#define TYPE_MEMORY_BACKEND_RAM "memory-backend-ram"
+#define IS_MEMORY_BACKEND_RAM(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_BACKEND_RAM)
+
 typedef struct HostMemoryBackend HostMemoryBackend;
 typedef struct HostMemoryBackendClass HostMemoryBackendClass;
 

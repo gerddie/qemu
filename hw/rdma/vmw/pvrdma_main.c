@@ -34,6 +34,7 @@
 #include "standard-headers/rdma/vmw_pvrdma-abi.h"
 #include "standard-headers/drivers/infiniband/hw/vmw_pvrdma/pvrdma_dev_api.h"
 #include "pvrdma_qp_ops.h"
+#include "sysemu/hostmem.h"
 
 static Property pvrdma_dev_properties[] = {
     DEFINE_PROP_STRING("backend-dev", PVRDMADev, backend_device_name),
@@ -563,7 +564,7 @@ static int pvrdma_check_ram_shared(Object *obj, void *opaque)
 {
     bool *shared = opaque;
 
-    if (object_dynamic_cast(obj, "memory-backend-ram")) {
+    if (IS_MEMORY_BACKEND_RAM(obj)) {
         *shared = object_property_get_bool(obj, "share", NULL);
     }
 
