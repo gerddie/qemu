@@ -1391,8 +1391,12 @@ static void vfio_pci_igd_lpc_bridge_class_init(ObjectClass *klass, void *data)
     k->class_id = PCI_CLASS_BRIDGE_ISA;
 }
 
+#define TYPE_VFIO_PCI_IGD_LPC_BRIDGE "vfio-pci-igd-lpc-bridge"
+#define IS_VFIO_PCI_IGD_LPC_BRIDGE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_VFIO_PCI_IGD_LPC_BRIDGE)
+
 static TypeInfo vfio_pci_igd_lpc_bridge_info = {
-    .name = "vfio-pci-igd-lpc-bridge",
+    .name = TYPE_VFIO_PCI_IGD_LPC_BRIDGE,
     .parent = TYPE_PCI_DEVICE,
     .class_init = vfio_pci_igd_lpc_bridge_class_init,
     .interfaces = (InterfaceInfo[]) {
@@ -1418,7 +1422,7 @@ static int vfio_pci_igd_lpc_init(VFIOPCIDevice *vdev,
                                  0, PCI_DEVFN(0x1f, 0));
     if (!lpc_bridge) {
         lpc_bridge = pci_create_simple(pci_device_root_bus(&vdev->pdev),
-                                 PCI_DEVFN(0x1f, 0), "vfio-pci-igd-lpc-bridge");
+                            PCI_DEVFN(0x1f, 0), TYPE_VFIO_PCI_IGD_LPC_BRIDGE);
     }
 
     ret = vfio_pci_igd_copy(vdev, lpc_bridge, info, igd_lpc_bridge_infos,
@@ -1588,8 +1592,7 @@ static void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
      */
     lpc_bridge = pci_find_device(pci_device_root_bus(&vdev->pdev),
                                  0, PCI_DEVFN(0x1f, 0));
-    if (lpc_bridge && !object_dynamic_cast(OBJECT(lpc_bridge),
-                                           "vfio-pci-igd-lpc-bridge")) {
+    if (lpc_bridge && !IS_VFIO_PCI_IGD_LPC_BRIDGE(lpc_bridge)) {
         error_report("IGD device %s cannot support legacy mode due to existing "
                      "devices at address 1f.0", vdev->vbasedev.name);
         return;
