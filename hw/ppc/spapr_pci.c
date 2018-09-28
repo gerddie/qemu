@@ -45,6 +45,7 @@
 #include "hw/pci/pci_bus.h"
 #include "hw/pci/pci_ids.h"
 #include "hw/ppc/spapr_drc.h"
+#include "hw/vfio/vfio-common.h"
 #include "sysemu/device_tree.h"
 #include "sysemu/kvm.h"
 #include "sysemu/hostmem.h"
@@ -822,7 +823,7 @@ static char *spapr_phb_get_loc_code(sPAPRPHBState *sphb, PCIDevice *pdev)
     const char *devtype = "qemu";
     uint32_t busnr = pci_bus_num(PCI_BUS(qdev_get_parent_bus(DEVICE(pdev))));
 
-    if (object_dynamic_cast(OBJECT(pdev), "vfio-pci")) {
+    if (IS_VFIO_PCI(pdev)) {
         buf = spapr_phb_vfio_get_loc_code(sphb, pdev);
         if (buf) {
             return buf;

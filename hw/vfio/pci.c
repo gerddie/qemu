@@ -3245,7 +3245,7 @@ static void vfio_pci_dev_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo vfio_pci_dev_info = {
-    .name = "vfio-pci",
+    .name = TYPE_VFIO_PCI,
     .parent = TYPE_PCI_DEVICE,
     .instance_size = sizeof(VFIOPCIDevice),
     .class_init = vfio_pci_dev_class_init,

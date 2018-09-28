@@ -21,6 +21,7 @@
 #include "hw/pci/pci_bus.h"
 #include "hw/pci/pci_bridge.h"
 #include "hw/pci/msi.h"
+#include "hw/vfio/vfio-common.h"
 #include "qemu/error-report.h"
 
 #ifndef DEBUG_S390PCI_BUS
@@ -863,7 +864,7 @@ static void s390_pcihost_hot_plug(HotplugHandler *hotplug_dev,
             }
         }
 
-        if (object_dynamic_cast(OBJECT(dev), "vfio-pci")) {
+        if (IS_VFIO_PCI(dev)) {
             pbdev->fh |= FH_SHM_VFIO;
         } else {
             pbdev->fh |= FH_SHM_EMUL;
