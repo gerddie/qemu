@@ -39,7 +39,7 @@ static int memory_device_build_list(Object *obj, void *opaque)
 {
     GSList **list = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_MEMORY_DEVICE)) {
+    if (IS_MEMORY_DEVICE(obj)) {
         DeviceState *dev = DEVICE(obj);
         if (dev->realized) { /* only realized memory devices matter */
             *list = g_slist_insert_sorted(*list, dev, memory_device_addr_sort);
@@ -54,7 +54,7 @@ static int memory_device_used_region_size(Object *obj, void *opaque)
 {
     uint64_t *size = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_MEMORY_DEVICE)) {
+    if (IS_MEMORY_DEVICE(obj)) {
         const DeviceState *dev = DEVICE(obj);
         const MemoryDeviceState *md = MEMORY_DEVICE(obj);
         const MemoryDeviceClass *mdc = MEMORY_DEVICE_GET_CLASS(obj);
@@ -226,7 +226,7 @@ static int memory_device_plugged_size(Object *obj, void *opaque)
 {
     uint64_t *size = opaque;
 
-    if (object_dynamic_cast(obj, TYPE_MEMORY_DEVICE)) {
+    if (IS_MEMORY_DEVICE(obj)) {
         const DeviceState *dev = DEVICE(obj);
         const MemoryDeviceState *md = MEMORY_DEVICE(obj);
         const MemoryDeviceClass *mdc = MEMORY_DEVICE_GET_CLASS(obj);

@@ -19,11 +19,13 @@
 #define TYPE_MEMORY_DEVICE "memory-device"
 
 #define MEMORY_DEVICE_CLASS(klass) \
-     OBJECT_CLASS_CHECK(MemoryDeviceClass, (klass), TYPE_MEMORY_DEVICE)
+    OBJECT_CLASS_CHECK(MemoryDeviceClass, (klass), TYPE_MEMORY_DEVICE)
 #define MEMORY_DEVICE_GET_CLASS(obj) \
     OBJECT_GET_CLASS(MemoryDeviceClass, (obj), TYPE_MEMORY_DEVICE)
 #define MEMORY_DEVICE(obj) \
-     INTERFACE_CHECK(MemoryDeviceState, (obj), TYPE_MEMORY_DEVICE)
+    INTERFACE_CHECK(MemoryDeviceState, (obj), TYPE_MEMORY_DEVICE)
+#define IS_MEMORY_DEVICE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_DEVICE)
 
 typedef struct MemoryDeviceState {
     Object parent_obj;
