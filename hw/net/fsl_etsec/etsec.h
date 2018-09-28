@@ -151,7 +151,9 @@ typedef struct eTSEC {
 
 #define TYPE_ETSEC_COMMON "eTSEC"
 #define ETSEC_COMMON(obj) \
-     OBJECT_CHECK(eTSEC, (obj), TYPE_ETSEC_COMMON)
+    OBJECT_CHECK(eTSEC, (obj), TYPE_ETSEC_COMMON)
+#define IS_ETSEC_COMMON(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_ETSEC_COMMON)
 
 #define eTSEC_TRANSMIT 1
 #define eTSEC_RECEIVE  2

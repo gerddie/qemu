@@ -211,7 +211,7 @@ static void sysbus_device_create_devtree(SysBusDevice *sbdev, void *opaque)
     PlatformDevtreeData *data = opaque;
     bool matched = false;
 
-    if (object_dynamic_cast(OBJECT(sbdev), TYPE_ETSEC_COMMON)) {
+    if (IS_ETSEC_COMMON(sbdev)) {
         create_devtree_etsec(sbdev, data);
         matched = true;
     }
