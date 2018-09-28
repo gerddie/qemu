@@ -380,10 +380,7 @@ static void ipmi_bt_init(IPMIInterface *ii, Error **errp)
     memory_region_init_io(&ib->io, NULL, &ipmi_bt_io_ops, ii, "ipmi-bt", 3);
 }
 
-
-#define TYPE_ISA_IPMI_BT "isa-ipmi-bt"
-#define ISA_IPMI_BT(obj) OBJECT_CHECK(ISAIPMIBTDevice, (obj), \
-                                       TYPE_ISA_IPMI_BT)
+#define ISA_IPMI_BT(obj) OBJECT_CHECK(ISAIPMIBTDevice, (obj), TYPE_ISA_IPMI_BT)
 
 typedef struct ISAIPMIBTDevice {
     ISADevice dev;

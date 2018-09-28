@@ -170,6 +170,9 @@ typedef struct IPMIInterfaceClass {
     void (*get_fwinfo)(struct IPMIInterface *s, IPMIFwInfo *info);
 } IPMIInterfaceClass;
 
+#define TYPE_ISA_IPMI_BT "isa-ipmi-bt"
+#define IS_ISA_IPMI_BT(obj) object_dynamic_cast(OBJECT(obj), TYPE_ISA_IPMI_BT)
+
 /*
  * Define a BMC simulator (or perhaps a connection to a real BMC)
  */

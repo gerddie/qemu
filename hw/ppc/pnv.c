@@ -386,7 +386,7 @@ static int pnv_dt_isa_device(DeviceState *dev, void *opaque)
         pnv_dt_rtc(d, args->fdt, args->offset);
     } else if (IS_ISA_SERIAL(dev)) {
         pnv_dt_serial(d, args->fdt, args->offset);
-    } else if (object_dynamic_cast(OBJECT(dev), "isa-ipmi-bt")) {
+    } else if (IS_ISA_IPMI_BT(dev)) {
         pnv_dt_ipmi_bt(d, args->fdt, args->offset);
     } else {
         error_report("unknown isa device %s@i%x", qdev_fw_name(dev),
