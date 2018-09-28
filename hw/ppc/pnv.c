@@ -384,7 +384,7 @@ static int pnv_dt_isa_device(DeviceState *dev, void *opaque)
 
     if (IS_MC146818_RTC(dev)) {
         pnv_dt_rtc(d, args->fdt, args->offset);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_ISA_SERIAL)) {
+    } else if (IS_ISA_SERIAL(dev)) {
         pnv_dt_serial(d, args->fdt, args->offset);
     } else if (object_dynamic_cast(OBJECT(dev), "isa-ipmi-bt")) {
         pnv_dt_ipmi_bt(d, args->fdt, args->offset);

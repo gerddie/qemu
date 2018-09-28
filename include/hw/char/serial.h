@@ -99,6 +99,8 @@ SerialState *serial_mm_init(MemoryRegion *address_space,
 #define MAX_ISA_SERIAL_PORTS 4
 
 #define TYPE_ISA_SERIAL "isa-serial"
+#define IS_ISA_SERIAL(obj) object_dynamic_cast(OBJECT(obj), TYPE_ISA_SERIAL)
+
 void serial_hds_isa_init(ISABus *bus, int from, int to);
 
 #endif
