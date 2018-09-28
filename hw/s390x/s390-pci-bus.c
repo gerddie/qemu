@@ -885,7 +885,7 @@ static void s390_pcihost_hot_plug(HotplugHandler *hotplug_dev,
             s390_pci_generate_plug_event(HP_EVENT_RESERVED_TO_STANDBY,
                                          pbdev->fh, pbdev->fid);
         }
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_S390_PCI_DEVICE)) {
+    } else if (IS_S390_PCI_DEVICE(dev)) {
         pbdev = S390_PCI_DEVICE(dev);
 
         if (!s390_pci_alloc_idx(s, pbdev)) {
@@ -936,7 +936,7 @@ static void s390_pcihost_hot_unplug(HotplugHandler *hotplug_dev,
             }
         }
         assert(pbdev != NULL);
-    } else if (object_dynamic_cast(OBJECT(dev), TYPE_S390_PCI_DEVICE)) {
+    } else if (IS_S390_PCI_DEVICE(dev)) {
         pbdev = S390_PCI_DEVICE(dev);
         pci_dev = pbdev->pdev;
     }
