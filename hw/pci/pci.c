@@ -381,7 +381,7 @@ static void pci_root_bus_init(PCIBus *bus, DeviceState *parent,
 
 bool pci_bus_is_express(PCIBus *bus)
 {
-    return object_dynamic_cast(OBJECT(bus), TYPE_PCIE_BUS);
+    return IS_PCIE_BUS(bus);
 }
 
 bool pci_bus_is_root(PCIBus *bus)
