@@ -2254,8 +2254,8 @@ static int spapr_switch_one_vga(DeviceState *dev, void *opaque)
 {
     bool be = *(bool *)opaque;
 
-    if (object_dynamic_cast(OBJECT(dev), "VGA")
-        || object_dynamic_cast(OBJECT(dev), "secondary-vga")) {
+    if (IS_PCI_VGA(dev) &&
+        object_property_find(OBJECT(dev), "big-endian-framebuffer", NULL)) {
         object_property_set_bool(OBJECT(dev), be, "big-endian-framebuffer",
                                  &error_abort);
     }

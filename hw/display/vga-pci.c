@@ -44,7 +44,6 @@ typedef struct PCIVGAState {
     MemoryRegion mrs[3];
 } PCIVGAState;
 
-#define TYPE_PCI_VGA "pci-vga"
 #define PCI_VGA(obj) OBJECT_CHECK(PCIVGAState, (obj), TYPE_PCI_VGA)
 
 static const VMStateDescription vmstate_vga_pci = {

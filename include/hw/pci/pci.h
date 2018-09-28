@@ -432,6 +432,9 @@ PCIDevice *pci_nic_init_nofail(NICInfo *nd, PCIBus *rootbus,
                                const char *default_model,
                                const char *default_devaddr);
 
+#define TYPE_PCI_VGA "pci-vga"
+#define IS_PCI_VGA(obj) object_dynamic_cast(OBJECT(obj), TYPE_PCI_VGA)
+
 PCIDevice *pci_vga_init(PCIBus *bus);
 
 static inline PCIBus *pci_get_bus(const PCIDevice *dev)
