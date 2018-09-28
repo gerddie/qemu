@@ -20,7 +20,9 @@
 #define SPAPR_CPU_CORE_CLASS(klass) \
     OBJECT_CLASS_CHECK(sPAPRCPUCoreClass, (klass), TYPE_SPAPR_CPU_CORE)
 #define SPAPR_CPU_CORE_GET_CLASS(obj) \
-     OBJECT_GET_CLASS(sPAPRCPUCoreClass, (obj), TYPE_SPAPR_CPU_CORE)
+    OBJECT_GET_CLASS(sPAPRCPUCoreClass, (obj), TYPE_SPAPR_CPU_CORE)
+#define IS_SPAPR_CPU_CORE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_SPAPR_CPU_CORE)
 
 #define SPAPR_CPU_CORE_TYPE_NAME(model) model "-" TYPE_SPAPR_CPU_CORE
 
