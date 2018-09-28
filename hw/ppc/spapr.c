@@ -1708,7 +1708,7 @@ static int spapr_post_load(void *opaque, int version_id)
         return err;
     }
 
-    if (!object_dynamic_cast(OBJECT(spapr->ics), TYPE_ICS_KVM)) {
+    if (!IS_ICS_KVM(spapr->ics)) {
         CPUState *cs;
         CPU_FOREACH(cs) {
             PowerPCCPU *cpu = POWERPC_CPU(cs);

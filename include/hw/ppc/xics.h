@@ -105,6 +105,7 @@ struct PnvICPState {
 
 #define TYPE_ICS_KVM "icskvm"
 #define ICS_KVM(obj) OBJECT_CHECK(ICSState, (obj), TYPE_ICS_KVM)
+#define IS_ICS_KVM(obj) object_dynamic_cast(OBJECT(obj), TYPE_ICS_KVM)
 
 #define ICS_BASE_CLASS(klass) \
      OBJECT_CLASS_CHECK(ICSStateClass, (klass), TYPE_ICS_BASE)
