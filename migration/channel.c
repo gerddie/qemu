@@ -36,8 +36,7 @@ void migration_channel_process_incoming(QIOChannel *ioc)
 
     if (s->parameters.tls_creds &&
         *s->parameters.tls_creds &&
-        !object_dynamic_cast(OBJECT(ioc),
-                             TYPE_QIO_CHANNEL_TLS)) {
+        !IS_QIO_CHANNEL_TLS(ioc)) {
         Error *local_err = NULL;
         migration_tls_channel_process_incoming(s, ioc, &local_err);
         if (local_err) {
@@ -68,8 +67,7 @@ void migration_channel_connect(MigrationState *s,
     if (!error) {
         if (s->parameters.tls_creds &&
             *s->parameters.tls_creds &&
-            !object_dynamic_cast(OBJECT(ioc),
-                                 TYPE_QIO_CHANNEL_TLS)) {
+            !IS_QIO_CHANNEL_TLS(ioc)) {
             migration_tls_channel_connect(s, ioc, hostname, &error);
 
             if (!error) {
