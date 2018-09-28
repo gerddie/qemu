@@ -36,6 +36,8 @@
                            TYPE_SPAPR_DRC_PHYSICAL)
 #define SPAPR_DRC_PHYSICAL(obj) OBJECT_CHECK(sPAPRDRCPhysical, (obj), \
                                              TYPE_SPAPR_DRC_PHYSICAL)
+#define IS_SPAPR_DRC_PHYSICAL(obj) \
+        object_dynamic_cast(OBJECT(obj), TYPE_SPAPR_DRC_PHYSICAL)
 
 #define TYPE_SPAPR_DRC_LOGICAL "spapr-drc-logical"
 #define SPAPR_DRC_LOGICAL_GET_CLASS(obj) \
@@ -45,6 +47,8 @@
                            TYPE_SPAPR_DRC_LOGICAL)
 #define SPAPR_DRC_LOGICAL(obj) OBJECT_CHECK(sPAPRDRConnector, (obj), \
                                              TYPE_SPAPR_DRC_LOGICAL)
+#define IS_SPAPR_DRC_LOGICAL(obj) \
+        object_dynamic_cast(OBJECT(obj), TYPE_SPAPR_DRC_LOGICAL)
 
 #define TYPE_SPAPR_DRC_CPU "spapr-drc-cpu"
 #define SPAPR_DRC_CPU_GET_CLASS(obj) \

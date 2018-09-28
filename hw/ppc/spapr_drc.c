@@ -927,7 +927,7 @@ static uint32_t rtas_set_allocation_state(uint32_t idx, uint32_t state)
 {
     sPAPRDRConnector *drc = spapr_drc_by_index(idx);
 
-    if (!drc || !object_dynamic_cast(OBJECT(drc), TYPE_SPAPR_DRC_LOGICAL)) {
+    if (!IS_SPAPR_DRC_LOGICAL(drc)) {
         return RTAS_OUT_NO_SUCH_INDICATOR;
     }
 
@@ -949,7 +949,7 @@ static uint32_t rtas_set_dr_indicator(uint32_t idx, uint32_t state)
 {
     sPAPRDRConnector *drc = spapr_drc_by_index(idx);
 
-    if (!drc || !object_dynamic_cast(OBJECT(drc), TYPE_SPAPR_DRC_PHYSICAL)) {
+    if (!IS_SPAPR_DRC_PHYSICAL(drc)) {
         return RTAS_OUT_NO_SUCH_INDICATOR;
     }
     if ((state != SPAPR_DR_INDICATOR_INACTIVE)
