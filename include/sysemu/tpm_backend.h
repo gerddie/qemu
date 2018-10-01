@@ -26,6 +26,8 @@
     OBJECT_GET_CLASS(TPMBackendClass, (obj), TYPE_TPM_BACKEND)
 #define TPM_BACKEND_CLASS(klass) \
     OBJECT_CLASS_CHECK(TPMBackendClass, (klass), TYPE_TPM_BACKEND)
+#define IS_TPM_BACKEND_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_TPM_BACKEND)
 
 typedef struct TPMBackendClass TPMBackendClass;
 typedef struct TPMBackend TPMBackend;
