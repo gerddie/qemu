@@ -32,6 +32,8 @@ struct arm_boot_info;
     OBJECT_CHECK(ARMCPU, (obj), TYPE_ARM_CPU)
 #define ARM_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(ARMCPUClass, (obj), TYPE_ARM_CPU)
+#define IS_ARM_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_ARM_CPU)
 
 #define TYPE_ARM_MAX_CPU "max-" TYPE_ARM_CPU
 
