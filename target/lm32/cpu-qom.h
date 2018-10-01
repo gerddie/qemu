@@ -30,6 +30,8 @@
     OBJECT_CHECK(LM32CPU, (obj), TYPE_LM32_CPU)
 #define LM32_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(LM32CPUClass, (obj), TYPE_LM32_CPU)
+#define IS_LM32_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_LM32_CPU)
 
 /**
  * LM32CPUClass:

@@ -209,8 +209,7 @@ static ObjectClass *lm32_cpu_class_by_name(const char *cpu_model)
     typename = g_strdup_printf(LM32_CPU_TYPE_NAME("%s"), cpu_model);
     oc = object_class_by_name(typename);
     g_free(typename);
-    if (oc != NULL && (!object_class_dynamic_cast(oc, TYPE_LM32_CPU) ||
-                       object_class_is_abstract(oc))) {
+    if (!IS_LM32_CPU_CLASS(oc) || object_class_is_abstract(oc)) {
         oc = NULL;
     }
     return oc;
