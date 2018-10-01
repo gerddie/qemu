@@ -72,6 +72,8 @@ typedef struct CPUMoxieState {
     OBJECT_CHECK(MoxieCPU, (obj), TYPE_MOXIE_CPU)
 #define MOXIE_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(MoxieCPUClass, (obj), TYPE_MOXIE_CPU)
+#define IS_MOXIE_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_MOXIE_CPU)
 
 /**
  * MoxieCPUClass:
