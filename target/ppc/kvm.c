@@ -2458,7 +2458,7 @@ static int kvm_ppc_register_host_cpu_type(MachineState *ms)
     }
     type_info.parent = object_class_get_name(OBJECT_CLASS(pvr_pcc));
     type_register(&type_info);
-    if (object_dynamic_cast(OBJECT(ms), TYPE_SPAPR_MACHINE)) {
+    if (IS_SPAPR_MACHINE(ms)) {
         /* override TCG default cpu type with 'host' cpu model */
         mc->default_cpu_type = TYPE_HOST_POWERPC_CPU;
     }

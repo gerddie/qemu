@@ -44,6 +44,8 @@ typedef struct sPAPRMachineClass sPAPRMachineClass;
     OBJECT_GET_CLASS(sPAPRMachineClass, obj, TYPE_SPAPR_MACHINE)
 #define SPAPR_MACHINE_CLASS(klass) \
     OBJECT_CLASS_CHECK(sPAPRMachineClass, klass, TYPE_SPAPR_MACHINE)
+#define IS_SPAPR_MACHINE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_SPAPR_MACHINE)
 
 typedef enum {
     SPAPR_RESIZE_HPT_DEFAULT = 0,
