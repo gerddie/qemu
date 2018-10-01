@@ -30,6 +30,8 @@
     OBJECT_CHECK(M68kCPU, (obj), TYPE_M68K_CPU)
 #define M68K_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(M68kCPUClass, (obj), TYPE_M68K_CPU)
+#define IS_M68K_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_M68K_CPU)
 
 /**
  * M68kCPUClass:
