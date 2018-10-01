@@ -21,6 +21,8 @@
     OBJECT_CHECK(UniCore32CPU, (obj), TYPE_UNICORE32_CPU)
 #define UNICORE32_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(UniCore32CPUClass, (obj), TYPE_UNICORE32_CPU)
+#define IS_UNICORE32_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_UNICORE32_CPU)
 
 /**
  * UniCore32CPUClass:
