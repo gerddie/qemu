@@ -143,6 +143,8 @@ struct PCMachineClass {
     OBJECT_GET_CLASS(PCMachineClass, (obj), TYPE_PC_MACHINE)
 #define PC_MACHINE_CLASS(klass) \
     OBJECT_CLASS_CHECK(PCMachineClass, (klass), TYPE_PC_MACHINE)
+#define IS_PC_MACHINE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_PC_MACHINE)
 
 /* i8259.c */
 
