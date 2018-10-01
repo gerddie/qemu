@@ -30,6 +30,8 @@
     OBJECT_CHECK(AlphaCPU, (obj), TYPE_ALPHA_CPU)
 #define ALPHA_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(AlphaCPUClass, (obj), TYPE_ALPHA_CPU)
+#define IS_ALPHA_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_ALPHA_CPU)
 
 /**
  * AlphaCPUClass:
