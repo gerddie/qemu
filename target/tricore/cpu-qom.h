@@ -29,6 +29,8 @@
     OBJECT_CHECK(TriCoreCPU, (obj), TYPE_TRICORE_CPU)
 #define TRICORE_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(TriCoreCPUClass, (obj), TYPE_TRICORE_CPU)
+#define IS_TRICORE_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_TRICORE_CPU)
 
 typedef struct TriCoreCPUClass {
     /*< private >*/
