@@ -424,7 +424,7 @@ void object_initialize_childv(Object *parentobj, const char *propname,
         goto out;
     }
 
-    if (object_dynamic_cast(obj, TYPE_USER_CREATABLE)) {
+    if (IS_USER_CREATABLE(obj)) {
         user_creatable_complete(obj, &local_err);
         if (local_err) {
             object_unparent(obj);
@@ -605,7 +605,7 @@ Object *object_new_with_propv(const char *typename,
         goto error;
     }
 
-    if (object_dynamic_cast(obj, TYPE_USER_CREATABLE)) {
+    if (IS_USER_CREATABLE(obj)) {
         user_creatable_complete(obj, &local_err);
         if (local_err) {
             object_unparent(obj);

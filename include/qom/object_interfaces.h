@@ -7,15 +7,15 @@
 #define TYPE_USER_CREATABLE "user-creatable"
 
 #define USER_CREATABLE_CLASS(klass) \
-     OBJECT_CLASS_CHECK(UserCreatableClass, (klass), \
-                        TYPE_USER_CREATABLE)
+    OBJECT_CLASS_CHECK(UserCreatableClass, (klass), TYPE_USER_CREATABLE)
 #define USER_CREATABLE_GET_CLASS(obj) \
-     OBJECT_GET_CLASS(UserCreatableClass, (obj), \
-                      TYPE_USER_CREATABLE)
+    OBJECT_GET_CLASS(UserCreatableClass, (obj), TYPE_USER_CREATABLE)
 #define USER_CREATABLE(obj) \
-     INTERFACE_CHECK(UserCreatable, (obj), \
-                     TYPE_USER_CREATABLE)
-
+    INTERFACE_CHECK(UserCreatable, (obj), TYPE_USER_CREATABLE)
+#define IS_USER_CREATABLE(obj) \
+    object_dynamic_cast(OBJECT(obj), TYPE_USER_CREATABLE)
+#define IS_USER_CREATABLE_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_USER_CREATABLE)
 
 typedef struct UserCreatable {
     /* <private> */

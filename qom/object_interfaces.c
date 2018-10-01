@@ -52,7 +52,7 @@ Object *user_creatable_add_type(const char *type, const char *id,
         return NULL;
     }
 
-    if (!object_class_dynamic_cast(klass, TYPE_USER_CREATABLE)) {
+    if (!IS_USER_CREATABLE_CLASS(klass)) {
         error_setg(errp, "object type '%s' isn't supported by object-add",
                    type);
         return NULL;
