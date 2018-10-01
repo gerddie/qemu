@@ -181,6 +181,8 @@ struct CPURISCVState {
     OBJECT_CHECK(RISCVCPU, (obj), TYPE_RISCV_CPU)
 #define RISCV_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(RISCVCPUClass, (obj), TYPE_RISCV_CPU)
+#define IS_RISCV_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_RISCV_CPU)
 
 /**
  * RISCVCPUClass:
