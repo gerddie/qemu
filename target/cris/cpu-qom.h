@@ -30,6 +30,8 @@
     OBJECT_CHECK(CRISCPU, (obj), TYPE_CRIS_CPU)
 #define CRIS_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(CRISCPUClass, (obj), TYPE_CRIS_CPU)
+#define IS_CRIS_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_CRIS_CPU)
 
 /**
  * CRISCPUClass:
