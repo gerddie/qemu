@@ -512,6 +512,9 @@ struct TypeInfo
 #define OBJECT_CLASS(class) \
     ((ObjectClass *)(class))
 
+#define IS_OBJECT_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_OBJECT)
+
 /**
  * OBJECT_CHECK:
  * @type: The C type to use for the return value.
