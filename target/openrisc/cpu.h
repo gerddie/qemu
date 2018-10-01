@@ -39,6 +39,8 @@ struct OpenRISCCPU;
     OBJECT_CHECK(OpenRISCCPU, (obj), TYPE_OPENRISC_CPU)
 #define OPENRISC_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(OpenRISCCPUClass, (obj), TYPE_OPENRISC_CPU)
+#define IS_OPENRISC_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_OPENRISC_CPU)
 
 /**
  * OpenRISCCPUClass:
