@@ -39,6 +39,8 @@
     OBJECT_CHECK(XtensaCPU, (obj), TYPE_XTENSA_CPU)
 #define XTENSA_CPU_GET_CLASS(obj) \
     OBJECT_GET_CLASS(XtensaCPUClass, (obj), TYPE_XTENSA_CPU)
+#define IS_XTENSA_CPU_CLASS(klass) \
+    object_class_dynamic_cast(OBJECT_CLASS(klass), TYPE_XTENSA_CPU)
 
 typedef struct XtensaConfig XtensaConfig;
 
