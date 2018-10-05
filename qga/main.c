@@ -509,8 +509,9 @@ fail:
 #endif
 }
 
-static int send_response(GAState *s, const QDict *rsp)
+static void dispatch_return_cb(QmpSession *session, QDict *rsp)
 {
+    GAState *s = container_of(session, GAState, session);
     const char *buf;
     QString *payload_qstr, *response_qstr;
     GIOStatus status;
@@ -518,9 +519,6 @@ static int send_response(GAState *s, const QDict *rsp)
     g_assert(rsp && s->channel);
 
     payload_qstr = qobject_to_json(QOBJECT(rsp));
-    if (!payload_qstr) {
-        return -EINVAL;
-    }
 
     if (s->delimit_response) {
         s->delimit_response = false;
@@ -537,18 +535,7 @@ static int send_response(GAState *s, const QDict *rsp)
     status = ga_channel_write_all(s->channel, buf, strlen(buf));
     qobject_unref(response_qstr);
     if (status != G_IO_STATUS_NORMAL) {
-        return -EIO;
-    }
-
-    return 0;
-}
-
-static void dispatch_return_cb(QmpSession *session, QDict *rsp)
-{
-    GAState *s = container_of(session, GAState, session);
-    int ret = send_response(s, rsp);
-    if (ret < 0) {
-        g_warning("error sending response: %s", strerror(-ret));
+        g_warning("Failed sending response");
     }
 }
 
