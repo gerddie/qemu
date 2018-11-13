@@ -194,6 +194,7 @@ static const SlirpCb slirp_cb = {
     .timer_free = net_slirp_timer_free,
     .timer_mod = net_slirp_timer_mod,
     .set_nonblock = qemu_set_nonblock,
+    .notify = qemu_notify_event,
 };
 
 static int net_slirp_init(NetClientState *peer, const char *model,

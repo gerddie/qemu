@@ -29,6 +29,8 @@ typedef struct SlirpCb {
     void (*timer_mod)(void *timer, int64_t expire_time);
     /* Put a fd in nonblocking mode and register it for future polling */
     void (*set_nonblock)(int fd);
+    /* Kick the io-thread, to signal that new events may be processed */
+    void (*notify)(void);
 } SlirpCb;
 
 
