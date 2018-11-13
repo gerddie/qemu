@@ -163,7 +163,7 @@ fork_exec(struct socket *so, const char *ex)
     socket_set_fast_reuse(so->s);
     opt = 1;
     qemu_setsockopt(so->s, SOL_SOCKET, SO_OOBINLINE, &opt, sizeof(int));
-    qemu_set_nonblock(so->s);
+    so->slirp->cb->set_nonblock(so->s);
     return 1;
 }
 
