@@ -10,6 +10,11 @@ major_version = varr[0]
 minor_version = varr[1]
 micro_version = varr[2]
 
+conf = configuration_data()
+conf.set('SLIRP_MAJOR_VERSION', major_version)
+conf.set('SLIRP_MINOR_VERSION', minor_version)
+conf.set('SLIRP_MICRO_VERSION', micro_version)
+
 # libtool versioning - this applies to libpackagekit
 #
 # See http://sources.redhat.com/autobook/autobook/autobook_91.html#SEC91 for details
@@ -79,6 +84,7 @@ sources = [
   'udp.c',
   'udp6.c',
   'util.c',
+  'version.c'
 ]
 
 mapfile = 'libslirp.map'
@@ -92,6 +98,13 @@ lib = shared_library('slirp', sources,
                      link_depends : mapfile,
                      dependencies : [glib_dep, platform_deps],
                      install : true)
+
+configure_file(
+  input : 'libslirp-version.h.in',
+  output : 'libslirp-version.h',
+  install_dir : join_paths(get_option('includedir'), 'slirp'),
+  configuration : conf
+)
 
 install_headers(['libslirp.h'], subdir : 'slirp')
 
