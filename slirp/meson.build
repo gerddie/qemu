@@ -76,6 +76,8 @@ sources = [
   'sbuf.c',
   'slirp.c',
   'socket.c',
+  'state.c',
+  'stream.c',
   'tcp_input.c',
   'tcp_output.c',
   'tcp_subr.c',
@@ -84,7 +86,8 @@ sources = [
   'udp.c',
   'udp6.c',
   'util.c',
-  'version.c'
+  'version.c',
+  'vmstate.c',
 ]
 
 mapfile = 'libslirp.map'

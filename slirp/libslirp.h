@@ -28,6 +28,7 @@ enum {
     SLIRP_POLL_HUP = 1 << 4,
 };
 
+typedef ssize_t (*SlirpReadCb)(void *buf, size_t len, void *opaque);
 typedef ssize_t (*SlirpWriteCb)(const void *buf, size_t len, void *opaque);
 typedef void (*SlirpTimerCb)(void *opaque);
 typedef int (*SlirpAddPollCb)(int fd, int events, void *opaque);
@@ -102,6 +103,13 @@ size_t slirp_socket_can_recv(Slirp *slirp, struct in_addr guest_addr,
                              int guest_port);
 
 const char *slirp_version_string(void);
+
+void slirp_state_save(Slirp *s, SlirpWriteCb write_cb, void *opaque);
+
+int slirp_state_load(Slirp *s, int version_id,
+                     SlirpReadCb read_cb, void *opaque);
+
+int slirp_state_version(void);
 
 #ifdef __cplusplus
 } /* extern "C" */
