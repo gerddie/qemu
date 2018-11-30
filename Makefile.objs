@@ -61,7 +61,6 @@ util-obj-y += qapi/qapi-events-ui.o
 util-obj-y += qapi/qapi-introspect.o
 
 chardev-obj-y = chardev/
-slirp-obj-$(CONFIG_SLIRP) = slirp/
 
 #######################################################################
 # block-obj-y is code used by both qemu system emulation and qemu-img

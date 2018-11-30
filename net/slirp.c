@@ -26,7 +26,6 @@
 #include "qemu/log.h"
 #include "net/slirp.h"
 
-
 #ifndef _WIN32
 #include <pwd.h>
 #include <sys/wait.h>
@@ -37,13 +36,15 @@
 #include "monitor/monitor.h"
 #include "qemu/error-report.h"
 #include "qemu/sockets.h"
-#include "slirp/libslirp.h"
+#include <libslirp.h>
 #include "chardev/char-fe.h"
 #include "sysemu/sysemu.h"
 #include "qemu/cutils.h"
 #include "qapi/error.h"
 #include "qapi/qmp/qdict.h"
 #include "util.h"
+#include "migration/register.h"
+#include "migration/qemu-file-types.h"
 
 static int get_str_sep(char *buf, int buf_size, const char **pp, int sep)
 {
@@ -146,6 +147,7 @@ static void net_slirp_cleanup(NetClientState *nc)
 
     g_slist_free_full(s->fwd, slirp_free_fwd);
     main_loop_poll_remove_notifier(&s->poll_notifier);
+    unregister_savevm(NULL, "slirp", s->slirp);
     slirp_cleanup(s->slirp);
     if (s->exit_notifier.notify) {
         qemu_remove_exit_notifier(&s->exit_notifier);
@@ -161,32 +163,42 @@ static NetClientInfo net_slirp_info = {
     .cleanup = net_slirp_cleanup,
 };
 
-static void net_slirp_guest_error(const char *msg)
+static void net_slirp_guest_error(const char *msg, void *opaque)
 {
     qemu_log_mask(LOG_GUEST_ERROR, "%s", msg);
 }
 
-static int64_t net_slirp_clock_get_ns(void)
+static int64_t net_slirp_clock_get_ns(void *opaque)
 {
     return qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
 }
 
-static void *net_slirp_timer_new(SlirpTimerCb cb, void *opaque)
+static void *net_slirp_timer_new(SlirpTimerCb cb, void *cb_opaque, void *opaque)
 {
     return timer_new_full(NULL, QEMU_CLOCK_VIRTUAL,
                           SCALE_MS, QEMU_TIMER_ATTR_EXTERNAL,
-                          cb, opaque);
+                          cb, cb_opaque);
 }
 
-static void net_slirp_timer_free(void *timer)
+static void net_slirp_timer_free(void *timer, void *opaque)
 {
     timer_del(timer);
     timer_free(timer);
 }
 
-static void net_slirp_timer_mod(void *timer, int64_t expire_timer)
+static void net_slirp_timer_mod(void *timer, int64_t expire_timer, void *opaque)
 {
     timer_mod(timer, expire_timer);
+}
+
+static void net_slirp_set_nonblock(int fd, void *opaque)
+{
+    qemu_set_nonblock(fd);
+}
+
+static void net_slirp_notify(void *opaque)
+{
+    qemu_notify_event();
 }
 
 static const SlirpCb slirp_cb = {
@@ -196,8 +208,8 @@ static const SlirpCb slirp_cb = {
     .timer_new = net_slirp_timer_new,
     .timer_free = net_slirp_timer_free,
     .timer_mod = net_slirp_timer_mod,
-    .set_nonblock = qemu_set_nonblock,
-    .notify = qemu_notify_event,
+    .set_nonblock = net_slirp_set_nonblock,
+    .notify = net_slirp_notify,
 };
 
 static int slirp_poll_to_gio(int events)
@@ -284,6 +296,46 @@ static void net_slirp_poll_notify(Notifier *notifier, void *data)
         g_assert_not_reached();
     }
 }
+
+static ssize_t
+net_slirp_stream_read(void *buf, size_t size, void *opaque)
+{
+    QEMUFile *f = opaque;
+
+    return qemu_get_buffer(f, buf, size);
+}
+
+static ssize_t
+net_slirp_stream_write(const void *buf, size_t size, void *opaque)
+{
+    QEMUFile *f = opaque;
+
+    qemu_put_buffer(f, buf, size);
+    if (qemu_file_get_error(f)) {
+        return -1;
+    }
+
+    return size;
+}
+
+static int net_slirp_state_load(QEMUFile *f, void *opaque, int version_id)
+{
+    Slirp *slirp = opaque;
+
+    return slirp_state_load(slirp, version_id, net_slirp_stream_read, f);
+}
+
+static void net_slirp_state_save(QEMUFile *f, void *opaque)
+{
+    Slirp *slirp = opaque;
+
+    slirp_state_save(slirp, net_slirp_stream_write, f);
+}
+
+static SaveVMHandlers savevm_slirp_state = {
+    .save_state = net_slirp_state_save,
+    .load_state = net_slirp_state_load,
+};
 
 static int net_slirp_init(NetClientState *peer, const char *model,
                           const char *name, int restricted,
@@ -504,6 +556,8 @@ static int net_slirp_init(NetClientState *peer, const char *model,
                           dns, ip6_dns, dnssearch, vdomainname,
                           &slirp_cb, s);
     QTAILQ_INSERT_TAIL(&slirp_stacks, s, entry);
+    register_savevm_live(NULL, "slirp", 0, slirp_state_version(),
+                         &savevm_slirp_state, s->slirp);
 
     s->poll_notifier.notify = net_slirp_poll_notify;
     main_loop_poll_add_notifier(&s->poll_notifier);

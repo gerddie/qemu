@@ -5620,6 +5620,28 @@ if test "$libpmem" != "no"; then
 fi
 
 ##########################################
+# check for slirp
+
+if test "$slirp" != "no" ; then
+    cat > $TMPC << EOF
+#include <libslirp.h>
+int main(void) { slirp_version_string(); return 0; }
+EOF
+    slirp_cflags=$($pkg_config --cflags slirp 2>/dev/null)
+    slirp_libs=$($pkg_config --libs slirp 2>/dev/null)
+    slirp_version=$($pkg_config --modversion slirp 2>/dev/null)
+    if $pkg_config slirp >/dev/null 2>&1 && \
+           compile_prog "$slirp_cflags" "$slirp_libs" ; then
+        slirp="yes"
+    else
+        if test "$slirp" = "yes" ; then
+            feature_not_found "slirp"
+        fi
+        slirp="no"
+    fi
+fi
+
+##########################################
 # End of CC checks
 # After here, no more $cc or $ld runs
 
@@ -5970,6 +5992,7 @@ echo "QEMU_LDFLAGS      $QEMU_LDFLAGS"
 echo "make              $make"
 echo "install           $install"
 echo "python            $python"
+echo "slirp support     $slirp $(echo_version $slirp $slirp_version)"
 if test "$slirp" = "yes" ; then
     echo "smbd              $smbd"
 fi
@@ -6240,6 +6263,8 @@ fi
 if test "$slirp" = "yes" ; then
   echo "CONFIG_SLIRP=y" >> $config_host_mak
   echo "CONFIG_SMBD_COMMAND=\"$smbd\"" >> $config_host_mak
+  echo "SLIRP_CFLAGS=$slirp_cflags" >> $config_host_mak
+  echo "SLIRP_LIBS=$slirp_libs" >> $config_host_mak
 fi
 if test "$vde" = "yes" ; then
   echo "CONFIG_VDE=y" >> $config_host_mak
