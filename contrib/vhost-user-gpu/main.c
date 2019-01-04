@@ -1089,7 +1089,7 @@ static GOptionEntry entries[] = {
       "PID path", "PATH" },
     { "fd", 'f', 0, G_OPTION_ARG_INT, &opt_fdnum,
       "Use inherited fd socket", "FDNUM" },
-    { "socket-path", 's', 0, G_OPTION_ARG_INT, &opt_socket_path,
+    { "socket-path", 's', 0, G_OPTION_ARG_FILENAME, &opt_socket_path,
       "Use UNIX socket path", "PATH" },
     { "render-node", 'r', 0, G_OPTION_ARG_FILENAME, &opt_render_node,
       "Specify DRM render node", "PATH" },
