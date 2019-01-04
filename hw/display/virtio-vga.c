@@ -161,7 +161,10 @@ static void virtio_vga_base_reset(DeviceState *dev)
     VirtIOVGABase *vvga = VIRTIO_VGA_BASE(dev);
 
     /* reset virtio-gpu */
-    virtio_gpu_reset(VIRTIO_DEVICE(vvga->vgpu));
+    DeviceClass *klass = DEVICE_GET_CLASS(vvga->vgpu);
+
+    if (klass->reset)
+        klass->reset(vvga->vgpu);
 
     /* reset vga */
     vga_common_reset(&vvga->vga);
